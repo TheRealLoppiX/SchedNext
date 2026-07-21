@@ -1,0 +1,17 @@
+{
+  "name": "barbearia-agenda",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "start:frontend": "npm start --workspace=frontend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

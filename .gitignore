@@ -1,0 +1,27 @@
+# backend agora é um repositório próprio (SchedNextAPI), não faz parte deste repo
+backend/
+
+# dependencies
+node_modules/
+frontend/node_modules/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# build
+frontend/build/
+
+# documento de trabalho interno, não vai pro repo público
+handoff.md
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

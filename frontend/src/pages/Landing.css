@@ -1,0 +1,140 @@
+@keyframes ln-fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ln-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes ln-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes ln-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+@keyframes ln-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(37, 84, 235, 0.35); }
+  100% { box-shadow: 0 0 0 16px rgba(37, 84, 235, 0); }
+}
+
+@keyframes ln-check-draw {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Entrada do hero */
+.ln-hero-eyebrow { animation: ln-fade-up 0.6s ease both; }
+.ln-hero-title { animation: ln-fade-up 0.7s ease both 0.08s; }
+.ln-hero-sub { animation: ln-fade-up 0.7s ease both 0.18s; }
+.ln-hero-cta { animation: ln-fade-up 0.7s ease both 0.28s; }
+
+/* Revela seções ao rolar */
+.ln-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.ln-reveal.ln-visible { opacity: 1; transform: translateY(0); }
+
+/* Mockup flutuante */
+.ln-mockup { animation: ln-float 4.5s ease-in-out infinite 1s; will-change: transform; }
+.ln-mockup:hover { animation-play-state: paused; }
+.ln-mockup-check { stroke-dasharray: 24; animation: ln-check-draw 0.6s ease 1.4s both; }
+
+/* Botões */
+.ln-cta-primary {
+  background-size: 200% 200%;
+  animation: ln-gradient-shift 6s ease infinite;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.ln-cta-primary:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 14px 28px rgba(37, 84, 235, 0.35); }
+.ln-cta-primary:active { transform: translateY(-1px) scale(1.01); }
+
+.ln-cta-secondary { transition: background 0.25s ease, transform 0.25s ease, border-color 0.25s ease; }
+.ln-cta-secondary:hover { background: var(--bb-black-soft); transform: translateY(-2px); border-color: var(--bb-gold); }
+
+.ln-cta-final {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+.ln-cta-final:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 16px 30px rgba(0, 0, 0, 0.25); }
+
+/* Cards com hover consistente */
+.ln-card { transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
+.ln-card:hover { transform: translateY(-8px); box-shadow: 0 18px 36px rgba(20, 24, 43, 0.1); border-color: var(--bb-gold); }
+
+.ln-card-plano { transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
+.ln-card-plano:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 20px 40px rgba(20, 24, 43, 0.12); border-color: var(--bb-gold); }
+
+.ln-cta-plano { transition: background 0.25s ease, color 0.25s ease; }
+.ln-cta-plano:hover { background: var(--bb-gold); color: #fff; }
+
+/* Passos numerados */
+.ln-step-numero { display: inline-block; transition: color 0.3s ease, transform 0.3s ease; }
+.ln-step:hover .ln-step-numero { color: var(--bb-gold); transform: scale(1.15) rotate(-4deg); }
+
+/* Ícones de recurso */
+.ln-icone-wrapper { transition: transform 0.3s ease, background 0.3s ease; }
+.ln-card:hover .ln-icone-wrapper { transform: scale(1.12) rotate(-6deg); background: var(--bb-gold); color: #fff; }
+
+/* Nav com sublinhado animado */
+.ln-nav-link { position: relative; transition: color 0.2s ease; }
+.ln-nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 0;
+  height: 2px;
+  background: var(--bb-gold);
+  transition: width 0.25s ease;
+}
+.ln-nav-link:hover::after { width: 100%; }
+
+/* Faixa do topo com gradiente animado */
+.ln-faixa-topo {
+  background: linear-gradient(90deg, #173fb0, #2554eb, #e0293e, #2554eb, #173fb0);
+  background-size: 300% 100%;
+  animation: ln-gradient-shift 8s ease infinite;
+}
+
+/* FAQ com destaque no hover */
+.ln-faq-item { transition: padding-left 0.25s ease, border-color 0.25s ease; cursor: default; }
+.ln-faq-item:hover { padding-left: 8px; border-color: var(--bb-gold); }
+
+/* Palavra rotativa no eyebrow do hero — largura reservada pra não "pular" o texto
+   ao redor quando a palavra trocar de tamanho. */
+.ln-rotativo-wrap {
+  display: inline-block;
+  min-width: 250px;
+  text-align: left;
+  vertical-align: top;
+  color: var(--bb-gold);
+}
+.ln-rotativo {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+.ln-rotativo.ln-rotativo-visivel { opacity: 1; transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ln-hero-eyebrow, .ln-hero-title, .ln-hero-sub, .ln-hero-cta,
+  .ln-mockup, .ln-mockup-check, .ln-faixa-topo, .ln-cta-primary {
+    animation: none !important;
+  }
+  .ln-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .ln-card, .ln-card-plano, .ln-cta-primary, .ln-cta-secondary, .ln-cta-final {
+    transition: none !important;
+  }
+  .ln-rotativo { transition: none !important; opacity: 1 !important; transform: none !important; }
+}
