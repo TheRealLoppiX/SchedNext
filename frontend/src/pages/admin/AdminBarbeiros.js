@@ -5,6 +5,7 @@ import useEscToClose from '../../hooks/useEscToClose';
 import LoadingButton from '../../components/LoadingButton';
 import EmptyState from '../../components/EmptyState';
 import { obterTerminologia } from '../../utils/terminologia';
+import { API_URL } from '../../services/api';
 
 function AdminBarbeiros({ empresaId }) {
     const toast = useToast();
@@ -53,7 +54,7 @@ function AdminBarbeiros({ empresaId }) {
         }
 
         try {
-            const res = await fetch(`http://localhost:4000/admin/equipe/${idEfetivo}`);
+            const res = await fetch(`${API_URL}/admin/equipe/${idEfetivo}`);
             const data = await res.json();
             
             // Se o banco retornar algo que não é array, assume lista vazia e libera a tela
@@ -65,7 +66,7 @@ function AdminBarbeiros({ empresaId }) {
 
             const equipeComBloqueios = await Promise.all(data.map(async (b) => {
                 try {
-                    const resB = await fetch(`http://localhost:4000/admin/bloqueios/${b.id}`);
+                    const resB = await fetch(`${API_URL}/admin/bloqueios/${b.id}`);
                     const bloqs = await resB.json();
                     return { ...b, bloqueios: Array.isArray(bloqs) ? bloqs : [] };
                 } catch (err) {
@@ -86,7 +87,7 @@ function AdminBarbeiros({ empresaId }) {
 
     useEffect(() => {
         if (!idEfetivo) return;
-        fetch(`http://localhost:4000/admin/empresa/${idEfetivo}`)
+        fetch(`${API_URL}/admin/empresa/${idEfetivo}`)
             .then(r => r.json())
             .then(d => d?.vertical && setVertical(d.vertical))
             .catch(() => {});
@@ -125,7 +126,7 @@ function AdminBarbeiros({ empresaId }) {
 
         setCadastrando(true);
         try {
-            const res = await fetch(`http://localhost:4000/admin/barbeiro`, {
+            const res = await fetch(`${API_URL}/admin/barbeiro`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ nome: novoNome, empresa_id: idEfetivo, foto_url: novaFoto })
@@ -157,7 +158,7 @@ function AdminBarbeiros({ empresaId }) {
         if (!ok) return;
 
         try {
-            const res = await fetch(`http://localhost:4000/admin/barbeiro/status`, {
+            const res = await fetch(`${API_URL}/admin/barbeiro/status`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, ativo: !statusAtual })
@@ -176,7 +177,7 @@ function AdminBarbeiros({ empresaId }) {
     const salvarEdicao = async () => {
         setSalvando(true);
         try {
-            const res = await fetch(`http://localhost:4000/admin/barbeiro/editar`, {
+            const res = await fetch(`${API_URL}/admin/barbeiro/editar`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(editando)
@@ -204,7 +205,7 @@ function AdminBarbeiros({ empresaId }) {
         if (!ok) return;
 
         try {
-            const res = await fetch(`http://localhost:4000/admin/barbeiro/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${API_URL}/admin/barbeiro/${id}`, { method: 'DELETE' });
             const data = await res.json();
 
             if (res.ok) {
@@ -234,7 +235,7 @@ function AdminBarbeiros({ empresaId }) {
 
         setSalvando(true);
         try {
-            const res = await fetch('http://localhost:4000/admin/bloqueio', {
+            const res = await fetch(`${API_URL}/admin/bloqueio`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(dadosParaEnviar)
@@ -260,7 +261,7 @@ function AdminBarbeiros({ empresaId }) {
         if (!ok) return;
 
         try {
-            const res = await fetch(`http://localhost:4000/admin/bloqueio/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${API_URL}/admin/bloqueio/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 carregarEquipe();
                 toast.success('Bloqueio removido.');
@@ -279,8 +280,8 @@ function AdminBarbeiros({ empresaId }) {
 
         try {
             const [resServicos, resVinculos] = await Promise.all([
-                fetch(`http://localhost:4000/admin/servicos?empresa=${empresaSlug}`),
-                fetch(`http://localhost:4000/barbeiro-servicos/${barbeiro.id}`)
+                fetch(`${API_URL}/admin/servicos?empresa=${empresaSlug}`),
+                fetch(`${API_URL}/barbeiro-servicos/${barbeiro.id}`)
             ]);
             
             setListaServicos(await resServicos.json() || []);
@@ -298,7 +299,7 @@ function AdminBarbeiros({ empresaId }) {
     const salvarVinculo = async () => {
         setSalvando(true);
         try {
-            const res = await fetch('http://localhost:4000/barbeiro-servicos', {
+            const res = await fetch(`${API_URL}/barbeiro-servicos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ barbeiro_id: barbeiroSelecionado.id, servicosIds: servicosMarcados })

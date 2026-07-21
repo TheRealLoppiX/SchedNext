@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './Landing.css';
 import useRevelarAoRolar from '../hooks/useRevelarAoRolar';
+import { API_URL } from '../services/api';
 
 const PASSOS = [
   { numero: '01', titulo: 'Crie sua conta', desc: 'Escolha o nome do seu negócio e o tipo de serviço — barbearia, salão, estúdio de unhas ou outro.' },
@@ -126,7 +127,7 @@ function Landing() {
   const [refCtaFinal, visivelCtaFinal] = useRevelarAoRolar();
 
   useEffect(() => {
-    fetch('http://localhost:4000/planos-plataforma')
+    fetch(`${API_URL}/planos-plataforma`)
       .then((r) => r.json())
       .then(setPlanos)
       .catch(() => setPlanos([]));

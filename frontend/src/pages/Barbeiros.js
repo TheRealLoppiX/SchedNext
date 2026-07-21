@@ -3,6 +3,7 @@ import { useNavigate, useParams, useOutletContext } from 'react-router-dom';
 import { format, startOfDay, addDays, setHours, setMinutes, isBefore, isSameDay, isAfter, getDay } from 'date-fns';
 import ptBR from 'date-fns/locale/pt-BR';
 import usePaletaTenant from '../hooks/usePaletaTenant';
+import { API_URL } from '../services/api';
 
 function Barbeiros() {
   const [barbeiros, setBarbeiros] = useState([]);
@@ -29,7 +30,7 @@ function Barbeiros() {
   usePaletaTenant(empresaPlano);
 
   useEffect(() => {
-    fetch(`http://localhost:4000/empresa/slug/${empresaSlug}`)
+    fetch(`${API_URL}/empresa/slug/${empresaSlug}`)
       .then(r => r.json())
       .then(setEmpresaPlano)
       .catch(() => {});
@@ -38,7 +39,7 @@ function Barbeiros() {
   useEffect(() => {
     const uid = localStorage.getItem('usuario_id');
     if (uid) {
-      fetch(`http://localhost:4000/usuario/${uid}/assinante`)
+      fetch(`${API_URL}/usuario/${uid}/assinante`)
         .then(r => r.json())
         .then(d => setIsAssinante(!!d.assinante))
         .catch(() => {});
@@ -46,7 +47,7 @@ function Barbeiros() {
   }, []);
 
   useEffect(() => {
-    fetch(`http://localhost:4000/unidades?empresa=${empresaSlug}`)
+    fetch(`${API_URL}/unidades?empresa=${empresaSlug}`)
       .then(r => r.json())
       .then(data => setUnidades(Array.isArray(data) ? data : []))
       .catch(() => {});
@@ -54,7 +55,7 @@ function Barbeiros() {
 
   useEffect(() => {
     const query = unidadeSelecionada ? `&unidade_id=${unidadeSelecionada}` : '';
-    fetch(`http://localhost:4000/barbeiros?empresa=${empresaSlug}${query}`)
+    fetch(`${API_URL}/barbeiros?empresa=${empresaSlug}${query}`)
       .then(res => res.json())
       .then(data => {
         setBarbeiros(data);
@@ -98,7 +99,7 @@ function Barbeiros() {
 
       const dataF = format(dataSelecionada, 'yyyy-MM-dd');
       try {
-        const response = await fetch(`http://localhost:4000/disponibilidade-filtro?data=${dataF}&hora=${horaSelecionada}&empresa=${empresaSlug}`);
+        const response = await fetch(`${API_URL}/disponibilidade-filtro?data=${dataF}&hora=${horaSelecionada}&empresa=${empresaSlug}`);
         const dataStatus = await response.json(); 
 
         if (dataStatus.fechado) {

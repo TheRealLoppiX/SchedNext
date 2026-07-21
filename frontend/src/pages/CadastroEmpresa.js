@@ -4,6 +4,7 @@ import { useToast } from '../components/Toast';
 import LoadingButton from '../components/LoadingButton';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 import { obterTerminologia } from '../utils/terminologia';
+import { API_URL } from '../services/api';
 
 function gerarSlug(nome) {
   return nome
@@ -45,14 +46,14 @@ function CadastroEmpresa({ setEmpresaLogada }) {
       return;
     }
     setStatusSlug((s) => ({ ...s, checando: true }));
-    fetch(`http://localhost:4000/empresas/slug-disponivel/${slugDebounced}`)
+    fetch(`${API_URL}/empresas/slug-disponivel/${slugDebounced}`)
       .then((r) => r.json())
       .then((d) => setStatusSlug({ checando: false, disponivel: d.disponivel, motivo: d.motivo || '' }))
       .catch(() => setStatusSlug({ checando: false, disponivel: null, motivo: '' }));
   }, [slugDebounced]);
 
   useEffect(() => {
-    fetch('http://localhost:4000/planos-plataforma')
+    fetch(`${API_URL}/planos-plataforma`)
       .then((r) => r.json())
       .then((data) => {
         setPlanos(data);
@@ -74,7 +75,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
   const finalizarCadastro = async () => {
     setEnviando(true);
     try {
-      const resCadastro = await fetch('http://localhost:4000/empresas/registrar', {
+      const resCadastro = await fetch(`${API_URL}/empresas/registrar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome, slug, email, senha, vertical, plano_plataforma_id: planoId })
@@ -87,7 +88,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
         return;
       }
 
-      const resLogin = await fetch('http://localhost:4000/admin/login', {
+      const resLogin = await fetch(`${API_URL}/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, senha })

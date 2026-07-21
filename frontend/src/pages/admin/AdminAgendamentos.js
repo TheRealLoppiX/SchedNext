@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../../components/Toast';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { obterTerminologia } from '../../utils/terminologia';
+import { API_URL } from '../../services/api';
 
 function AdminAgendamentos({ empresaId }) {
   const toast = useToast();
@@ -21,17 +22,17 @@ function AdminAgendamentos({ empresaId }) {
 
   useEffect(() => {
     if (idEfetivo) {
-      fetch(`http://localhost:4000/admin/agendamentos/${idEfetivo}`)
+      fetch(`${API_URL}/admin/agendamentos/${idEfetivo}`)
         .then(res => res.json())
         .then(data => setAgendamentos(Array.isArray(data) ? data : []))
         .catch(err => console.error("Erro ao buscar agendamentos:", err));
 
-      fetch(`http://localhost:4000/admin/equipe/${idEfetivo}`)
+      fetch(`${API_URL}/admin/equipe/${idEfetivo}`)
         .then(res => res.json())
         .then(data => setBarbeiros(Array.isArray(data) ? data : []))
         .catch(err => console.error("Erro ao carregar equipe:", err));
 
-      fetch(`http://localhost:4000/admin/empresa/${idEfetivo}`)
+      fetch(`${API_URL}/admin/empresa/${idEfetivo}`)
         .then(res => res.json())
         .then(d => d?.vertical && setVertical(d.vertical))
         .catch(() => {});

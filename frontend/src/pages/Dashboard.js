@@ -4,6 +4,7 @@ import { formatarTelefone } from '../utils/telefone';
 import { useToast } from '../components/Toast';
 import LoadingButton from '../components/LoadingButton';
 import { obterTerminologia } from '../utils/terminologia';
+import { API_URL } from '../services/api';
 
 function ModalAvaliacao({ isOpen, onClose, onSubmit, barbeiroNome }) {
   const [nota, setNota] = useState(0);
@@ -138,7 +139,7 @@ function AgendamentosView({ userId }) {
   const [modalCancelamento, setModalCancelamento] = useState({ aberto: false, id: null, motivo: '' });
 
   const carregarAgendamentos = () => {
-    fetch(`http://localhost:4000/meus-agendamentos/${userId}`)
+    fetch(`${API_URL}/meus-agendamentos/${userId}`)
       .then(r => r.json())
       .then(setLista)
       .catch(err => console.error("Erro ao carregar lista:", err));
@@ -158,7 +159,7 @@ function AgendamentosView({ userId }) {
   const handleSalvarAvaliacao = async () => {
     if (notaEmoji === 0) return toast.error("Selecione uma nota antes de enviar.");
     try {
-      const res = await fetch(`http://localhost:4000/avaliar`, {
+      const res = await fetch(`${API_URL}/avaliar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -184,7 +185,7 @@ function AgendamentosView({ userId }) {
   // --- NOVA FUNÇÃO: Confirmar Cancelamento via Modal ---
   const confirmarCancelamentoManual = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/cancelar-agendamento/${modalCancelamento.id}`, {
+      const res = await fetch(`${API_URL}/cancelar-agendamento/${modalCancelamento.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ motivo: modalCancelamento.motivo })
@@ -361,7 +362,7 @@ function DadosView() {
 
     setSalvando(true);
     try {
-      const res = await fetch(`http://localhost:4000/atualizar-perfil/${userId}`, {
+      const res = await fetch(`${API_URL}/atualizar-perfil/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -459,7 +460,7 @@ function PrivacidadeView({ userId, emailAtual }) {
 
   const solicitarCodigo = async () => {
     try {
-      const res = await fetch(`http://localhost:4000/seguranca-codigo`, {
+      const res = await fetch(`${API_URL}/seguranca-codigo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: userId })
@@ -482,7 +483,7 @@ function PrivacidadeView({ userId, emailAtual }) {
     }
 
     try {
-      const res = await fetch(`http://localhost:4000/seguranca-update/${userId}`, {
+      const res = await fetch(`${API_URL}/seguranca-update/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -811,9 +812,9 @@ function AgendamentosAdminView({ empresaId }) {
   const termos = obterTerminologia(vertical);
 
   useEffect(() => {
-    fetch(`http://localhost:4000/admin/agendamentos-geral/${empresaId}`).then(r => r.json()).then(setDados => setAgendamentos(setDados));
-    fetch(`http://localhost:4000/barbeiros/${empresaId}`).then(r => r.json()).then(setBarbeiros);
-    fetch(`http://localhost:4000/admin/empresa/${empresaId}`).then(r => r.json()).then(d => d?.vertical && setVertical(d.vertical)).catch(() => {});
+    fetch(`${API_URL}/admin/agendamentos-geral/${empresaId}`).then(r => r.json()).then(setDados => setAgendamentos(setDados));
+    fetch(`${API_URL}/barbeiros/${empresaId}`).then(r => r.json()).then(setBarbeiros);
+    fetch(`${API_URL}/admin/empresa/${empresaId}`).then(r => r.json()).then(d => d?.vertical && setVertical(d.vertical)).catch(() => {});
   }, [empresaId]);
 
   const toggleBarbeiro = (id) => {
@@ -888,7 +889,7 @@ function FidelidadeView({ userId }) {
 
   useEffect(() => {
     if (userId) {
-      fetch(`http://localhost:4000/fidelidade/${userId}`)
+      fetch(`${API_URL}/fidelidade/${userId}`)
         .then(r => r.json())
         .then(setInfo)
         .catch(err => console.error("Erro fidelidade:", err));

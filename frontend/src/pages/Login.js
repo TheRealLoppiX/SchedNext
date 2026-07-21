@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import usePaletaTenant from '../hooks/usePaletaTenant';
 import MarcaPlataforma from '../components/MarcaPlataforma';
+import { API_URL } from '../services/api';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -17,7 +18,7 @@ function Login() {
   useEffect(() => {
     const carregarDadosEmpresa = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/empresa/slug/${empresaSlug}`);
+        const res = await fetch(`${API_URL}/empresa/slug/${empresaSlug}`);
         const data = await res.json();
         if (res.ok) {
           setEmpresa(data);
@@ -32,7 +33,7 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:4000/login', {
+      const res = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, senha })

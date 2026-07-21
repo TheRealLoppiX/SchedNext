@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { obterTerminologia } from '../../utils/terminologia';
+import { API_URL } from '../../services/api';
 
 function AdminAssinaturas({ empresaId }) {
     const confirmar = useConfirm();
@@ -19,9 +20,9 @@ function AdminAssinaturas({ empresaId }) {
         if (!idEfetivo) return;
         try {
             const [resPlanos, resServicos, resEmpresa] = await Promise.all([
-                fetch(`http://localhost:4000/admin/assinaturas/${idEfetivo}`),
-                fetch(`http://localhost:4000/admin/servicos?empresa=${idEfetivo}`),
-                fetch(`http://localhost:4000/admin/empresa/${idEfetivo}`)
+                fetch(`${API_URL}/admin/assinaturas/${idEfetivo}`),
+                fetch(`${API_URL}/admin/servicos?empresa=${idEfetivo}`),
+                fetch(`${API_URL}/admin/empresa/${idEfetivo}`)
             ]);
             setPlanos(await resPlanos.json() || []);
             setServicos(await resServicos.json() || []);
@@ -59,7 +60,7 @@ function AdminAssinaturas({ empresaId }) {
         e.preventDefault();
         if (form.servicos_ids.length === 0) return mostrarFeedback('Selecione ao menos um serviço.', 'erro');
         try {
-            const res = await fetch('http://localhost:4000/admin/assinaturas', {
+            const res = await fetch(`${API_URL}/admin/assinaturas`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...form, empresa_id: idEfetivo })
@@ -77,7 +78,7 @@ function AdminAssinaturas({ empresaId }) {
     const handleAtualizar = async () => {
         if (editando.servicos_ids.length === 0) return mostrarFeedback('Selecione ao menos um serviço.', 'erro');
         try {
-            const res = await fetch(`http://localhost:4000/admin/assinaturas/${editando.id}`, {
+            const res = await fetch(`${API_URL}/admin/assinaturas/${editando.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(editando)
@@ -103,7 +104,7 @@ function AdminAssinaturas({ empresaId }) {
         if (!ok) return;
 
         try {
-            const res = await fetch(`http://localhost:4000/admin/assinaturas/${plano.id}/status`, {
+            const res = await fetch(`${API_URL}/admin/assinaturas/${plano.id}/status`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ativo: !plano.ativo })
@@ -125,7 +126,7 @@ function AdminAssinaturas({ empresaId }) {
         });
         if (!ok) return;
         try {
-            await fetch(`http://localhost:4000/admin/assinaturas/${id}`, { method: 'DELETE' });
+            await fetch(`${API_URL}/admin/assinaturas/${id}`, { method: 'DELETE' });
             mostrarFeedback('Plano excluído.');
             carregar();
         } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }

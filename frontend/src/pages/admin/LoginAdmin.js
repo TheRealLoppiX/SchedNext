@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/Toast';
 import LoadingButton from '../../components/LoadingButton';
+import { API_URL } from '../../services/api';
 
 function LoginAdmin({ setEmpresaLogada }) {
   const [email, setEmail] = useState('');
@@ -14,7 +15,7 @@ function LoginAdmin({ setEmpresaLogada }) {
     e.preventDefault();
     setEntrando(true);
     try {
-      const res = await fetch('http://localhost:4000/admin/login', {
+      const res = await fetch(`${API_URL}/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, senha })

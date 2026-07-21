@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import ptBR from 'date-fns/locale/pt-BR';
-import { 
-  setHours, setMinutes, format, isSameDay, startOfMinute, 
-  addMinutes, isBefore, isAfter, isEqual, parseISO, startOfDay 
+import {
+  setHours, setMinutes, format, isSameDay, startOfMinute,
+  addMinutes, isBefore, isAfter, isEqual, parseISO, startOfDay
 } from 'date-fns';
 import 'react-datepicker/dist/react-datepicker.css';
+import { API_URL } from '../services/api';
 
 registerLocale('pt-BR', ptBR);
 
@@ -51,7 +52,7 @@ function Agenda() {
   // Verifica se o usuario e assinante
   useEffect(() => {
     if (userId) {
-      fetch(`http://localhost:4000/usuario/${userId}/assinante`)
+      fetch(`${API_URL}/usuario/${userId}/assinante`)
         .then(r => r.json())
         .then(d => {
           setIsAssinante(!!d.assinante);
@@ -84,7 +85,7 @@ function Agenda() {
   // --- BUSCA NOTIFICAÇÕES ---
   useEffect(() => {
     const buscarNotif = () => {
-      fetch(`http://localhost:4000/notificacoes/${userId}`)
+      fetch(`${API_URL}/notificacoes/${userId}`)
         .then(res => res.json())
         .then(data => setNotificacoes(data))
         .catch(err => console.error("Erro ao buscar notificações:", err));
@@ -97,14 +98,14 @@ function Agenda() {
   const toggleNotificacoes = async () => {
     setExibirNotificacoes(!exibirNotificacoes);
     if (!exibirNotificacoes && notificacoes.some(n => !n.lida)) {
-      await fetch(`http://localhost:4000/notificacoes/ler-todas/${userId}`, { method: 'PUT' });
+      await fetch(`${API_URL}/notificacoes/ler-todas/${userId}`, { method: 'PUT' });
       setNotificacoes(notificacoes.map(n => ({ ...n, lida: 1 })));
     }
   };
 
   // --- BUSCA SERVIÇOS E BARBEIRO ---
   useEffect(() => {
-    fetch(`http://localhost:4000/barbeiros?empresa=${empresaSlug}`)
+    fetch(`${API_URL}/barbeiros?empresa=${empresaSlug}`)
       .then(res => res.json())
       .then(data => {
         const barbeiro = data.find(b => String(b.id) === String(barbeiroId));
@@ -117,7 +118,7 @@ function Agenda() {
       });
 
     if (barbeiroId) {
-      fetch(`http://localhost:4000/servicos-por-barbeiro/${barbeiroId}`)
+      fetch(`${API_URL}/servicos-por-barbeiro/${barbeiroId}`)
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {
@@ -137,7 +138,7 @@ function Agenda() {
   useEffect(() => {
     if (!barbeiroId) return;
     const dataFormatada = format(dataHora, 'yyyy-MM-dd');
-    fetch(`http://localhost:4000/horarios-ocupados?barbeiro_id=${barbeiroId}&data=${dataFormatada}`)
+    fetch(`${API_URL}/horarios-ocupados?barbeiro_id=${barbeiroId}&data=${dataFormatada}`)
       .then(res => res.json())
       .then(data => {
         setHorariosOcupados({
@@ -214,7 +215,7 @@ function Agenda() {
     setMensagem('Aguarde...');
 
     try {
-      const res = await fetch('http://localhost:4000/agendar', {
+      const res = await fetch(`${API_URL}/agendar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -232,7 +233,7 @@ function Agenda() {
           setMensagem('Agendado com sucesso'); 
           setCarrinho([]); 
           const dataFormatada = format(dataHora, 'yyyy-MM-dd');
-          fetch(`http://localhost:4000/horarios-ocupados?barbeiro_id=${barbeiroId}&data=${dataFormatada}`)
+          fetch(`${API_URL}/horarios-ocupados?barbeiro_id=${barbeiroId}&data=${dataFormatada}`)
             .then(res => res.json()).then(newData => {
                 setHorariosOcupados({
                   agendados: newData.agendados || [],

@@ -5,6 +5,7 @@ import { emailValido } from '../utils/validacao';
 import { useToast } from '../components/Toast';
 import usePaletaTenant from '../hooks/usePaletaTenant';
 import MarcaPlataforma from '../components/MarcaPlataforma';
+import { API_URL } from '../services/api';
 
 function Cadastro() {
   const [form, setForm] = useState({ nome: '', nascimento: '', email: '', telefone: '', senha: '' });
@@ -19,7 +20,7 @@ function Cadastro() {
   usePaletaTenant(empresa);
 
   useEffect(() => {
-    fetch(`http://localhost:4000/empresa/slug/${empresaSlug}`)
+    fetch(`${API_URL}/empresa/slug/${empresaSlug}`)
       .then((r) => r.json())
       .then(setEmpresa)
       .catch(() => {});
@@ -44,7 +45,7 @@ function Cadastro() {
     }
 
     try {
-      const res = await fetch('http://localhost:4000/registrar', {
+      const res = await fetch(`${API_URL}/registrar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, empresaSlug })
@@ -66,7 +67,7 @@ function Cadastro() {
   const handleConfirmarCodigo = async (e) => {
     if (e) e.preventDefault();
     try {
-      const res = await fetch('http://localhost:4000/confirmar-codigo', {
+      const res = await fetch(`${API_URL}/confirmar-codigo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email, codigo })

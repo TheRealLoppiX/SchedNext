@@ -4,6 +4,7 @@ import { useToast } from './Toast';
 import { obterTerminologia } from '../utils/terminologia';
 import usePaletaTenant from '../hooks/usePaletaTenant';
 import MarcaPlataforma from './MarcaPlataforma';
+import { API_URL } from '../services/api';
 
 
 function Layout({ setEmpresaId }) {
@@ -42,7 +43,7 @@ function Layout({ setEmpresaId }) {
           const empresaId = adminData.empresa_id;
 
           try {
-            const res = await fetch(`http://localhost:4000/admin/empresa/${empresaId}`);
+            const res = await fetch(`${API_URL}/admin/empresa/${empresaId}`);
             const data = await res.json();
             if (data) {
               setDados({
@@ -59,7 +60,7 @@ function Layout({ setEmpresaId }) {
       } else {
         if (userId) {
           try {
-            const res = await fetch(`http://localhost:4000/usuarios/${userId}`);
+            const res = await fetch(`${API_URL}/usuarios/${userId}`);
             const data = await res.json();
             if (data) {
               setDados({
@@ -70,10 +71,10 @@ function Layout({ setEmpresaId }) {
               });
               // Verificar assinatura
               try {
-                const resAss = await fetch(`http://localhost:4000/usuario/${userId}/assinante`);
+                const resAss = await fetch(`${API_URL}/usuario/${userId}/assinante`);
                 const assData = await resAss.json();
                 if (assData.assinante && assData.plano_id) {
-                  const resPlano = await fetch(`http://localhost:4000/admin/assinaturas/plano/${assData.plano_id}`);
+                  const resPlano = await fetch(`${API_URL}/admin/assinaturas/plano/${assData.plano_id}`);
                   const planoData = await resPlano.json();
                   setDadosAssinante({ assinante: true, plano_nome: planoData.nome || 'Assinante' });
                 } else {
@@ -93,7 +94,7 @@ function Layout({ setEmpresaId }) {
 
   useEffect(() => {
     if (isAdminPath || !empresaSlug) return;
-    fetch(`http://localhost:4000/empresa/slug/${empresaSlug}`)
+    fetch(`${API_URL}/empresa/slug/${empresaSlug}`)
       .then((r) => r.json())
       .then(setEmpresaTenant)
       .catch(() => {});
@@ -126,7 +127,7 @@ function Layout({ setEmpresaId }) {
   const solicitarCodigo = async () => {
     setCarregando(true);
     try {
-      const r = await fetch(`http://localhost:4000/seguranca-codigo`, {
+      const r = await fetch(`${API_URL}/seguranca-codigo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: userId })
@@ -141,7 +142,7 @@ function Layout({ setEmpresaId }) {
     if (codigo.length !== 6) return toast.error("Digite os 6 dígitos do código.");
     setCarregando(true);
     try {
-      const r = await fetch(`http://localhost:4000/seguranca-validar`, {
+      const r = await fetch(`${API_URL}/seguranca-validar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: userId, codigo: codigo })
@@ -156,7 +157,7 @@ function Layout({ setEmpresaId }) {
     if (!novosDados.email || !novosDados.senha) return toast.error("Preencha todos os campos.");
     setCarregando(true);
     try {
-      const r = await fetch(`http://localhost:4000/seguranca-update/${userId}`, {
+      const r = await fetch(`${API_URL}/seguranca-update/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: novosDados.email, senha: novosDados.senha, codigo: codigo })

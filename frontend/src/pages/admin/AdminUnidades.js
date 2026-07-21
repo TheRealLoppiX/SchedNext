@@ -3,6 +3,7 @@ import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import LoadingButton from '../../components/LoadingButton';
 import EmptyState from '../../components/EmptyState';
+import { API_URL } from '../../services/api';
 
 function AdminUnidades({ empresaId }) {
   const toast = useToast();
@@ -21,8 +22,8 @@ function AdminUnidades({ empresaId }) {
     if (!idEfetivo) return setCarregando(false);
     try {
       const [resEmpresa, resUnidades] = await Promise.all([
-        fetch(`http://localhost:4000/admin/empresa/${idEfetivo}`),
-        fetch(`http://localhost:4000/admin/unidades/${idEfetivo}`)
+        fetch(`${API_URL}/admin/empresa/${idEfetivo}`),
+        fetch(`${API_URL}/admin/unidades/${idEfetivo}`)
       ]);
       const dadosEmpresa = await resEmpresa.json();
       const dadosUnidades = await resUnidades.json();
@@ -42,7 +43,7 @@ function AdminUnidades({ empresaId }) {
     if (!novoNome.trim()) return toast.error('Informe o nome da unidade.');
     setCadastrando(true);
     try {
-      const res = await fetch('http://localhost:4000/admin/unidades', {
+      const res = await fetch(`${API_URL}/admin/unidades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ empresa_id: idEfetivo, nome: novoNome, endereco: novoEndereco })
@@ -73,7 +74,7 @@ function AdminUnidades({ empresaId }) {
     if (!ok) return;
 
     try {
-      const res = await fetch(`http://localhost:4000/admin/unidades/${unidade.id}`, {
+      const res = await fetch(`${API_URL}/admin/unidades/${unidade.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ativo: !unidade.ativo })
@@ -98,7 +99,7 @@ function AdminUnidades({ empresaId }) {
     if (!ok) return;
 
     try {
-      const res = await fetch(`http://localhost:4000/admin/unidades/${unidade.id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/admin/unidades/${unidade.id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Unidade excluída.');
         carregar();

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '../components/Toast';
 import usePaletaTenant from '../hooks/usePaletaTenant';
 import MarcaPlataforma from '../components/MarcaPlataforma';
+import { API_URL } from '../services/api';
 
 function RecuperarSenha() {
   const [etapa, setEtapa] = useState(1); // 1: Email, 2: Código, 3: Nova Senha
@@ -18,7 +19,7 @@ function RecuperarSenha() {
   usePaletaTenant(empresa);
 
   useEffect(() => {
-    fetch(`http://localhost:4000/empresa/slug/${empresaSlug}`)
+    fetch(`${API_URL}/empresa/slug/${empresaSlug}`)
       .then((r) => r.json())
       .then(setEmpresa)
       .catch(() => {});
@@ -27,7 +28,7 @@ function RecuperarSenha() {
   // ENVIA O CÓDIGO
   const handleEnviarEmail = async (e) => {
     if (e) e.preventDefault();
-    const res = await fetch('http://localhost:4000/recuperar-senha', {
+    const res = await fetch(`${API_URL}/recuperar-senha`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
@@ -46,7 +47,7 @@ function RecuperarSenha() {
   // FINALIZA E TROCA A SENHA
   const handleFinalizarReset = async (e) => {
     if (e) e.preventDefault();
-    const res = await fetch('http://localhost:4000/resetar-senha', {
+    const res = await fetch(`${API_URL}/resetar-senha`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, codigo, novaSenha })

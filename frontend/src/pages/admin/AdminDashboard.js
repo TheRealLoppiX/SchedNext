@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import AgendaModal from './AgendaModal';
 import './AdminDashboard.css';
 import { obterTerminologia } from '../../utils/terminologia';
+import { API_URL } from '../../services/api';
 
 function AdminDashboard({ empresaId: propEmpresaId }) {
   const [stats, setStats] = useState({
@@ -37,7 +38,7 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
 
   useEffect(() => {
     if (!empresaIdEfetivo) return;
-    fetch(`http://localhost:4000/admin/empresa/${empresaIdEfetivo}`)
+    fetch(`${API_URL}/admin/empresa/${empresaIdEfetivo}`)
       .then(r => r.json())
       .then(d => {
         if (d?.vertical) setVertical(d.vertical);
@@ -51,7 +52,7 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
     setGerandoResumo(true);
     setResumoIA('');
     try {
-      const res = await fetch('http://localhost:4000/admin/ia/resumo-dashboard', {
+      const res = await fetch(`${API_URL}/admin/ia/resumo-dashboard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stats, nomeEmpresa })
@@ -120,9 +121,9 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
       if (dataInicio || dataFim) urlParams = `?dataInicio=${dataInicio}&dataFim=${dataFim}`;
       
       const [resStats, resBarbeiros, resAgs] = await Promise.all([
-        fetch(`http://localhost:4000/admin/stats/${empresaIdEfetivo}${urlParams}`),
-        fetch(`http://localhost:4000/admin/equipe/${empresaIdEfetivo}`),
-        fetch(`http://localhost:4000/admin/agendamentos/${empresaIdEfetivo}`)
+        fetch(`${API_URL}/admin/stats/${empresaIdEfetivo}${urlParams}`),
+        fetch(`${API_URL}/admin/equipe/${empresaIdEfetivo}`),
+        fetch(`${API_URL}/admin/agendamentos/${empresaIdEfetivo}`)
       ]);
 
       if (resStats.ok) setStats(await resStats.json());

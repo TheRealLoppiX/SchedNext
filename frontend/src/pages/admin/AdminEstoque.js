@@ -5,6 +5,7 @@ import useEscToClose from '../../hooks/useEscToClose';
 import LoadingButton from '../../components/LoadingButton';
 import EmptyState from '../../components/EmptyState';
 import { obterTerminologia } from '../../utils/terminologia';
+import { API_URL } from '../../services/api';
 
 function AdminEstoque({ empresaId }) {
   const toast = useToast();
@@ -49,7 +50,7 @@ function AdminEstoque({ empresaId }) {
   // --- BUSCA USUÁRIOS PARA O DROPDOWN ---
   useEffect(() => {
     if (!autorizado && idEfetivo) {
-        fetch(`http://localhost:4000/admin/estoque/usuarios/${idEfetivo}`)
+        fetch(`${API_URL}/admin/estoque/usuarios/${idEfetivo}`)
             .then(r => r.json())
             .then(data => setListaUsuarios(Array.isArray(data) ? data : []))
             .catch(err => console.error(err));
@@ -58,7 +59,7 @@ function AdminEstoque({ empresaId }) {
 
   useEffect(() => {
     if (!idEfetivo) return;
-    fetch(`http://localhost:4000/admin/empresa/${idEfetivo}`)
+    fetch(`${API_URL}/admin/empresa/${idEfetivo}`)
       .then(r => r.json())
       .then(d => d?.vertical && setVertical(d.vertical))
       .catch(() => {});
@@ -71,7 +72,7 @@ function AdminEstoque({ empresaId }) {
 
     setEntrando(true);
     try {
-      const res = await fetch('http://localhost:4000/admin/estoque/login', {
+      const res = await fetch(`${API_URL}/admin/estoque/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ empresa_id: idEfetivo, ...credenciais })
@@ -94,7 +95,7 @@ function AdminEstoque({ empresaId }) {
     e.preventDefault();
     setCriandoSublogin(true);
     try {
-      const res = await fetch('http://localhost:4000/admin/estoque/criar-sublogin', {
+      const res = await fetch(`${API_URL}/admin/estoque/criar-sublogin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ empresa_id: idEfetivo, ...formSublogin })
@@ -104,7 +105,7 @@ function AdminEstoque({ empresaId }) {
         setModalSublogin(false);
         setFormSublogin({ senha_admin: '', novo_nome: '', nova_senha: '' });
         // Atualiza a lista de usuários no background
-        fetch(`http://localhost:4000/admin/estoque/usuarios/${idEfetivo}`).then(r => r.json()).then(setListaUsuarios);
+        fetch(`${API_URL}/admin/estoque/usuarios/${idEfetivo}`).then(r => r.json()).then(setListaUsuarios);
       } else {
         toast.error("Senha do Admin incorreta.");
       }
@@ -119,7 +120,7 @@ function AdminEstoque({ empresaId }) {
   const carregarProdutos = useCallback(async () => {
     if (!idEfetivo) return;
     try {
-      const res = await fetch(`http://localhost:4000/admin/estoque/${idEfetivo}`);
+      const res = await fetch(`${API_URL}/admin/estoque/${idEfetivo}`);
       const data = await res.json();
       setProdutos(Array.isArray(data) ? data : []);
     } catch (err) { console.error("Erro ao carregar estoque:", err); }
@@ -129,7 +130,7 @@ function AdminEstoque({ empresaId }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const url = editandoId ? `http://localhost:4000/admin/estoque/${editandoId}` : 'http://localhost:4000/admin/estoque';
+    const url = editandoId ? `${API_URL}/admin/estoque/${editandoId}` : `${API_URL}/admin/estoque`;
     setSalvandoProduto(true);
     try {
       const res = await fetch(url, {
@@ -163,7 +164,7 @@ function AdminEstoque({ empresaId }) {
     if (!ok) return;
 
     try {
-      const res = await fetch(`http://localhost:4000/admin/estoque/${id}/status`, {
+      const res = await fetch(`${API_URL}/admin/estoque/${id}/status`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ativo: !ativoSeguro })
       });
       if (res.ok) {
@@ -182,7 +183,7 @@ function AdminEstoque({ empresaId }) {
     if (!ok) return;
 
     try {
-      const res = await fetch(`http://localhost:4000/admin/estoque/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/admin/estoque/${id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success("Produto excluído.");
         carregarProdutos();
@@ -201,7 +202,7 @@ function AdminEstoque({ empresaId }) {
 
     setMovimentando(true);
     try {
-      const res = await fetch('http://localhost:4000/admin/estoque/movimentar', {
+      const res = await fetch(`${API_URL}/admin/estoque/movimentar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -225,7 +226,7 @@ function AdminEstoque({ empresaId }) {
 
   const buscarRelatorio = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/admin/estoque/relatorio/${idEfetivo}?inicio=${filtroRelatorio.inicio}&fim=${filtroRelatorio.fim}`);
+        const res = await fetch(`${API_URL}/admin/estoque/relatorio/${idEfetivo}?inicio=${filtroRelatorio.inicio}&fim=${filtroRelatorio.fim}`);
         const data = await res.json();
         setDadosRelatorio(Array.isArray(data) ? data : []);
       } catch (err) { toast.error("Não foi possível buscar o relatório."); }

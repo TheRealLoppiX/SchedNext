@@ -3,6 +3,7 @@ import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import LoadingButton from '../../components/LoadingButton';
 import EmptyState from '../../components/EmptyState';
+import { API_URL } from '../../services/api';
 
 function AdminAcoes() {
     const toast = useToast();
@@ -20,9 +21,9 @@ function AdminAcoes() {
         if (!empresaId) { setCarregando(false); return; }
         try {
             const [resCamp, resServ, resProd] = await Promise.all([
-                fetch(`http://localhost:4000/admin/acoes/${empresaId}`),
-                fetch(`http://localhost:4000/admin/servicos?empresa=${empresaId}`),
-                fetch(`http://localhost:4000/admin/estoque/${empresaId}`)
+                fetch(`${API_URL}/admin/acoes/${empresaId}`),
+                fetch(`${API_URL}/admin/servicos?empresa=${empresaId}`),
+                fetch(`${API_URL}/admin/estoque/${empresaId}`)
             ]);
             setCampanhas(await resCamp.json() || []);
             setServicos(await resServ.json() || []);
@@ -47,7 +48,7 @@ function AdminAcoes() {
 
         setLancando(true);
         try {
-            const res = await fetch('http://localhost:4000/admin/acoes', {
+            const res = await fetch(`${API_URL}/admin/acoes`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...form, empresa_id: empresaId, premio_descritivo: premioFinal })
             });
@@ -67,7 +68,7 @@ function AdminAcoes() {
 
     const alternarStatus = async (id, statusAtual) => {
         try {
-            const res = await fetch(`http://localhost:4000/admin/acoes/${id}/status`, {
+            const res = await fetch(`${API_URL}/admin/acoes/${id}/status`, {
                 method: 'PUT', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ empresa_id: empresaId, ativar: !statusAtual })
             });
@@ -87,7 +88,7 @@ function AdminAcoes() {
         if (!ok) return;
 
         try {
-            const res = await fetch(`http://localhost:4000/admin/acoes/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${API_URL}/admin/acoes/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 carregarDados();
                 toast.success('Ação excluída.');

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { obterTerminologia } from '../../utils/terminologia';
+import { API_URL } from '../../services/api';
 
 function GestaoServicos({ empresaId }) {
   const confirmar = useConfirm();
@@ -14,7 +15,7 @@ function GestaoServicos({ empresaId }) {
   const termos = obterTerminologia(vertical);
 
   const carregarServicos = () => {
-    fetch(`http://localhost:4000/servicos-gestao/${empresaId}`)
+    fetch(`${API_URL}/servicos-gestao/${empresaId}`)
       .then(res => res.json())
       .then(data => setServicos(data));
   };
@@ -25,7 +26,7 @@ function GestaoServicos({ empresaId }) {
 
   useEffect(() => {
     if (!empresaId) return;
-    fetch(`http://localhost:4000/admin/empresa/${empresaId}`)
+    fetch(`${API_URL}/admin/empresa/${empresaId}`)
       .then(r => r.json())
       .then(d => {
         if (d?.vertical) setVertical(d.vertical);
@@ -38,7 +39,7 @@ function GestaoServicos({ empresaId }) {
     if (!formData.nome.trim()) return mostrarFeedback('Digite o nome do serviço antes de gerar a descrição.', 'erro');
     setGerandoDescricao(true);
     try {
-      const res = await fetch('http://localhost:4000/admin/ia/descricao-servico', {
+      const res = await fetch(`${API_URL}/admin/ia/descricao-servico`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome: formData.nome, vertical: termos.local })
@@ -64,8 +65,8 @@ function GestaoServicos({ empresaId }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     const url = editandoId 
-      ? `http://localhost:4000/servicos-gestao/${editandoId}` 
-      : 'http://localhost:4000/servicos-gestao';
+      ? `${API_URL}/servicos-gestao/${editandoId}` 
+      : `${API_URL}/servicos-gestao`;
     
     fetch(url, {
       method: editandoId ? 'PUT' : 'POST',
@@ -94,7 +95,7 @@ function GestaoServicos({ empresaId }) {
     const ok = await confirmar("Excluir este serviço definitivamente?", { confirmText: 'Excluir', danger: true });
     if (!ok) return;
 
-    fetch(`http://localhost:4000/servicos-gestao/${id}`, { method: 'DELETE' })
+    fetch(`${API_URL}/servicos-gestao/${id}`, { method: 'DELETE' })
       .then(res => {
         if (res.ok) {
           mostrarFeedback("Serviço excluído.", "sucesso");
@@ -119,7 +120,7 @@ function GestaoServicos({ empresaId }) {
       });
       if (!ok) return;
 
-      fetch(`http://localhost:4000/servicos-gestao/${id}/status`, {
+      fetch(`${API_URL}/servicos-gestao/${id}/status`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ativo: !ativoSeguro })

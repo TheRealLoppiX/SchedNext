@@ -5,6 +5,7 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import useEscToClose from '../../hooks/useEscToClose';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
 import LoadingButton from '../../components/LoadingButton';
+import { API_URL } from '../../services/api';
 
 function AdminClientes({ empresaId }) {
     const confirmar = useConfirm();
@@ -28,7 +29,7 @@ function AdminClientes({ empresaId }) {
 
     useEffect(() => {
         if (!idEfetivo) return;
-        fetch(`http://localhost:4000/admin/empresa/${idEfetivo}`)
+        fetch(`${API_URL}/admin/empresa/${idEfetivo}`)
             .then(r => r.json())
             .then(d => {
                 setPermiteIA(!!d?.plano_plataforma?.permite_ia);
@@ -41,7 +42,7 @@ function AdminClientes({ empresaId }) {
         setGerandoSugestao(true);
         setSugestaoIA('');
         try {
-            const res = await fetch('http://localhost:4000/admin/ia/sugestao-followup', {
+            const res = await fetch(`${API_URL}/admin/ia/sugestao-followup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ clienteNome: (cliente.nome_completo || '').split(' ')[0], nomeEmpresa })
@@ -59,8 +60,8 @@ function AdminClientes({ empresaId }) {
         if (!idEfetivo) return;
         try {
             const [resC, resP] = await Promise.all([
-                fetch(`http://localhost:4000/admin/clientes/${idEfetivo}`),
-                fetch(`http://localhost:4000/admin/assinaturas/${idEfetivo}`)
+                fetch(`${API_URL}/admin/clientes/${idEfetivo}`),
+                fetch(`${API_URL}/admin/assinaturas/${idEfetivo}`)
             ]);
             const dataC = await resC.json();
             const dataP = await resP.json();
@@ -81,7 +82,7 @@ function AdminClientes({ empresaId }) {
         setLoadingId(cliente.id);
         const novoStatus = !cliente.assinante;
         try {
-            const res = await fetch(`http://localhost:4000/admin/clientes/${cliente.id}/assinante`, {
+            const res = await fetch(`${API_URL}/admin/clientes/${cliente.id}/assinante`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ assinante: novoStatus })
@@ -100,7 +101,7 @@ function AdminClientes({ empresaId }) {
     const enviarFollowUp = async (cliente, tipo) => {
         setLoadingId(cliente.id + tipo);
         try {
-            const res = await fetch('http://localhost:4000/admin/clientes/followup', {
+            const res = await fetch(`${API_URL}/admin/clientes/followup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ cliente_id: cliente.id, tipo, empresa_id: idEfetivo })
@@ -116,7 +117,7 @@ function AdminClientes({ empresaId }) {
 
     const vincularPlano = async (clienteId, planoId) => {
         try {
-            const res = await fetch(`http://localhost:4000/admin/clientes/${clienteId}/plano`, {
+            const res = await fetch(`${API_URL}/admin/clientes/${clienteId}/plano`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ plano_id: planoId || null })
@@ -137,7 +138,7 @@ function AdminClientes({ empresaId }) {
         }
         try {
             // 1. Salva dados pessoais
-            const res = await fetch(`http://localhost:4000/admin/clientes/${clienteSelecionado.id}`, {
+            const res = await fetch(`${API_URL}/admin/clientes/${clienteSelecionado.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -151,7 +152,7 @@ function AdminClientes({ empresaId }) {
             if (!res.ok) return mostrarFeedback('Erro ao salvar dados.', 'erro');
 
             // 2. Salva plano/assinatura (so aplicado ao clicar em Salvar)
-            await fetch(`http://localhost:4000/admin/clientes/${clienteSelecionado.id}/plano`, {
+            await fetch(`${API_URL}/admin/clientes/${clienteSelecionado.id}/plano`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ plano_id: clienteSelecionado.plano_id || null })
@@ -171,7 +172,7 @@ function AdminClientes({ empresaId }) {
         });
         if (!ok) return;
         try {
-            const res = await fetch(`http://localhost:4000/admin/clientes/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${API_URL}/admin/clientes/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 mostrarFeedback('Cliente excluído.');
                 setClienteSelecionado(null);
@@ -228,7 +229,7 @@ function AdminClientes({ empresaId }) {
         setProcessandoLote(true);
         try {
             const resultados = await Promise.all(clientesSelecionadosObjs.map(c =>
-                fetch('http://localhost:4000/admin/clientes/followup', {
+                fetch(`${API_URL}/admin/clientes/followup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ cliente_id: c.id, tipo: 'saudade', empresa_id: idEfetivo })
@@ -255,7 +256,7 @@ function AdminClientes({ empresaId }) {
         setProcessandoLote(true);
         try {
             const resultados = await Promise.all(selecionados.map(id =>
-                fetch(`http://localhost:4000/admin/clientes/${id}`, { method: 'DELETE' }).then(r => r.ok)
+                fetch(`${API_URL}/admin/clientes/${id}`, { method: 'DELETE' }).then(r => r.ok)
             ));
             const sucesso = resultados.filter(Boolean).length;
             mostrarFeedback(`${sucesso} de ${resultados.length} clientes excluídos.`, sucesso === resultados.length ? 'sucesso' : 'erro');

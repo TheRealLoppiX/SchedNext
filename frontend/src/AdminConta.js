@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from './components/Toast';
 import { useConfirm } from './components/ConfirmDialog';
 import { obterTerminologia } from './utils/terminologia';
+import { API_URL } from './services/api';
 
 const HORARIOS_PADRAO = {
     0: { aberto: false, abre: '08:00', fecha: '18:00', label: 'Domingo' },
@@ -34,7 +35,7 @@ function AdminConta({ empresaId }) {
 
     const carregarDados = useCallback(async () => {
         try {
-            const res = await fetch(`http://localhost:4000/admin/empresa/${idEfetivo}`);
+            const res = await fetch(`${API_URL}/admin/empresa/${idEfetivo}`);
             const data = await res.json();
             
             if (data) {
@@ -63,7 +64,7 @@ function AdminConta({ empresaId }) {
     useEffect(() => { carregarDados(); }, [carregarDados]);
 
     useEffect(() => {
-        fetch('http://localhost:4000/planos-plataforma')
+        fetch(`${API_URL}/planos-plataforma`)
             .then(r => r.json())
             .then(data => setPlanosDisponiveis(Array.isArray(data) ? data : []))
             .catch(() => {});
@@ -73,7 +74,7 @@ function AdminConta({ empresaId }) {
         if (!planoEscolhidoId || planoEscolhidoId === assinatura?.plano?.id) return;
         setProcessandoAssinatura(true);
         try {
-            const res = await fetch('http://localhost:4000/admin/assinatura-plataforma/iniciar-upgrade', {
+            const res = await fetch(`${API_URL}/admin/assinatura-plataforma/iniciar-upgrade`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ plano_plataforma_id: planoEscolhidoId })
@@ -95,7 +96,7 @@ function AdminConta({ empresaId }) {
     const cancelarCobranca = async () => {
         setProcessandoAssinatura(true);
         try {
-            const res = await fetch('http://localhost:4000/admin/assinatura-plataforma/cancelar-cobranca', { method: 'POST' });
+            const res = await fetch(`${API_URL}/admin/assinatura-plataforma/cancelar-cobranca`, { method: 'POST' });
             const data = await res.json();
             if (res.ok) { toast.success(data.message); carregarDados(); }
             else toast.error(data.error || 'Não foi possível cancelar a cobrança.');
@@ -109,7 +110,7 @@ function AdminConta({ empresaId }) {
     const reativarCobranca = async () => {
         setProcessandoAssinatura(true);
         try {
-            const res = await fetch('http://localhost:4000/admin/assinatura-plataforma/reativar-cobranca', { method: 'POST' });
+            const res = await fetch(`${API_URL}/admin/assinatura-plataforma/reativar-cobranca`, { method: 'POST' });
             const data = await res.json();
             if (res.ok) { toast.success(data.message); carregarDados(); }
             else toast.error(data.error || 'Não foi possível reativar a cobrança.');
@@ -129,7 +130,7 @@ function AdminConta({ empresaId }) {
         if (!ok) return;
         setProcessandoAssinatura(true);
         try {
-            const res = await fetch('http://localhost:4000/admin/assinatura-plataforma/cancelar-plano', { method: 'POST' });
+            const res = await fetch(`${API_URL}/admin/assinatura-plataforma/cancelar-plano`, { method: 'POST' });
             const data = await res.json();
             if (res.ok) { toast.success(data.message); carregarDados(); }
             else toast.error(data.error || 'Não foi possível cancelar o plano.');
@@ -173,7 +174,7 @@ function AdminConta({ empresaId }) {
         e.preventDefault();
         setSalvando(true);
         try {
-            const res = await fetch('http://localhost:4000/admin/empresa/atualizar', {
+            const res = await fetch(`${API_URL}/admin/empresa/atualizar`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

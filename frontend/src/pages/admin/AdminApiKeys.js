@@ -3,6 +3,7 @@ import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import LoadingButton from '../../components/LoadingButton';
 import EmptyState from '../../components/EmptyState';
+import { API_URL } from '../../services/api';
 
 function AdminApiKeys({ empresaId }) {
   const toast = useToast();
@@ -21,8 +22,8 @@ function AdminApiKeys({ empresaId }) {
     if (!idEfetivo) return setCarregando(false);
     try {
       const [resEmpresa, resChaves] = await Promise.all([
-        fetch(`http://localhost:4000/admin/empresa/${idEfetivo}`),
-        fetch(`http://localhost:4000/admin/api-keys/${idEfetivo}`)
+        fetch(`${API_URL}/admin/empresa/${idEfetivo}`),
+        fetch(`${API_URL}/admin/api-keys/${idEfetivo}`)
       ]);
       const dadosEmpresa = await resEmpresa.json();
       const dadosChaves = await resChaves.json();
@@ -42,7 +43,7 @@ function AdminApiKeys({ empresaId }) {
     if (!novoNome.trim()) return toast.error('Dê um nome pra essa chave.');
     setGerando(true);
     try {
-      const res = await fetch('http://localhost:4000/admin/api-keys', {
+      const res = await fetch(`${API_URL}/admin/api-keys`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ empresa_id: idEfetivo, nome: novoNome })
@@ -71,7 +72,7 @@ function AdminApiKeys({ empresaId }) {
     if (!ok) return;
 
     try {
-      const res = await fetch(`http://localhost:4000/admin/api-keys/${chave.id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/admin/api-keys/${chave.id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Chave revogada.');
         carregar();

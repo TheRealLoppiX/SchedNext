@@ -4,6 +4,7 @@ import { emailValido } from '../../utils/validacao';
 import { useToast } from '../../components/Toast';
 import useEscToClose from '../../hooks/useEscToClose';
 import LoadingButton from '../../components/LoadingButton';
+import { API_URL } from '../../services/api';
 
 function AgendaModal({ barbeiro, empresaId, dataSelecionada, horaPreSelecionada, agendamentoCheckout, onClose }) {
     const toast = useToast();
@@ -64,9 +65,9 @@ function AgendaModal({ barbeiro, empresaId, dataSelecionada, horaPreSelecionada,
         if (!empresaId || !barbeiro?.id || !dataSelecionada) return;
         try {
             const [resAgs, resServicos, resEstoque] = await Promise.all([
-                fetch(`http://localhost:4000/admin/agendamentos/${empresaId}?dataInicio=${dataSelecionada}&dataFim=${dataSelecionada}`),
-                fetch(`http://localhost:4000/admin/servicos?empresa=${empresaId}`),
-                fetch(`http://localhost:4000/admin/estoque/${empresaId}`)
+                fetch(`${API_URL}/admin/agendamentos/${empresaId}?dataInicio=${dataSelecionada}&dataFim=${dataSelecionada}`),
+                fetch(`${API_URL}/admin/servicos?empresa=${empresaId}`),
+                fetch(`${API_URL}/admin/estoque/${empresaId}`)
             ]);
 
             if (resAgs.ok) {
@@ -84,7 +85,7 @@ function AgendaModal({ barbeiro, empresaId, dataSelecionada, horaPreSelecionada,
         if (buscaCliente.length > 2) {
             const delayDebounceFn = setTimeout(async () => {
                 try {
-                    const res = await fetch(`http://localhost:4000/admin/buscar-clientes?q=${encodeURIComponent(buscaCliente)}&empresa_id=${empresaId}`);
+                    const res = await fetch(`${API_URL}/admin/buscar-clientes?q=${encodeURIComponent(buscaCliente)}&empresa_id=${empresaId}`);
                     if (res.ok) {
                         const data = await res.json();
                         setClientesEncontrados(Array.isArray(data) ? data : []);
@@ -141,7 +142,7 @@ const toggleServico = (servico) => {
 
         if (!clienteSelecionado) {
             try {
-                const resCriar = await fetch('http://localhost:4000/admin/clientes/rapido', {
+                const resCriar = await fetch(`${API_URL}/admin/clientes/rapido`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -168,7 +169,7 @@ const toggleServico = (servico) => {
         }
 
         try {
-            const resAgendar = await fetch('http://localhost:4000/admin/agendar-encaixe', {
+            const resAgendar = await fetch(`${API_URL}/admin/agendar-encaixe`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -211,7 +212,7 @@ const toggleServico = (servico) => {
 
         setAtualizandoStatus(true);
         try {
-            const res = await fetch(`http://localhost:4000/admin/agendamentos/${id}/status`, {
+            const res = await fetch(`${API_URL}/admin/agendamentos/${id}/status`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(bodyData)
@@ -250,7 +251,7 @@ const toggleServico = (servico) => {
             const produtosVendidos = extrasSelecionados.filter(e => e.tipo === 'produto');
             const servicosAdd = extrasSelecionados.filter(e => e.tipo === 'servico');
 
-            const res = await fetch('http://localhost:4000/admin/finalizar-servico-checkout', {
+            const res = await fetch(`${API_URL}/admin/finalizar-servico-checkout`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -280,7 +281,7 @@ const toggleServico = (servico) => {
     // VALOR BASE AGORA LÊ CORRETAMENTE
     useEffect(() => {
         if (!modalFinalizar?.id) { setAssinaturaCheckout({ assinante: false, servicos_ids: [], servicos_agendados_ids: [] }); return; }
-        fetch(`http://localhost:4000/admin/agendamento-usuario/${modalFinalizar.id}`)
+        fetch(`${API_URL}/admin/agendamento-usuario/${modalFinalizar.id}`)
             .then(r => r.json())
             .then(d => {
                 console.log('DIAGNOSTICO >>> agendamento_id:', modalFinalizar.id, '| empresaId (modal):', empresaId, '| resposta:', d);
