@@ -15,7 +15,7 @@ function GestaoServicos({ empresaId }) {
   const termos = obterTerminologia(vertical);
 
   const carregarServicos = () => {
-    fetch(`${API_URL}/servicos-gestao/${empresaId}`)
+    fetch(`${API_URL}/admin/servicos-gestao`)
       .then(res => res.json())
       .then(data => setServicos(data));
   };
@@ -64,14 +64,14 @@ function GestaoServicos({ empresaId }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const url = editandoId 
-      ? `${API_URL}/servicos-gestao/${editandoId}` 
-      : `${API_URL}/servicos-gestao`;
-    
+    const url = editandoId
+      ? `${API_URL}/admin/servicos-gestao/${editandoId}`
+      : `${API_URL}/admin/servicos-gestao`;
+
     fetch(url, {
       method: editandoId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...formData, empresa_id: empresaId })
+      body: JSON.stringify(formData)
     })
     .then(res => {
       if (res.ok) {
@@ -95,7 +95,7 @@ function GestaoServicos({ empresaId }) {
     const ok = await confirmar("Excluir este serviço definitivamente?", { confirmText: 'Excluir', danger: true });
     if (!ok) return;
 
-    fetch(`${API_URL}/servicos-gestao/${id}`, { method: 'DELETE' })
+    fetch(`${API_URL}/admin/servicos-gestao/${id}`, { method: 'DELETE' })
       .then(res => {
         if (res.ok) {
           mostrarFeedback("Serviço excluído.", "sucesso");
@@ -120,7 +120,7 @@ function GestaoServicos({ empresaId }) {
       });
       if (!ok) return;
 
-      fetch(`${API_URL}/servicos-gestao/${id}/status`, {
+      fetch(`${API_URL}/admin/servicos-gestao/${id}/status`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ativo: !ativoSeguro })
@@ -228,7 +228,7 @@ function GestaoServicos({ empresaId }) {
               {editandoId ? 'Atualizar Serviço' : 'Cadastrar Serviço'}
             </button>
             {editandoId && (
-              <button type="button" onClick={() => {setEditandoId(null); setFormData({nome:'', valor:'', duracao:'30'})}} style={styles.btnCancelar}>
+              <button type="button" onClick={() => {setEditandoId(null); setFormData({nome:'', valor:'', duracao:'30', descricao:''})}} style={styles.btnCancelar}>
                 Cancelar
               </button>
             )}

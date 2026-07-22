@@ -130,7 +130,7 @@ function AdminUnidades({ empresaId }) {
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>🏢 Unidades</h2>
-      <p style={styles.subtitle}>Gerencie as filiais do seu negócio — cada uma com sua própria equipe.</p>
+      <p style={styles.subtitle}>Gerencie as filiais do seu negócio, cada uma com sua própria equipe.</p>
 
       <form onSubmit={cadastrarUnidade} style={styles.cardForm}>
         <div style={styles.formRow}>

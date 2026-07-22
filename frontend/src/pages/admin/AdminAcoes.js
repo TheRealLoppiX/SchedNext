@@ -3,6 +3,7 @@ import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import LoadingButton from '../../components/LoadingButton';
 import EmptyState from '../../components/EmptyState';
+import { formatarDataSemFuso } from '../../utils/dataSemFuso';
 import { API_URL } from '../../services/api';
 
 function AdminAcoes() {
@@ -236,7 +237,7 @@ function AdminAcoes() {
                         ) : campanhas.map(c => (
                             <tr key={c.id} style={{...s.tr, opacity: c.ativa ? 1 : 0.6}}>
                                 <td style={s.td}><b>{c.nome}</b></td>
-                                <td style={s.td}>{new Date(c.data_inicio).toLocaleDateString('pt-BR')} a {new Date(c.data_fim).toLocaleDateString('pt-BR')}</td>
+                                <td style={s.td}>{formatarDataSemFuso(c.data_inicio)} a {formatarDataSemFuso(c.data_fim)}</td>
                                 <td style={s.td}>{c.cortes_necessarios}x (Min: R${c.valor_minimo})</td>
                                 <td style={{...s.td, color: '#059669', fontWeight: 'bold'}}>{c.premio_descritivo}</td>
                                 <td style={s.td}>

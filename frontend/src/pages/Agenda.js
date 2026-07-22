@@ -47,7 +47,10 @@ function Agenda() {
   
   const [notificacoes, setNotificacoes] = useState([]);
   const [exibirNotificacoes, setExibirNotificacoes] = useState(false);
-  const userId = localStorage.getItem('usuario_id') || 1;
+  // Sem fallback: esta página só renderiza dentro do Layout, que já redireciona pro login
+  // quando não há usuario_id. Um fallback pro ID 1 faria qualquer corrida nesse redirect
+  // atribuir o agendamento ao cliente de ID 1 (de qualquer tenant, já que IDs são globais).
+  const userId = localStorage.getItem('usuario_id');
 
   // Verifica se o usuario e assinante
   useEffect(() => {
@@ -187,14 +190,28 @@ function Agenda() {
     return temposParaExcluir;
   };
 
+  // Horário de fechamento real do dia (configurado em AdminConta), com 19:00 só como
+  // fallback pra quando a empresa ainda não configurou horários, usado tanto aqui quanto em
+  // gerarSlotsHorario, que já tinha essa mesma lógica.
+  const obterFechamentoDoDia = (data) => {
+    let hFecha = 19, mFecha = 0;
+    if (empresaHorarios) {
+      const regra = empresaHorarios[data.getDay()];
+      if (regra && regra.aberto && regra.fecha) {
+        [hFecha, mFecha] = regra.fecha.split(':').map(Number);
+      }
+    }
+    return setHours(setMinutes(new Date(data), mFecha), hFecha);
+  };
+
   // --- VALIDAÇÃO DE CONFLITO ---
   const erroConflito = (() => {
     if (!horaSelecionada || carrinho.length === 0) return null;
     const inicioDesejado = startOfMinute(dataHora);
     const fimDesejado = addMinutes(inicioDesejado, duracaoTotal);
-    const limiteExpediente = setHours(setMinutes(new Date(dataHora), 0), 19);
-    
-    if (isAfter(fimDesejado, limiteExpediente)) return "O serviço ultrapassa o expediente (19:00)";
+    const limiteExpediente = obterFechamentoDoDia(dataHora);
+
+    if (isAfter(fimDesejado, limiteExpediente)) return `O serviço ultrapassa o expediente (${format(limiteExpediente, 'HH:mm')})`;
     
     const ocupados = renderExcludeTimes();
     for (let i = 0; i < duracaoTotal; i += 15) {
@@ -241,7 +258,7 @@ function Agenda() {
                 });
             });
       } else { 
-          setMensagem(`❌ Erro: ${data.error || 'Horário indisponível'}`); 
+          setMensagem(`Erro: ${data.error || 'Horário indisponível'}`);
       }
     } catch (err) {
       setMensagem('Erro de conexão. Tente novamente.');
@@ -331,8 +348,11 @@ function Agenda() {
             <button
               onClick={() => {
                 // Atualiza a URL via router (não window.history) para o React re-renderizar
-                // sem precisar de reload — preserva o carrinho e o restante do estado.
-                navigate(`${location.pathname}?barbeiro=${barbeiroId}&data=${format(dataHora, 'yyyy-MM-dd')}`, { replace: true });
+                // sem precisar de reload. Preserva o carrinho e o restante do estado. Mantém
+                // "unidade" na URL: sem isso, o próximo agendamento ia com unidade_id null,
+                // mesmo o cliente tendo escolhido uma unidade específica em Barbeiros.js.
+                const unidadeParam = unidadeId ? `&unidade=${unidadeId}` : '';
+                navigate(`${location.pathname}?barbeiro=${barbeiroId}&data=${format(dataHora, 'yyyy-MM-dd')}${unidadeParam}`, { replace: true });
                 setHoraSelecionada(null);
               }}
               style={styles.btnTrocarHorario}
@@ -488,8 +508,14 @@ function Agenda() {
           );
         })()}
 
-        <button 
-          onClick={confirmarAgendamento} 
+        {erroConflito && (
+          <p style={{ fontSize: '13px', color: '#991b1b', margin: '0 0 10px 0', textAlign: 'left' }}>
+            ⚠️ {erroConflito}
+          </p>
+        )}
+
+        <button
+          onClick={confirmarAgendamento}
           disabled={carrinho.length === 0 || !!erroConflito}
           style={{ ...styles.confirmBtn, background: (carrinho.length > 0 && !erroConflito) ? 'linear-gradient(135deg, #4c74f0, #2554eb)' : '#ccc', color: (carrinho.length > 0 && !erroConflito) ? '#ffffff' : '#fff' }}
         >

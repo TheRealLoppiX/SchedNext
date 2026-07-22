@@ -4,6 +4,7 @@ import { formatarTelefone } from '../utils/telefone';
 import { useToast } from '../components/Toast';
 import LoadingButton from '../components/LoadingButton';
 import { obterTerminologia } from '../utils/terminologia';
+import { formatarDataSemFuso } from '../utils/dataSemFuso';
 import { API_URL } from '../services/api';
 
 function ModalAvaliacao({ isOpen, onClose, onSubmit, barbeiroNome }) {
@@ -281,7 +282,7 @@ function AgendamentosView({ userId }) {
       {/* TABELA DE AGENDAMENTOS */}
       <div style={styles.tabela}>
         {lista.map((ag, i) => {
-          // ATENÇÃO: data_hora vem do banco "ingênuo" — os números representam o horário de
+          // ATENÇÃO: data_hora vem do banco "ingênuo", os números representam o horário de
           // parede pretendido (ex: 09:00), só que salvos com rótulo UTC (+00), sem conversão real
           // de fuso. Por isso NUNCA usar toLocaleDateString/toLocaleTimeString aqui (eles fariam
           // uma conversão de fuso de verdade e mostrariam 3h a menos). Extraímos os componentes
@@ -905,7 +906,7 @@ function FidelidadeView({ userId }) {
   return (
     <div style={styles.cardFidelidadeNovo}>
       <div style={styles.fidelidadeHeader}>
-        <h3 style={{ margin: 0, fontSize: '18px', color: '#fff' }}>⭐ {info.nome}</h3>
+        <h3 style={{ margin: 0, fontSize: '18px', color: '#fff' }}>{info.nome}</h3>
         <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '12px', fontWeight: 'bold' }}>
           Ação Ativa
         </span>
@@ -915,12 +916,12 @@ function FidelidadeView({ userId }) {
         Complete <b>{info.objetivo} cortes</b> e ganhe:
       </p>
       <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#ffc107', marginBottom: '15px' }}>
-        🎁 {info.premio}
+        {info.premio}
       </div>
 
       <div style={styles.fidelidadeRegras}>
-        <small>📅 Válido até: {new Date(info.data_fim).toLocaleDateString('pt-BR')}</small>
-        {info.valor_minimo > 0 && <small>💰 Serviços acima de: R$ {info.valor_minimo}</small>}
+        <small>Válido até: {formatarDataSemFuso(info.data_fim)}</small>
+        {info.valor_minimo > 0 && <small>Serviços acima de: R$ {info.valor_minimo}</small>}
       </div>
 
       <div style={styles.barraProgressoNova}>
@@ -930,7 +931,7 @@ function FidelidadeView({ userId }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '13px' }}>
         <span style={{ color: '#ccc' }}>{info.progresso} / {info.objetivo} concluídos</span>
         <span style={{ color: info.ganhouPremio ? '#28a745' : '#ffc107', fontWeight: 'bold' }}>
-          {info.ganhouPremio ? "🎉 PRÊMIO LIBERADO!" : `Faltam ${info.faltam}`}
+          {info.ganhouPremio ? "PRÊMIO LIBERADO!" : `Faltam ${info.faltam}`}
         </span>
       </div>
     </div>

@@ -1,5 +1,5 @@
 :root {
-  /* Paleta padrão da plataforma (plano Grátis) — vermelho, azul e branco.
+  /* Paleta padrão da plataforma (plano Grátis): vermelho, azul e branco.
      Planos pagos poderão sobrescrever estes tokens por tenant (ver plano de produto, §7). */
   --bb-black: #ffffff;
   --bb-black-soft: #f4f6fb;

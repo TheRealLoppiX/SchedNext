@@ -28,13 +28,17 @@ function RecuperarSenha() {
   // ENVIA O CÓDIGO
   const handleEnviarEmail = async (e) => {
     if (e) e.preventDefault();
-    const res = await fetch(`${API_URL}/recuperar-senha`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    if (res.ok) { setEtapa(2); setErro(''); } 
-    else { setErro('E-mail não encontrado.'); }
+    try {
+      const res = await fetch(`${API_URL}/recuperar-senha`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      if (res.ok) { setEtapa(2); setErro(''); }
+      else { setErro('E-mail não encontrado.'); }
+    } catch (err) {
+      setErro('Erro de conexão. Tente novamente.');
+    }
   };
 
   // APENAS AVANÇA PARA A SENHA (A validação real ocorre no passo final pelo backend)
@@ -47,18 +51,22 @@ function RecuperarSenha() {
   // FINALIZA E TROCA A SENHA
   const handleFinalizarReset = async (e) => {
     if (e) e.preventDefault();
-    const res = await fetch(`${API_URL}/resetar-senha`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, codigo, novaSenha })
-    });
+    try {
+      const res = await fetch(`${API_URL}/resetar-senha`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, codigo, novaSenha })
+      });
 
-    if (res.ok) {
-      toast.success('Senha alterada! Faça login agora.');
-      navigate(`/${empresaSlug}/login`);
-    } else {
-      setErro('Código inválido. Tente novamente do início.');
-      setEtapa(1); // Volta pro início se o código estiver errado
+      if (res.ok) {
+        toast.success('Senha alterada! Faça login agora.');
+        navigate(`/${empresaSlug}/login`);
+      } else {
+        setErro('Código inválido. Tente novamente do início.');
+        setEtapa(1); // Volta pro início se o código estiver errado
+      }
+    } catch (err) {
+      setErro('Erro de conexão. Tente novamente.');
     }
   };
 

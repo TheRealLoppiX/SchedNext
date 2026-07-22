@@ -110,14 +110,14 @@
 .ln-faq-item { transition: padding-left 0.25s ease, border-color 0.25s ease; cursor: default; }
 .ln-faq-item:hover { padding-left: 8px; border-color: var(--bb-gold); }
 
-/* Palavra rotativa no eyebrow do hero — largura reservada pra não "pular" o texto
+/* Palavra rotativa no eyebrow do hero: largura reservada pra não "pular" o texto
    ao redor quando a palavra trocar de tamanho. */
 .ln-rotativo-wrap {
   display: inline-block;
   min-width: 250px;
   text-align: left;
   vertical-align: top;
-  color: var(--bb-gold);
+  color: var(--bb-gold-light);
 }
 .ln-rotativo {
   display: inline-block;

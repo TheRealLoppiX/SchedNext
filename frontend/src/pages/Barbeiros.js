@@ -58,15 +58,22 @@ function Barbeiros() {
     fetch(`${API_URL}/barbeiros?empresa=${empresaSlug}${query}`)
       .then(res => res.json())
       .then(data => {
+        // Sem essa validação, uma resposta de erro (objeto, não array) quebrava o próximo
+        // efeito na hora de rodar `barbeiros.filter(...)`.
+        if (!Array.isArray(data)) {
+          setBarbeiros([]);
+          return;
+        }
         setBarbeiros(data);
         const nomeFmt = data[0]?.nome_empresa || empresaSlug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         setNomeEmpresa(nomeFmt);
-        
+
         // Lê os horários configurados no AdminConta e salva no estado
         if (data[0]?.horarios_funcionamento) {
             setEmpresaHorarios(JSON.parse(data[0].horarios_funcionamento));
         }
-      });
+      })
+      .catch(() => setBarbeiros([]));
   }, [empresaSlug, unidadeSelecionada]);
 
   // FUNÇÃO MÁGICA: Pega a regra do dia exato (0=Dom, 1=Seg...)

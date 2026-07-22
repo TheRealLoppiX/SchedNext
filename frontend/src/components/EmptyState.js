@@ -1,6 +1,6 @@
 import React from 'react';
 
-// Estado vazio com orientação de próximo passo — antes as telas só diziam "nada aqui"
+// Estado vazio com orientação de próximo passo. Antes as telas só diziam "nada aqui"
 // sem dizer o que fazer a respeito (heurísticas 1 e 10). Cores neutras de propósito:
 // este componente é usado dentro do conteúdo das páginas (ainda no tema claro antigo),
 // não é um overlay como o toast/confirm/ajuda.

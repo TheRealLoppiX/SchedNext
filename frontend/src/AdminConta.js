@@ -279,7 +279,7 @@ function AdminConta({ empresaId }) {
                             <>
                                 <div style={styles.linhaAssinatura}>
                                     <span style={styles.labelAssinatura}>Plano atual</span>
-                                    <strong>{assinatura.plano?.nome || '—'}{assinatura.plano?.preco_mensal > 0 ? ` — R$ ${Number(assinatura.plano.preco_mensal).toFixed(2)}/mês` : assinatura.plano?.preco_mensal === 0 ? ' — Grátis' : ''}</strong>
+                                    <strong>{assinatura.plano?.nome || '—'}{assinatura.plano?.preco_mensal > 0 ? ` · R$ ${Number(assinatura.plano.preco_mensal).toFixed(2)}/mês` : assinatura.plano?.preco_mensal === 0 ? ' · Grátis' : ''}</strong>
                                 </div>
                                 <div style={styles.linhaAssinatura}>
                                     <span style={styles.labelAssinatura}>Status</span>
@@ -296,7 +296,7 @@ function AdminConta({ empresaId }) {
 
                                 {assinatura.cancelamento_agendado && (
                                     <div style={styles.avisoCancelamento}>
-                                        Cobrança cancelada — seu plano continua ativo até a data acima, depois cai automaticamente pro plano Grátis.
+                                        Cobrança cancelada. Seu plano continua ativo até a data acima, depois cai automaticamente pro plano Grátis.
                                         <button onClick={reativarCobranca} disabled={processandoAssinatura} style={styles.btnLinkReativar}>Reativar cobrança</button>
                                     </div>
                                 )}
@@ -311,7 +311,7 @@ function AdminConta({ empresaId }) {
                                         >
                                             {planosDisponiveis.map(p => (
                                                 <option key={p.id} value={p.id}>
-                                                    {p.nome}{p.preco_mensal > 0 ? ` — R$ ${Number(p.preco_mensal).toFixed(2)}/mês` : p.preco_mensal === 0 ? ' — Grátis' : ' — sob consulta'}
+                                                    {p.nome}{p.preco_mensal > 0 ? ` · R$ ${Number(p.preco_mensal).toFixed(2)}/mês` : p.preco_mensal === 0 ? ' · Grátis' : ' · sob consulta'}
                                                 </option>
                                             ))}
                                         </select>

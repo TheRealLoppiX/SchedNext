@@ -499,7 +499,12 @@ const toggleServico = (servico) => {
                         <label style={subModalStyles.label}>Adicionar Mais Serviços:</label>
                         <div style={{ maxHeight: '130px', overflowY: 'auto', marginBottom: '15px', border: '1px solid #f0f0f0', padding: '5px', borderRadius: '8px', background: '#f9fafb' }}>
                             {servicos.map(s => {
-                                const jaAgendado = modalFinalizar.servicos.includes(s.nome);
+                                // Comparação exata contra a lista já dividida, não substring da
+                                // string toda: "Corte" dentro de "Corte Infantil" não pode
+                                // contar como "já incluso" e bloquear o profissional de
+                                // adicioná-lo de verdade no checkout.
+                                const nomesJaAgendados = modalFinalizar.servicos.split(' + ').map(n => n.trim());
+                                const jaAgendado = nomesJaAgendados.includes(s.nome);
                                 const selecionado = extrasSelecionados.some(item => item.id === s.id && item.tipo === 'servico');
                                 
                                 return (
@@ -583,7 +588,7 @@ const toggleServico = (servico) => {
                             {assinaturaCheckout.assinante && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', padding: '6px 10px', background: '#faf5ff', borderRadius: '6px', border: '1px solid #c4b5fd' }}>
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"></path><path d="M11 3L8 9l4 13 4-13-3-6"></path><line x1="2" y1="9" x2="22" y2="9"></line></svg>
-                                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#6d28d9' }}>Assinante — serviços do plano descontados</span>
+                                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#6d28d9' }}>Assinante: serviços do plano descontados</span>
                                 </div>
                             )}
                             <div style={{ textAlign: 'right' }}>

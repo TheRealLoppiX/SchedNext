@@ -30,7 +30,7 @@ import AdminClientes from './pages/admin/AdminClientes';
 import AdminUnidades from './pages/admin/AdminUnidades';
 import AdminApiKeys from './pages/admin/AdminApiKeys';
 
-// Base compartilhada de UX (toast, confirmação e ajuda) — ver auditoria de heurísticas
+// Base compartilhada de UX (toast, confirmação e ajuda), ver auditoria de heurísticas
 import { ToastProvider } from './components/Toast';
 import { ConfirmProvider } from './components/ConfirmDialog';
 import HelpButton from './components/HelpButton';

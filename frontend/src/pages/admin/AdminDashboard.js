@@ -157,7 +157,7 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
   });
 
   // Mesma definição usada em AdminAgendamentos.js: "não compareceu" não existe como status real
-  // no banco (ENUM só tem pendente/confirmado/concluido/cancelado) — é calculado por tempo
+  // no banco (ENUM só tem pendente/confirmado/concluido/cancelado); é calculado por tempo
   // decorrido além da tolerância. Antes esta tela mostrava uma estatística do backend que nunca
   // refletia essa mesma regra (sempre zerada); agora as duas telas concordam.
   const TOLERANCIA_MIN = 10;

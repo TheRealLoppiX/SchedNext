@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 // Aplica a paleta customizada do tenant como CSS custom properties, sobrescrevendo os
-// tokens padrão definidos em index.css — só quando o plano da empresa permite (Essencial+,
+// tokens padrão definidos em index.css, só quando o plano da empresa permite (Essencial+,
 // ver §7 do plano de plataforma) e ela já configurou uma cor. Empresas no plano Grátis
 // continuam com a paleta padrão da plataforma (o "gancho" visual pro upgrade).
 export default function usePaletaTenant(empresa) {

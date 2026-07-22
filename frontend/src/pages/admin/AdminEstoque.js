@@ -263,6 +263,13 @@ function AdminEstoque({ empresaId }) {
       document.body.removeChild(link);
   };
 
+  // Sem isso, um valor de justificativa (texto livre digitado por qualquer operador do
+  // estoque) contendo "<script>" ou tags HTML executava dentro da janela de impressão, já
+  // que o relatório é montado com `document.write` de uma string interpolada.
+  const escaparHtml = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+
   const exportarParaPDF = () => {
       if (dadosRelatorio.length === 0) return toast.error('Não há dados para exportar neste período.');
       const janela = window.open('', '_blank');
@@ -274,7 +281,7 @@ function AdminEstoque({ empresaId }) {
           const data = new Date(r.data_movimentacao).toLocaleString('pt-BR');
           const tipo = r.tipo === 'ADICIONAR' ? 'Entrada' : 'Saída';
           const corTipo = r.tipo === 'ADICIONAR' ? '#059669' : '#dc2626';
-          return `<tr style='border-bottom:1px solid #f0f0f0'><td style='padding:9px 12px;font-size:12px;color:#374151'>${data}</td><td style='padding:9px 12px;font-size:12px'>${r.usuario_nome}</td><td style='padding:9px 12px;font-size:12px;font-weight:600;color:#111827'>${r.produto_nome}</td><td style='padding:9px 12px;font-size:12px;font-weight:700;color:${corTipo}'>${tipo}</td><td style='padding:9px 12px;font-size:12px;text-align:center;font-weight:700'>${r.quantidade}</td><td style='padding:9px 12px;font-size:12px;color:#6b7280'>${r.justificativa || '-'}</td></tr>`;
+          return `<tr style='border-bottom:1px solid #f0f0f0'><td style='padding:9px 12px;font-size:12px;color:#374151'>${data}</td><td style='padding:9px 12px;font-size:12px'>${escaparHtml(r.usuario_nome)}</td><td style='padding:9px 12px;font-size:12px;font-weight:600;color:#111827'>${escaparHtml(r.produto_nome)}</td><td style='padding:9px 12px;font-size:12px;font-weight:700;color:${corTipo}'>${tipo}</td><td style='padding:9px 12px;font-size:12px;text-align:center;font-weight:700'>${r.quantidade}</td><td style='padding:9px 12px;font-size:12px;color:#6b7280'>${escaparHtml(r.justificativa) || '-'}</td></tr>`;
       }).join('');
       janela.document.write(`<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Relatório de Estoque</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:30px;color:#111827}h1{font-size:22px;font-weight:800;margin-bottom:4px}.sub{font-size:13px;color:#6b7280;margin-bottom:20px}.periodo{display:inline-block;background:#f3f4f6;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;color:#374151;margin-bottom:20px}table{width:100%;border-collapse:collapse}thead tr{background:#111827}th{padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.5px}tr:nth-child(even){background:#f9fafb}.footer{margin-top:20px;font-size:11px;color:#9ca3af;text-align:right}@media print{.no-print{display:none}}</style></head><body><h1>Relatório de Auditoria de Estoque</h1><p class='sub'>Movimentações no período</p><span class='periodo'>Período: ${periodo}</span><table><thead><tr><th>Data/Hora</th><th>Operador</th><th>Produto</th><th>Movimentação</th><th>Qtd</th><th>Justificativa</th></tr></thead><tbody>${linhas}</tbody></table><div class='footer'>Gerado em ${new Date().toLocaleString('pt-BR')} &bull; ${dadosRelatorio.length} registro(s)</div></body></html>`);
       janela.document.close();
@@ -311,7 +318,7 @@ function AdminEstoque({ empresaId }) {
               <small style={{ color: '#9ca3af', fontSize: '11.5px' }}>
                 {listaUsuarios.length > 0
                   ? `Quem tem acesso: Administrador, ${listaUsuarios.map(u => u.nome).join(', ')}.`
-                  : 'Ainda não há colaboradores cadastrados — só o Administrador tem acesso.'}
+                  : 'Ainda não há colaboradores cadastrados, só o Administrador tem acesso.'}
               </small>
             </div>
 

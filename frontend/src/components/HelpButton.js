@@ -25,7 +25,7 @@ const FAQ = [
   }
 ];
 
-// Botão de ajuda persistente + FAQ — a única fonte de ajuda/documentação do app hoje
+// Botão de ajuda persistente + FAQ, a única fonte de ajuda/documentação do app hoje
 // (heurística 10, que partiu de zero).
 function HelpButton() {
   const [aberto, setAberto] = useState(false);
@@ -34,7 +34,7 @@ function HelpButton() {
   useEscToClose(aberto, () => setAberto(false));
 
   // Não faz sentido mostrar ajuda de "como cancelar agendamento"/"como acessar o admin"
-  // pra quem ainda nem criou conta — a landing pública fica sem o botão.
+  // pra quem ainda nem criou conta, a landing pública fica sem o botão.
   if (location.pathname === '/') return null;
 
   return (

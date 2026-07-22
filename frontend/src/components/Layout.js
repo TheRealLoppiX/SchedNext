@@ -25,7 +25,11 @@ function Layout({ setEmpresaId }) {
   const [novosDados, setNovosDados] = useState({ email: '', senha: '' });
   const [carregando, setCarregando] = useState(false);
 
-  const isAdminPath = location.pathname.includes('/admin');
+  // startsWith (não includes): "includes" casava qualquer slug de tenant que contivesse
+  // "admin" como substring (ex: "administracao-total"), fazendo as rotas de CLIENTE desse
+  // tenant serem tratadas como rotas de admin por engano. Rotas de admin sempre vivem na raiz
+  // "/admin/...", nunca sob "/:empresaSlug/...".
+  const isAdminPath = location.pathname === '/admin' || location.pathname.startsWith('/admin/');
   const userId = localStorage.getItem('usuario_id');
   const adminToken = localStorage.getItem('adminToken');
 
@@ -45,7 +49,10 @@ function Layout({ setEmpresaId }) {
           try {
             const res = await fetch(`${API_URL}/admin/empresa/${empresaId}`);
             const data = await res.json();
-            if (data) {
+            // res.ok evita reintroduzir o bug de "vertical sempre vira barbearia": sem essa
+            // checagem, qualquer falha temporária da API (ex: cold start do Render) fazia
+            // `data` ser um objeto de erro sem `.vertical`, caindo sempre no fallback.
+            if (res.ok && data) {
               setDados({
                 nome_completo: data.nome || "Painel Administrativo",
                 foto_url: data.logo_url || null,
@@ -74,7 +81,7 @@ function Layout({ setEmpresaId }) {
                 const resAss = await fetch(`${API_URL}/usuario/${userId}/assinante`);
                 const assData = await resAss.json();
                 if (assData.assinante && assData.plano_id) {
-                  const resPlano = await fetch(`${API_URL}/admin/assinaturas/plano/${assData.plano_id}`);
+                  const resPlano = await fetch(`${API_URL}/assinaturas/plano/${assData.plano_id}`);
                   const planoData = await resPlano.json();
                   setDadosAssinante({ assinante: true, plano_nome: planoData.nome || 'Assinante' });
                 } else {
@@ -105,7 +112,7 @@ function Layout({ setEmpresaId }) {
     if (isAdminPath) {
       localStorage.removeItem('adminToken');
       localStorage.removeItem('empresaId');
-      // Precisa limpar o estado `empresaId` lá em cima no App.js também — sem isso, a rota
+      // Precisa limpar o estado `empresaId` lá em cima no App.js também. Sem isso, a rota
       // /admin/login ainda enxerga um empresaId "verdadeiro" (só em memória, já que o
       // localStorage foi limpo) e redireciona de volta pro /admin/dashboard, que tenta
       // buscar dados sem token válido e quebra. Era esse o bug do erro ao deslogar.

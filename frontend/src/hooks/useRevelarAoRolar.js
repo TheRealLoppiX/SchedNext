@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-// Adiciona a classe "ln-visible" quando o elemento entra na viewport — usado pra animar
+// Adiciona a classe "ln-visible" quando o elemento entra na viewport, usado pra animar
 // seções da landing ao rolar a página (ver Landing.css). Só observa uma vez: depois que
 // aparece, para de observar (não some de novo ao rolar pra cima).
 export default function useRevelarAoRolar() {

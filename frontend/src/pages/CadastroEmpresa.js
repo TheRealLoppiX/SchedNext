@@ -194,7 +194,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
 
         {etapa === 3 && (
           <div>
-            <p style={{ fontSize: '14px', color: 'var(--bb-text-muted)', marginBottom: '14px' }}>Escolha um plano — pode trocar depois.</p>
+            <p style={{ fontSize: '14px', color: 'var(--bb-text-muted)', marginBottom: '14px' }}>Escolha um plano, pode trocar depois.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
               {planos.map((p) => {
                 const selecionado = planoId === p.id;

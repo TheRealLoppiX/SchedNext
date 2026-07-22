@@ -5,17 +5,17 @@ import useRevelarAoRolar from '../hooks/useRevelarAoRolar';
 import { API_URL } from '../services/api';
 
 const PASSOS = [
-  { numero: '01', titulo: 'Crie sua conta', desc: 'Escolha o nome do seu negócio e o tipo de serviço — barbearia, salão, estúdio de unhas ou outro.' },
+  { numero: '01', titulo: 'Crie sua conta', desc: 'Escolha o nome do seu negócio e o tipo de serviço: barbearia, salão, estúdio de unhas ou outro.' },
   { numero: '02', titulo: 'Configure sua agenda', desc: 'Cadastre profissionais, serviços e horário de funcionamento. Leva menos de 5 minutos.' },
   { numero: '03', titulo: 'Comece a receber agendamentos', desc: 'Compartilhe seu link e seus clientes já marcam horário sozinhos, sem ligação.' }
 ];
 
 const RECURSOS = [
   { icone: 'calendario', titulo: 'Agenda em tempo real', desc: 'Sem overbooking: cada profissional só aparece disponível quando realmente está.' },
-  { icone: 'sino', titulo: 'Lembretes automáticos', desc: 'E-mail (e WhatsApp, no plano certo) avisando o cliente antes do horário — menos falta.' },
+  { icone: 'sino', titulo: 'Lembretes automáticos', desc: 'E-mail (e WhatsApp, no plano certo) avisando o cliente antes do horário, pra reduzir falta.' },
   { icone: 'estrela', titulo: 'Fidelidade de clientes', desc: 'Campanhas e planos de assinatura pra quem volta sempre, direto no painel.' },
-  { icone: 'paleta', titulo: 'Paleta personalizada', desc: 'Sua marca, suas cores, na tela dos seus clientes — a partir do plano Essencial.' },
-  { icone: 'mensagem', titulo: 'Bot de WhatsApp', desc: 'Cliente agenda direto pelo WhatsApp, sem precisar abrir o site — plano Profissional.' },
+  { icone: 'paleta', titulo: 'Paleta personalizada', desc: 'Sua marca, suas cores, na tela dos seus clientes, a partir do plano Essencial.' },
+  { icone: 'mensagem', titulo: 'Bot de WhatsApp', desc: 'Cliente agenda direto pelo WhatsApp, sem precisar abrir o site (plano Profissional).' },
   { icone: 'grafico', titulo: 'Relatórios e estoque', desc: 'Faturamento, produtos e movimentações num só painel, sem planilha paralela.' }
 ];
 
@@ -32,7 +32,7 @@ const CASOS_DE_USO = [
 ];
 
 const FAQ = [
-  { p: 'Preciso de cartão de crédito para começar?', r: 'Não. O plano Grátis não pede pagamento — cadastre e comece a usar na hora.' },
+  { p: 'Preciso de cartão de crédito para começar?', r: 'Não. O plano Grátis não pede pagamento, cadastre e comece a usar na hora.' },
   { p: 'Posso trocar de plano depois?', r: 'Sim, a qualquer momento direto pelo painel administrativo.' },
   { p: 'Meus clientes precisam instalar algo?', r: 'Não, o agendamento é feito direto pelo navegador, sem instalação.' },
   { p: 'Posso cancelar quando quiser?', r: 'Sim, sem multa e sem burocracia.' }
@@ -117,6 +117,9 @@ function MockupAgenda() {
 
 function Landing() {
   const [planos, setPlanos] = useState([]);
+  const [reduzirMovimento] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
 
   const [refComoFunciona, visivelComoFunciona] = useRevelarAoRolar();
   const [refRecursos, visivelRecursos] = useRevelarAoRolar();
@@ -135,7 +138,7 @@ function Landing() {
 
   return (
     <div style={s.pagina}>
-      <div className="ln-faixa-topo" style={s.faixaTopo}>🎉 Novo: personalize a paleta de cores e ative o bot de agendamento no WhatsApp</div>
+      <div className="ln-faixa-topo" style={s.faixaTopo}>Novo: personalize a paleta de cores e ative o bot de agendamento no WhatsApp</div>
 
       <header style={s.header}>
         <img src="/logo-schednext.png" alt="SchedNext" style={s.logoHeader} />
@@ -149,19 +152,37 @@ function Landing() {
       </header>
 
       <section style={s.hero}>
-        <span className="ln-hero-eyebrow" style={s.eyebrow}>
-          Agenda online para <TextoRotativo palavras={PALAVRAS_ROTATIVAS} />
-        </span>
-        <h1 className="ln-hero-title" style={s.heroTitulo}>Marque. Clique. Pronto.</h1>
-        <p className="ln-hero-sub" style={s.heroSubtitulo}>
-          Sua equipe organizada, sua agenda sempre em dia, seus clientes marcando sozinhos.
-          Grátis pra sempre — sem cartão, sem complicação.
-        </p>
-        <div className="ln-hero-cta" style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '50px' }}>
-          <Link to="/cadastrar" className="ln-cta-primary" style={s.ctaPrincipal}>Criar conta grátis</Link>
-          <a href="#recursos" className="ln-cta-secondary" style={s.ctaSecundario}>Ver como funciona</a>
+        {reduzirMovimento ? (
+          <img src="/videos/hero-barbearia-poster.jpg" alt="" aria-hidden="true" style={s.heroVideo} />
+        ) : (
+          <video
+            className="ln-hero-video"
+            style={s.heroVideo}
+            src="/videos/hero-barbearia.mp4"
+            poster="/videos/hero-barbearia-poster.jpg"
+            autoPlay
+            loop
+            muted
+            playsInline
+            aria-hidden="true"
+          />
+        )}
+        <div style={s.heroOverlay} />
+        <div style={s.heroConteudo}>
+          <span className="ln-hero-eyebrow" style={s.eyebrow}>
+            Agenda online para <TextoRotativo palavras={PALAVRAS_ROTATIVAS} />
+          </span>
+          <h1 className="ln-hero-title" style={s.heroTitulo}>Marque. Clique. Pronto.</h1>
+          <p className="ln-hero-sub" style={s.heroSubtitulo}>
+            Sua equipe organizada, sua agenda sempre em dia, seus clientes marcando sozinhos.
+            Grátis pra sempre, sem cartão, sem complicação.
+          </p>
+          <div className="ln-hero-cta" style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '50px' }}>
+            <Link to="/cadastrar" className="ln-cta-primary" style={s.ctaPrincipal}>Criar conta grátis</Link>
+            <a href="#recursos" className="ln-cta-secondary" style={s.ctaSecundarioHero}>Ver como funciona</a>
+          </div>
+          <MockupAgenda />
         </div>
-        <MockupAgenda />
       </section>
 
       <section ref={refComoFunciona} className={`ln-reveal ${visivelComoFunciona ? 'ln-visible' : ''}`} style={s.secao}>
@@ -273,7 +294,7 @@ function Landing() {
           <div>
             <img src="/logo-schednext.png" alt="SchedNext" style={s.logoFooter} />
             <p style={{ color: 'var(--bb-text-muted)', fontSize: '13px', marginTop: '10px', maxWidth: '260px' }}>
-              Agenda online para negócios de hora marcada — barbearias, salões, estúdios e mais.
+              Agenda online para negócios de hora marcada: barbearias, salões, estúdios e mais.
             </p>
           </div>
           <div>
@@ -310,12 +331,16 @@ const s = {
   linkHeader: { color: 'var(--bb-text)', textDecoration: 'none', fontSize: '14px' },
   btnHeader: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '14px' },
 
-  hero: { textAlign: 'center', padding: '80px 20px 0' },
-  eyebrow: { display: 'inline-block', fontSize: '13px', fontWeight: 600, color: 'var(--bb-gold)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '18px' },
-  heroTitulo: { fontSize: 'clamp(36px, 6vw, 56px)', maxWidth: '760px', margin: '0 auto 18px', lineHeight: 1.1, fontWeight: 700, textWrap: 'balance' },
-  heroSubtitulo: { fontSize: '17px', color: 'var(--bb-text-muted)', maxWidth: '580px', margin: '0 auto 30px' },
+  hero: { position: 'relative', textAlign: 'center', padding: '110px 20px 70px', overflow: 'hidden', borderRadius: '0 0 32px 32px' },
+  heroVideo: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 },
+  heroOverlay: { position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(8,12,28,0.82) 0%, rgba(10,16,38,0.7) 45%, rgba(9,13,30,0.95) 100%)', zIndex: 1 },
+  heroConteudo: { position: 'relative', zIndex: 2 },
+  eyebrow: { display: 'inline-block', fontSize: '13px', fontWeight: 600, color: 'var(--bb-gold-light)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '18px' },
+  heroTitulo: { fontSize: 'clamp(36px, 6vw, 56px)', maxWidth: '760px', margin: '0 auto 18px', lineHeight: 1.1, fontWeight: 700, textWrap: 'balance', color: '#fff' },
+  heroSubtitulo: { fontSize: '17px', color: 'rgba(255,255,255,0.82)', maxWidth: '580px', margin: '0 auto 30px' },
   ctaPrincipal: { background: 'linear-gradient(135deg, #4c74f0, #173fb0, #2554eb)', color: '#fff', padding: '14px 28px', borderRadius: '10px', textDecoration: 'none', fontWeight: 700, display: 'inline-block' },
   ctaSecundario: { border: '1px solid var(--bb-border)', color: 'var(--bb-text)', padding: '14px 28px', borderRadius: '10px', textDecoration: 'none', fontWeight: 600, display: 'inline-block' },
+  ctaSecundarioHero: { border: '1px solid rgba(255,255,255,0.4)', color: '#fff', padding: '14px 28px', borderRadius: '10px', textDecoration: 'none', fontWeight: 600, display: 'inline-block' },
 
   mockup: { maxWidth: '460px', margin: '0 auto', background: '#fff', border: '1px solid var(--bb-border)', borderRadius: '18px', boxShadow: '0 20px 50px rgba(20,24,43,0.12)', padding: '18px', textAlign: 'left' },
   mockupHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', paddingBottom: '12px', borderBottom: '1px solid var(--bb-border)' },

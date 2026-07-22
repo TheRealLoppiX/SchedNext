@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { formatarTelefone } from '../../utils/telefone';
 import { emailValido } from '../../utils/validacao';
+import { formatarDataSemFuso, ehMesDiaIgual } from '../../utils/dataSemFuso';
 import { useConfirm } from '../../components/ConfirmDialog';
 import useEscToClose from '../../hooks/useEscToClose';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
@@ -188,12 +189,7 @@ function AdminClientes({ empresaId }) {
         return Math.floor((new Date() - new Date(ultimoAgendamento)) / (1000 * 60 * 60 * 24));
     };
 
-    const aniversarioHoje = (dataNasc) => {
-        if (!dataNasc) return false;
-        const hoje = new Date();
-        const nasc = new Date(dataNasc);
-        return nasc.getDate() === hoje.getDate() && nasc.getMonth() === hoje.getMonth();
-    };
+    const aniversarioHoje = (dataNasc) => ehMesDiaIgual(dataNasc, new Date());
 
     const clientesFiltrados = clientes.filter(c => {
         const bate = (c.nome_completo || '').toLowerCase().includes(buscaDebounced.toLowerCase()) ||
@@ -402,7 +398,7 @@ function AdminClientes({ empresaId }) {
                                     </td>
                                     <td style={s.td}>
                                         <span style={{ fontSize: '13px', fontWeight: aniversario ? '700' : '500', color: aniversario ? '#d97706' : '#374151' }}>
-                                            {c.data_nascimento ? new Date(c.data_nascimento).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'}
+                                            {c.data_nascimento ? formatarDataSemFuso(c.data_nascimento, { somenteDiaMes: true }) : '—'}
                                         </span>
                                     </td>
                                     <td style={s.td}>
@@ -570,7 +566,7 @@ function AdminClientes({ empresaId }) {
                                     <select style={{ ...s.inputModal, cursor: 'pointer' }} value={clienteSelecionado.plano_id || ''} onChange={e => setClienteSelecionado(prev => ({ ...prev, plano_id: e.target.value ? Number(e.target.value) : null, assinante: e.target.value ? 1 : 0 }))}>
                                         <option value=''>Sem plano (cliente comum)</option>
                                         {planosDisponiveis.map(p => (
-                                            <option key={p.id} value={p.id}>{p.nome} — R$ {parseFloat(p.preco).toFixed(2).replace('.', ',')}/mês</option>
+                                            <option key={p.id} value={p.id}>{p.nome} · R$ {parseFloat(p.preco).toFixed(2).replace('.', ',')}/mês</option>
                                         ))}
                                     </select>
                                 </div>

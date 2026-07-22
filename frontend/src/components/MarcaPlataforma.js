@@ -1,5 +1,5 @@
 // Rodapé "feito com SchedNext" nas telas do cliente final. Fixo no plano Grátis, removível
-// a partir do Essencial (ver §3 do plano de plataforma) — é o "gancho" de white-label que
+// a partir do Essencial (ver §3 do plano de plataforma), é o "gancho" de white-label que
 // empurra pro upgrade, então só desaparece quando o plano da empresa permitir de verdade.
 function MarcaPlataforma({ empresa }) {
   if (empresa?.plano_plataforma?.permite_remover_marca) return null;

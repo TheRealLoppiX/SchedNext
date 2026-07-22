@@ -1,7 +1,7 @@
 import React from 'react';
 
 // Ícones de barbearia em traço (mesmo estilo line-art usado no restante do app),
-// desenhados na hora — sem depender de nenhuma lib de ícones externa.
+// desenhados na hora, sem depender de nenhuma lib de ícones externa.
 const ICONS = [
   // Tesoura
   (props) => (

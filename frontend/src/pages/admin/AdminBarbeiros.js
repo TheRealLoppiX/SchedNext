@@ -281,7 +281,7 @@ function AdminBarbeiros({ empresaId }) {
         try {
             const [resServicos, resVinculos] = await Promise.all([
                 fetch(`${API_URL}/admin/servicos?empresa=${empresaSlug}`),
-                fetch(`${API_URL}/barbeiro-servicos/${barbeiro.id}`)
+                fetch(`${API_URL}/admin/barbeiro-servicos/${barbeiro.id}`)
             ]);
             
             setListaServicos(await resServicos.json() || []);
@@ -299,7 +299,7 @@ function AdminBarbeiros({ empresaId }) {
     const salvarVinculo = async () => {
         setSalvando(true);
         try {
-            const res = await fetch(`${API_URL}/barbeiro-servicos`, {
+            const res = await fetch(`${API_URL}/admin/barbeiro-servicos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ barbeiro_id: barbeiroSelecionado.id, servicosIds: servicosMarcados })

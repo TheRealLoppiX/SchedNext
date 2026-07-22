@@ -1,9 +1,9 @@
 // Dicionário de terminologia por vertical de negócio. O schema e as rotas continuam
-// genéricos (barbeiro/serviço) — só o texto exibido muda conforme o tipo de negócio
+// genéricos (barbeiro/serviço); só o texto exibido muda conforme o tipo de negócio
 // da empresa (empresas.vertical). Ver §6 do plano de plataforma.
 //
 // artigo/artigoContraido existem porque "Barbearia" é feminino e "Salão"/"Estúdio"/
-// "Estabelecimento" são masculinos — sem isso frases como "Perfil da/do X" saem erradas
+// "Estabelecimento" são masculinos, sem isso frases como "Perfil da/do X" saem erradas
 // pra metade das verticais.
 const TERMINOLOGIA = {
   barbearia: {

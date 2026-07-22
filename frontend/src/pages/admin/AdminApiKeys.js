@@ -107,7 +107,7 @@ function AdminApiKeys({ empresaId }) {
 
       {chaveGerada && (
         <div style={styles.avisoChave}>
-          <strong>Copie sua chave agora — ela não será mostrada de novo:</strong>
+          <strong>Copie sua chave agora, ela não será mostrada de novo:</strong>
           <code style={styles.codigoChave}>{chaveGerada}</code>
           <button onClick={() => setChaveGerada(null)} style={styles.btnFecharAviso}>Já copiei, fechar</button>
         </div>
