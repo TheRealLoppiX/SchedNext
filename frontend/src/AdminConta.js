@@ -30,6 +30,8 @@ function AdminConta({ empresaId }) {
     const [planosDisponiveis, setPlanosDisponiveis] = useState([]);
     const [planoEscolhidoId, setPlanoEscolhidoId] = useState(null);
     const [processandoAssinatura, setProcessandoAssinatura] = useState(false);
+    const [cpfCnpj, setCpfCnpj] = useState('');
+    const [temDocumentoSalvo, setTemDocumentoSalvo] = useState(false);
 
     const idEfetivo = empresaId || localStorage.getItem('empresaId');
 
@@ -54,6 +56,7 @@ function AdminConta({ empresaId }) {
                     cancelamento_agendado: data.cancelamento_agendado
                 });
                 setPlanoEscolhidoId(data.plano_plataforma?.id || null);
+                setTemDocumentoSalvo(!!data.cpf_cnpj);
             }
             setCarregando(false);
         } catch (err) {
@@ -70,6 +73,8 @@ function AdminConta({ empresaId }) {
             .catch(() => {});
     }, []);
 
+    const planoEscolhidoEhPago = planosDisponiveis.find(p => p.id === planoEscolhidoId)?.preco_mensal > 0;
+
     const trocarPlano = async () => {
         if (!planoEscolhidoId || planoEscolhidoId === assinatura?.plano?.id) return;
         setProcessandoAssinatura(true);
@@ -77,12 +82,19 @@ function AdminConta({ empresaId }) {
             const res = await fetch(`${API_URL}/admin/assinatura-plataforma/iniciar-upgrade`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plano_plataforma_id: planoEscolhidoId })
+                body: JSON.stringify({ plano_plataforma_id: planoEscolhidoId, ...(cpfCnpj ? { cpf_cnpj: cpfCnpj } : {}) })
             });
             const data = await res.json();
             if (res.ok) {
-                toast.success(data.message || 'Plano atualizado!');
+                if (data.checkoutUrl) {
+                    window.open(data.checkoutUrl, '_blank', 'noopener,noreferrer');
+                    toast.success('Finalize o pagamento na aba que abriu. Seu plano ativa automaticamente assim que o pagamento for confirmado.');
+                } else {
+                    toast.success(data.message || 'Plano atualizado!');
+                }
                 carregarDados();
+            } else if (data.requerDocumento) {
+                toast.error('Informe seu CPF ou CNPJ para assinar um plano pago.');
             } else {
                 toast.error(data.error || 'Não foi possível trocar de plano.');
             }
@@ -323,6 +335,18 @@ function AdminConta({ empresaId }) {
                                             Confirmar troca
                                         </button>
                                     </div>
+                                    {planoEscolhidoEhPago && !temDocumentoSalvo && planoEscolhidoId !== assinatura.plano?.id && (
+                                        <div style={{ marginTop: '10px' }}>
+                                            <label style={styles.label}>CPF ou CNPJ (necessário para ativar cobrança)</label>
+                                            <input
+                                                type="text"
+                                                value={cpfCnpj}
+                                                onChange={e => setCpfCnpj(e.target.value)}
+                                                placeholder="Só números"
+                                                style={styles.selectPlano}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div style={styles.acoesAssinatura}>
