@@ -8,12 +8,6 @@
   50% { transform: translateY(-12px); }
 }
 
-@keyframes ln-gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
 @keyframes ln-pop {
   0% { transform: scale(0.6); opacity: 0; }
   60% { transform: scale(1.08); opacity: 1; }
@@ -51,15 +45,13 @@
 
 /* Botões */
 .ln-cta-primary {
-  background-size: 200% 200%;
-  animation: ln-gradient-shift 6s ease infinite;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
-.ln-cta-primary:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 14px 28px rgba(37, 84, 235, 0.35); }
+.ln-cta-primary:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 14px 28px rgba(255, 255, 255, 0.15); }
 .ln-cta-primary:active { transform: translateY(-1px) scale(1.01); }
 
 .ln-cta-secondary { transition: background 0.25s ease, transform 0.25s ease, border-color 0.25s ease; }
-.ln-cta-secondary:hover { background: var(--bb-black-soft); transform: translateY(-2px); border-color: var(--bb-gold); }
+.ln-cta-secondary:hover { background: rgba(255, 255, 255, 0.08); transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.5); }
 
 .ln-cta-final {
   transition: transform 0.25s ease, box-shadow 0.25s ease;
@@ -99,13 +91,6 @@
 }
 .ln-nav-link:hover::after { width: 100%; }
 
-/* Faixa do topo com gradiente animado */
-.ln-faixa-topo {
-  background: linear-gradient(90deg, #173fb0, #2554eb, #e0293e, #2554eb, #173fb0);
-  background-size: 300% 100%;
-  animation: ln-gradient-shift 8s ease infinite;
-}
-
 /* FAQ com destaque no hover */
 .ln-faq-item { transition: padding-left 0.25s ease, border-color 0.25s ease; cursor: default; }
 .ln-faq-item:hover { padding-left: 8px; border-color: var(--bb-gold); }
@@ -114,10 +99,17 @@
    ao redor quando a palavra trocar de tamanho. */
 .ln-rotativo-wrap {
   display: inline-block;
-  min-width: 250px;
+  min-width: min(250px, 60vw);
+  max-width: 100%;
   text-align: left;
   vertical-align: top;
-  color: var(--bb-gold-light);
+}
+.ln-rotativo,
+.ln-gradient-text {
+  background: linear-gradient(90deg, #4c74f0, #7c9dfb, #2554eb);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 .ln-rotativo {
   display: inline-block;
@@ -127,9 +119,47 @@
 }
 .ln-rotativo.ln-rotativo-visivel { opacity: 1; transform: translateY(0); }
 
+/* Header responsivo: em telas estreitas os links âncora (Recursos/Planos/FAQ)
+   somem e sobra só Entrar + CTA, senão o nav quebra a largura da tela. */
+@media (max-width: 640px) {
+  .ln-nav-scroll { display: none; }
+  header { padding: 14px 16px !important; }
+  header nav { gap: 10px !important; }
+}
+
+/* Layout do hero em duas colunas (texto + visual do painel) */
+.ln-hero-colunas {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 50px;
+  align-items: center;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+@media (max-width: 880px) {
+  .ln-hero-colunas { grid-template-columns: 1fr; text-align: center; }
+  .ln-hero-colunas .ln-hero-cta { justify-content: center; }
+}
+
+/* Grade sutil no fundo do painel visual do hero */
+.ln-hero-visual-grid {
+  position: absolute;
+  inset: -40px;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 36px 36px;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 40%, transparent 75%);
+  mask-image: radial-gradient(circle at 50% 50%, #000 40%, transparent 75%);
+  z-index: 0;
+}
+
+.ln-hero-stat { animation: ln-float 5s ease-in-out infinite 0.6s; will-change: transform; }
+.ln-hero-stat:hover { animation-play-state: paused; }
+
 @media (prefers-reduced-motion: reduce) {
   .ln-hero-eyebrow, .ln-hero-title, .ln-hero-sub, .ln-hero-cta,
-  .ln-mockup, .ln-mockup-check, .ln-faixa-topo, .ln-cta-primary {
+  .ln-mockup, .ln-mockup-check, .ln-hero-stat {
     animation: none !important;
   }
   .ln-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }

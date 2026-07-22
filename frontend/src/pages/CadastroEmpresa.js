@@ -128,7 +128,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
               required
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '4px 0 12px', fontSize: '13px', color: 'var(--bb-text-muted)' }}>
-              <span>Seu endereço: /{slug || 'sua-empresa'}</span>
+              <span>Seu endereço: {slug || 'sua-empresa'}.schednext.com.br</span>
             </div>
             <input
               className="bb-input"
