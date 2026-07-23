@@ -32,6 +32,8 @@ function CadastroEmpresa({ setEmpresaLogada }) {
   const [planos, setPlanos] = useState([]);
   const [planoId, setPlanoId] = useState(null);
   const [enviando, setEnviando] = useState(false);
+  const [codigo, setCodigo] = useState('');
+  const [confirmando, setConfirmando] = useState(false);
   const [mostrarFormEnterprise, setMostrarFormEnterprise] = useState(false);
   const [enterpriseEnviado, setEnterpriseEnviado] = useState(false);
   const [formEnterprise, setFormEnterprise] = useState({ cnpj: '', localizacao: '', clientes_esperados: '', observacoes: '', email_contato: '', telefone_contato: '' });
@@ -110,26 +112,11 @@ function CadastroEmpresa({ setEmpresaLogada }) {
 
       if (!resCadastro.ok) {
         toast.error(dataCadastro.error || 'Não foi possível criar sua conta.');
-        setEnviando(false);
         return;
       }
 
-      const resLogin = await fetch(`${API_URL}/admin/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha })
-      });
-      const dataLogin = await resLogin.json();
-
-      if (dataLogin.success) {
-        localStorage.setItem('adminToken', JSON.stringify({ ...dataLogin.admin, token: dataLogin.token }));
-        setEmpresaLogada(dataLogin.admin.empresa_id);
-        toast.success(`Conta criada! Bem-vindo(a), ${nome}.`);
-        navigate('/admin/dashboard');
-      } else {
-        toast.success('Conta criada! Faça login para continuar.');
-        navigate('/admin/login');
-      }
+      toast.success(dataCadastro.message || 'Enviamos um código de confirmação pro seu e-mail.');
+      setEtapa(4);
     } catch (err) {
       toast.error('Não foi possível conectar ao servidor. Tente novamente em instantes.');
     } finally {
@@ -137,12 +124,42 @@ function CadastroEmpresa({ setEmpresaLogada }) {
     }
   };
 
+  const confirmarCodigo = async () => {
+    setConfirmando(true);
+    try {
+      const res = await fetch(`${API_URL}/empresas/confirmar-codigo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, codigo })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Código inválido ou expirado.');
+        return;
+      }
+
+      localStorage.setItem('adminToken', JSON.stringify({ ...data.admin, token: data.token }));
+      setEmpresaLogada(data.admin.empresa_id);
+      toast.success(`Conta criada! Bem-vindo(a), ${nome}.`);
+      navigate('/admin/dashboard');
+    } catch (err) {
+      toast.error('Não foi possível conectar ao servidor. Tente novamente em instantes.');
+    } finally {
+      setConfirmando(false);
+    }
+  };
+
   return (
     <div className="bb-page">
       <div className="bb-card" style={{ maxWidth: '480px' }}>
         <img src="/icon-schednext.png" alt="SchedNext" className="bb-logo-img" />
-        <h2 className="bb-title">Criar sua conta</h2>
-        <p className="bb-subtitle">Etapa {etapa} de 3</p>
+        <h2 className="bb-title">{etapa === 4 ? 'Verifique seu e-mail' : 'Criar sua conta'}</h2>
+        {etapa === 4 ? (
+          <p className="bb-subtitle">Enviamos um código para <b>{email}</b></p>
+        ) : (
+          <p className="bb-subtitle">Etapa {etapa} de 3</p>
+        )}
 
         {etapa === 1 && (
           <form onSubmit={(e) => { e.preventDefault(); avancarDe1(); }}>
@@ -286,6 +303,22 @@ function CadastroEmpresa({ setEmpresaLogada }) {
               <LoadingButton type="button" loading={enviando} className="bb-btn" onClick={finalizarCadastro}>Criar conta</LoadingButton>
             </div>
           </div>
+        )}
+
+        {etapa === 4 && (
+          <form onSubmit={(e) => { e.preventDefault(); confirmarCodigo(); }}>
+            <input
+              className="bb-input"
+              style={{ textAlign: 'center', fontSize: '24px', letterSpacing: '5px' }}
+              placeholder="000000"
+              maxLength="6"
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value)}
+              autoFocus
+            />
+            <LoadingButton type="submit" loading={confirmando} className="bb-btn">Confirmar e criar conta</LoadingButton>
+            <button type="button" className="bb-btn-secondary" onClick={() => setEtapa(3)} disabled={confirmando}>Voltar</button>
+          </form>
         )}
 
         <p style={{ marginTop: '20px', fontSize: '13px' }}>
