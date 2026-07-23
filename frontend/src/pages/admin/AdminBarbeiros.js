@@ -276,11 +276,11 @@ function AdminBarbeiros({ empresaId }) {
     const abrirModalServicos = async (barbeiro) => {
         setBarbeiroSelecionado(barbeiro);
         const storage = localStorage.getItem('adminToken');
-        let empresaSlug = storage ? JSON.parse(storage).empresa_id : idEfetivo;
+        let empresaId = storage ? JSON.parse(storage).empresa_id : idEfetivo;
 
         try {
             const [resServicos, resVinculos] = await Promise.all([
-                fetch(`${API_URL}/admin/servicos?empresa=${empresaSlug}`),
+                fetch(`${API_URL}/admin/servicos?empresa=${empresaId}`),
                 fetch(`${API_URL}/admin/barbeiro-servicos/${barbeiro.id}`)
             ]);
             

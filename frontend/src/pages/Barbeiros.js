@@ -4,6 +4,7 @@ import { format, startOfDay, addDays, setHours, setMinutes, isBefore, isSameDay,
 import ptBR from 'date-fns/locale/pt-BR';
 import usePaletaTenant from '../hooks/usePaletaTenant';
 import { API_URL } from '../services/api';
+import { obterTerminologia } from '../utils/terminologia';
 
 function Barbeiros() {
   const [barbeiros, setBarbeiros] = useState([]);
@@ -26,6 +27,7 @@ function Barbeiros() {
   const { empresaSlug } = useParams();
   const { dados } = useOutletContext();
   const nomeCliente = dados?.nome_completo ? dados.nome_completo.split(' ')[0] : 'Cliente';
+  const termos = obterTerminologia(empresaPlano?.vertical);
 
   usePaletaTenant(empresaPlano);
 
@@ -286,7 +288,7 @@ function Barbeiros() {
           ))
         ) : (
           <div style={s.emptyState}>
-            <p style={{ fontSize: '18px', fontWeight: 'bold' }}>Nenhum barbeiro disponível</p>
+            <p style={{ fontSize: '18px', fontWeight: 'bold' }}>Nenhum {termos.profissional.toLowerCase()} disponível</p>
             <p>Tente outro horário ou data.</p>
           </div>
         )}

@@ -6,6 +6,8 @@
 // global uma única vez aqui.
 // TODO (ver handoff.md, Fase 4): substituir isso por um services/api.js explícito, chamado
 // por cada página, em vez de um patch no fetch global.
+import { obterSlugSubdominio } from '../utils/tenantSubdominio';
+
 const ADMIN_LOGIN_URL_FRAGMENT = '/admin/login';
 const SUPER_ADMIN_LOGIN_URL_FRAGMENT = '/super-admin/login';
 
@@ -81,8 +83,13 @@ window.fetch = (input, init = {}) => {
       } else if (isClienteRoute) {
         localStorage.removeItem('token');
         localStorage.removeItem('usuario_id');
+        // Em modo subdomínio (ex: minhaempresa.schednext.com.br/agenda), o pathname real
+        // não tem o slug — ele mora no host. Sem checar isso primeiro, o primeiro segmento
+        // do path (ex: "agenda") era tratado como se fosse o slug, montando um redirect
+        // pra uma rota inexistente (ex: /agenda/login) que caía no fallback e mandava o
+        // cliente pra Landing em vez do login do tenant dele.
         const slugMatch = window.location.pathname.match(/^\/([^/]+)/);
-        const slug = slugMatch ? slugMatch[1] : '';
+        const slug = obterSlugSubdominio() || (slugMatch ? slugMatch[1] : '');
         const loginPath = slug ? `/${slug}/login` : '/';
         if (!window.location.pathname.endsWith('/login')) {
           window.location.href = loginPath;

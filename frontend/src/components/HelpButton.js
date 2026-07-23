@@ -5,7 +5,7 @@ import useEscToClose from '../hooks/useEscToClose';
 const FAQ = [
   {
     q: 'Como eu marco um horário?',
-    a: 'Escolha o barbeiro, depois a data e o horário disponível, selecione os serviços desejados e confirme.'
+    a: 'Escolha o profissional, depois a data e o horário disponível, selecione os serviços desejados e confirme.'
   },
   {
     q: 'Como cancelo um agendamento?',

@@ -95,7 +95,7 @@ function RecuperarSenha() {
         {etapa === 3 && (
           <form onSubmit={handleFinalizarReset}>
             <p className="bb-subtitle">Crie sua nova senha:</p>
-            <input className="bb-input" type="password" placeholder="Nova Senha" onChange={e => setNovaSenha(e.target.value)} />
+            <input className="bb-input" type="password" placeholder="Nova Senha" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} />
             <button type="submit" className="bb-btn">Alterar Senha Agora</button>
           </form>
         )}

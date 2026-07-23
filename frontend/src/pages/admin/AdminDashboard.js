@@ -241,7 +241,7 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
               onChange={e => setAnoSelecionado(Number(e.target.value))}
               style={styles.selectFiltro}
             >
-              {Array.from({ length: new Date().getFullYear() - 2023 + 1 }, (_, i) => 2024 + i).reverse().map(ano => (
+              {Array.from({ length: new Date().getFullYear() - 2024 + 1 }, (_, i) => 2024 + i).reverse().map(ano => (
                 <option key={ano} value={ano}>{ano}</option>
               ))}
             </select>

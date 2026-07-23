@@ -7,60 +7,6 @@ import { obterTerminologia } from '../utils/terminologia';
 import { formatarDataSemFuso } from '../utils/dataSemFuso';
 import { API_URL } from '../services/api';
 
-function ModalAvaliacao({ isOpen, onClose, onSubmit, barbeiroNome }) {
-  const [nota, setNota] = useState(0);
-  const [hover, setHover] = useState(0);
-  const [comentario, setComentario] = useState('');
-
-  if (!isOpen) return null;
-
-  return (
-    <div style={styles.modalOverlay}>
-      <div style={styles.modalContent}>
-        <h3>Avaliar serviço</h3>
-        <p>Como foi seu atendimento com <b>{barbeiroNome}</b>?</p>
-        
-        <div style={{ margin: '20px 0' }}>
-          {[1, 2, 3, 4, 5].map((estrela) => (
-            <span
-              key={estrela}
-              style={{
-                fontSize: '35px',
-                cursor: 'pointer',
-                color: (hover || nota) >= estrela ? '#ffc107' : '#e4e5e9',
-                transition: 'color 0.2s'
-              }}
-              onClick={() => setNota(estrela)}
-              onMouseEnter={() => setHover(estrela)}
-              onMouseLeave={() => setHover(0)}
-            >
-              ★
-            </span>
-          ))}
-        </div>
-
-        <textarea
-          placeholder="Deixe um comentário (opcional)"
-          style={styles.textArea}
-          value={comentario}
-          onChange={(e) => setComentario(e.target.value)}
-        />
-
-        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button style={{ ...styles.btnPreto, flex: 1 }} onClick={onClose}>Cancelar</button>
-          <button 
-            style={{ ...styles.btnVerde, flex: 1, marginTop: 0 }} 
-            onClick={() => onSubmit(nota, comentario)}
-            disabled={nota === 0}
-          >
-            Enviar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function Dashboard() {
   const location = useLocation();
   // Pegamos os dados, o setDados (caso precise atualizar) e o userId direto do Layout
@@ -68,8 +14,12 @@ function Dashboard() {
   
   const [abaAtiva, setAbaAtiva] = useState('agendamentos');
 
-  // Identifica se estamos no painel administrativo
-  const isAdmin = location.pathname.includes('/admin');
+  // Identifica se estamos no painel administrativo. startsWith (não includes): "includes"
+  // casava qualquer slug de tenant que contivesse "/admin" como prefixo (ex: empresaSlug
+  // "admin-servicos" gera o path "/admin-servicos/perfil"), fazendo a página de perfil do
+  // CLIENTE desse tenant renderizar a visão administrativa por engano (mesma classe de bug
+  // já corrigida em components/Layout.js).
+  const isAdmin = location.pathname === '/admin' || location.pathname.startsWith('/admin/');
   
   // Pega o ID da empresa do localStorage se for Admin
   const adminToken = localStorage.getItem('adminToken');

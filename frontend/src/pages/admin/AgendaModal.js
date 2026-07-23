@@ -284,7 +284,6 @@ const toggleServico = (servico) => {
         fetch(`${API_URL}/admin/agendamento-usuario/${modalFinalizar.id}`)
             .then(r => r.json())
             .then(d => {
-                console.log('DIAGNOSTICO >>> agendamento_id:', modalFinalizar.id, '| empresaId (modal):', empresaId, '| resposta:', d);
                 setAssinaturaCheckout({ assinante: !!d.assinante, servicos_ids: d.servicos_ids || [], servicos_agendados_ids: d.servicos_agendados_ids || [] });
             })
             .catch(() => setAssinaturaCheckout({ assinante: false, servicos_ids: [], servicos_agendados_ids: [] }));
@@ -302,7 +301,6 @@ const toggleServico = (servico) => {
         const descontoPlano = servicos
             .filter(s => idsDescontarNum.includes(Number(s.id)))
             .reduce((acc, s) => acc + (parseFloat(String(s.valor || s.preco || '0').replace(',', '.')) || 0), 0);
-        console.log('Desconto final:', descontoPlano, 'idsDescontar:', idsDescontarNum, 'servicos ids:', servicos.map(s=>Number(s.id)));
         return Math.max(0, valorTotal - descontoPlano);
     };
 

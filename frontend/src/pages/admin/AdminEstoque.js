@@ -498,8 +498,18 @@ function AdminEstoque({ empresaId }) {
                 <input style={styles.input} placeholder="Ex: Carlos" required value={formSublogin.novo_nome} onChange={e => setFormSublogin({...formSublogin, novo_nome: e.target.value})} />
               </div>
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Senha para este Operador</label>
-                <input style={styles.input} type="password" required value={formSublogin.nova_senha} onChange={e => setFormSublogin({...formSublogin, nova_senha: e.target.value})} />
+                <label style={styles.label}>PIN de 4 dígitos para este Operador</label>
+                <input
+                  style={styles.input}
+                  type="password"
+                  inputMode="numeric"
+                  pattern="\d{4}"
+                  maxLength={4}
+                  placeholder="0000"
+                  required
+                  value={formSublogin.nova_senha}
+                  onChange={e => setFormSublogin({...formSublogin, nova_senha: e.target.value.replace(/\D/g, '').slice(0, 4)})}
+                />
               </div>
               <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
                 <LoadingButton type="submit" loading={criandoSublogin} style={styles.btnPrincipal}>Concluir Cadastro</LoadingButton>
