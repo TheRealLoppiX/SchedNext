@@ -32,6 +32,8 @@ function AdminConta({ empresaId }) {
     const [processandoAssinatura, setProcessandoAssinatura] = useState(false);
     const [cpfCnpj, setCpfCnpj] = useState('');
     const [temDocumentoSalvo, setTemDocumentoSalvo] = useState(false);
+    const [formEnterprise, setFormEnterprise] = useState({ cnpj: '', localizacao: '', clientes_esperados: '', observacoes: '', email_contato: '', telefone_contato: '' });
+    const [enterpriseEnviado, setEnterpriseEnviado] = useState(false);
 
     const idEfetivo = empresaId || localStorage.getItem('empresaId');
 
@@ -73,7 +75,31 @@ function AdminConta({ empresaId }) {
             .catch(() => {});
     }, []);
 
-    const planoEscolhidoEhPago = planosDisponiveis.find(p => p.id === planoEscolhidoId)?.preco_mensal > 0;
+    const planoSelecionado = planosDisponiveis.find(p => p.id === planoEscolhidoId);
+    const planoEscolhidoEhPago = planoSelecionado?.preco_mensal > 0;
+    const planoEscolhidoEhEnterprise = planoSelecionado && planoSelecionado.preco_mensal == null;
+
+    const enviarContatoEnterprise = async () => {
+        setProcessandoAssinatura(true);
+        try {
+            const res = await fetch(`${API_URL}/admin/empresa/contato-enterprise`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nome_empresa: dados.nome, ...formEnterprise })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                toast.success(data.message || 'Recebemos seu contato!');
+                setEnterpriseEnviado(true);
+            } else {
+                toast.error(data.error || 'Não foi possível enviar seu contato.');
+            }
+        } catch (err) {
+            toast.error('Erro de conexão. Tente novamente.');
+        } finally {
+            setProcessandoAssinatura(false);
+        }
+    };
 
     const trocarPlano = async () => {
         if (!planoEscolhidoId || planoEscolhidoId === assinatura?.plano?.id) return;
@@ -327,13 +353,15 @@ function AdminConta({ empresaId }) {
                                                 </option>
                                             ))}
                                         </select>
-                                        <button
-                                            onClick={trocarPlano}
-                                            disabled={processandoAssinatura || !planoEscolhidoId || planoEscolhidoId === assinatura.plano?.id}
-                                            style={styles.btnTrocarPlano}
-                                        >
-                                            Confirmar troca
-                                        </button>
+                                        {!planoEscolhidoEhEnterprise && (
+                                            <button
+                                                onClick={trocarPlano}
+                                                disabled={processandoAssinatura || !planoEscolhidoId || planoEscolhidoId === assinatura.plano?.id}
+                                                style={styles.btnTrocarPlano}
+                                            >
+                                                Confirmar troca
+                                            </button>
+                                        )}
                                     </div>
                                     {planoEscolhidoEhPago && !temDocumentoSalvo && planoEscolhidoId !== assinatura.plano?.id && (
                                         <div style={{ marginTop: '10px' }}>
@@ -346,6 +374,32 @@ function AdminConta({ empresaId }) {
                                                 style={styles.selectPlano}
                                             />
                                         </div>
+                                    )}
+                                    {planoEscolhidoEhEnterprise && planoEscolhidoId !== assinatura.plano?.id && (
+                                        enterpriseEnviado ? (
+                                            <p style={{ marginTop: '10px', fontSize: '13px', color: '#059669' }}>
+                                                Contato enviado! Nosso time entra em contato em breve pra combinar os detalhes.
+                                            </p>
+                                        ) : (
+                                            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>
+                                                    O plano Enterprise é sob consulta. Preencha os dados abaixo pra nosso time entrar em contato.
+                                                </p>
+                                                <input type="text" placeholder="CNPJ (só números)" value={formEnterprise.cnpj} onChange={e => setFormEnterprise({ ...formEnterprise, cnpj: e.target.value })} style={styles.selectPlano} />
+                                                <input type="text" placeholder="Localização (cidade/UF)" value={formEnterprise.localizacao} onChange={e => setFormEnterprise({ ...formEnterprise, localizacao: e.target.value })} style={styles.selectPlano} />
+                                                <input type="text" placeholder="Quantidade de clientes esperados" value={formEnterprise.clientes_esperados} onChange={e => setFormEnterprise({ ...formEnterprise, clientes_esperados: e.target.value })} style={styles.selectPlano} />
+                                                <input type="email" placeholder="E-mail de contato" value={formEnterprise.email_contato} onChange={e => setFormEnterprise({ ...formEnterprise, email_contato: e.target.value })} style={styles.selectPlano} />
+                                                <input type="text" placeholder="Telefone (opcional)" value={formEnterprise.telefone_contato} onChange={e => setFormEnterprise({ ...formEnterprise, telefone_contato: e.target.value })} style={styles.selectPlano} />
+                                                <textarea placeholder="Outras informações relevantes (opcional)" value={formEnterprise.observacoes} onChange={e => setFormEnterprise({ ...formEnterprise, observacoes: e.target.value })} style={{ ...styles.selectPlano, minHeight: '60px', fontFamily: 'inherit' }} />
+                                                <button
+                                                    onClick={enviarContatoEnterprise}
+                                                    disabled={processandoAssinatura || !formEnterprise.cnpj || !formEnterprise.localizacao || !formEnterprise.clientes_esperados || !formEnterprise.email_contato}
+                                                    style={styles.btnTrocarPlano}
+                                                >
+                                                    Enviar contato
+                                                </button>
+                                            </div>
+                                        )
                                     )}
                                 </div>
 

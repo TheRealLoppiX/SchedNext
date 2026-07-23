@@ -15,5 +15,6 @@ export function obterSlugSubdominio() {
 
 // Rotas que nunca são prefixadas por slug de tenant, mesmo em modo subdomínio.
 export function rotaIndependeDeTenant(pathname) {
-  return pathname === '/admin' || pathname.startsWith('/admin/') || pathname === '/cadastrar';
+  return pathname === '/admin' || pathname.startsWith('/admin/') || pathname === '/cadastrar'
+    || pathname === '/admin-absoluto' || pathname.startsWith('/admin-absoluto/');
 }

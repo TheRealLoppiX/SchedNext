@@ -32,6 +32,10 @@ function CadastroEmpresa({ setEmpresaLogada }) {
   const [planos, setPlanos] = useState([]);
   const [planoId, setPlanoId] = useState(null);
   const [enviando, setEnviando] = useState(false);
+  const [mostrarFormEnterprise, setMostrarFormEnterprise] = useState(false);
+  const [enterpriseEnviado, setEnterpriseEnviado] = useState(false);
+  const [formEnterprise, setFormEnterprise] = useState({ cnpj: '', localizacao: '', clientes_esperados: '', observacoes: '', email_contato: '', telefone_contato: '' });
+  const [enviandoEnterprise, setEnviandoEnterprise] = useState(false);
 
   const slugDebounced = useDebouncedValue(slug, 400);
   const [statusSlug, setStatusSlug] = useState({ checando: false, disponivel: null, motivo: '' });
@@ -70,6 +74,28 @@ function CadastroEmpresa({ setEmpresaLogada }) {
     if (senha.length < 6) return toast.error('A senha precisa ter ao menos 6 caracteres.');
     if (statusSlug.disponivel === false) return toast.error(statusSlug.motivo || 'Esse endereço já está em uso.');
     setEtapa(2);
+  };
+
+  const enviarContatoEnterprise = async () => {
+    setEnviandoEnterprise(true);
+    try {
+      const res = await fetch(`${API_URL}/empresas/contato-enterprise`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome_empresa: nome || 'Não informado', ...formEnterprise })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Recebemos seu contato!');
+        setEnterpriseEnviado(true);
+      } else {
+        toast.error(data.error || 'Não foi possível enviar seu contato.');
+      }
+    } catch (err) {
+      toast.error('Erro de conexão. Tente novamente.');
+    } finally {
+      setEnviandoEnterprise(false);
+    }
   };
 
   const finalizarCadastro = async () => {
@@ -197,12 +223,13 @@ function CadastroEmpresa({ setEmpresaLogada }) {
             <p style={{ fontSize: '14px', color: 'var(--bb-text-muted)', marginBottom: '14px' }}>Escolha um plano, pode trocar depois.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
               {planos.map((p) => {
-                const selecionado = planoId === p.id;
+                const ehEnterprise = p.preco_mensal == null;
+                const selecionado = !ehEnterprise && planoId === p.id;
                 return (
                   <button
                     key={p.id}
                     type="button"
-                    onClick={() => setPlanoId(p.id)}
+                    onClick={() => ehEnterprise ? setMostrarFormEnterprise(true) : setPlanoId(p.id)}
                     style={{
                       padding: '14px', borderRadius: '10px', cursor: 'pointer', textAlign: 'left',
                       border: selecionado ? '2px solid var(--bb-gold)' : '1px solid var(--bb-border)',
@@ -211,17 +238,49 @@ function CadastroEmpresa({ setEmpresaLogada }) {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                       <span>{p.nome}</span>
-                      <span>{p.preco_mensal == null ? 'Sob consulta' : p.preco_mensal === 0 ? 'Grátis' : `R$ ${Number(p.preco_mensal).toFixed(2)}/mês`}</span>
+                      <span>{ehEnterprise ? 'Sob consulta' : p.preco_mensal === 0 ? 'Grátis' : `R$ ${Number(p.preco_mensal).toFixed(2)}/mês`}</span>
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--bb-text-muted)', marginTop: '4px' }}>
-                      {p.limite_profissionais == null ? 'Profissionais ilimitados' : `Até ${p.limite_profissionais} profissional(is)`}
-                      {' · '}
-                      {p.limite_agendamentos_mes == null ? 'Agendamentos ilimitados/mês' : `Até ${p.limite_agendamentos_mes} agendamentos/mês`}
+                      {ehEnterprise
+                        ? 'Fale com nosso time pra combinar os detalhes'
+                        : <>
+                            {p.limite_profissionais == null ? 'Profissionais ilimitados' : `Até ${p.limite_profissionais} profissional(is)`}
+                            {' · '}
+                            {p.limite_agendamentos_mes == null ? 'Agendamentos ilimitados/mês' : `Até ${p.limite_agendamentos_mes} agendamentos/mês`}
+                          </>
+                      }
                     </div>
                   </button>
                 );
               })}
             </div>
+
+            {mostrarFormEnterprise && (
+              enterpriseEnviado ? (
+                <p style={{ fontSize: '13px', color: 'var(--bb-success)', marginBottom: '16px' }}>
+                  Contato enviado! Enquanto isso, crie sua conta num plano normal (dá pra trocar depois) e nosso time fala com você sobre o Enterprise.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', padding: '14px', border: '1px solid var(--bb-border)', borderRadius: '10px' }}>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--bb-text-muted)' }}>Conte um pouco sobre seu negócio pra gente entrar em contato:</p>
+                  <input className="bb-input" placeholder="CNPJ (só números)" value={formEnterprise.cnpj} onChange={(e) => setFormEnterprise({ ...formEnterprise, cnpj: e.target.value })} />
+                  <input className="bb-input" placeholder="Localização (cidade/UF)" value={formEnterprise.localizacao} onChange={(e) => setFormEnterprise({ ...formEnterprise, localizacao: e.target.value })} />
+                  <input className="bb-input" placeholder="Quantidade de clientes esperados" value={formEnterprise.clientes_esperados} onChange={(e) => setFormEnterprise({ ...formEnterprise, clientes_esperados: e.target.value })} />
+                  <input className="bb-input" type="email" placeholder="E-mail de contato" value={formEnterprise.email_contato} onChange={(e) => setFormEnterprise({ ...formEnterprise, email_contato: e.target.value })} />
+                  <input className="bb-input" placeholder="Telefone (opcional)" value={formEnterprise.telefone_contato} onChange={(e) => setFormEnterprise({ ...formEnterprise, telefone_contato: e.target.value })} />
+                  <textarea className="bb-input" placeholder="Outras informações relevantes (opcional)" value={formEnterprise.observacoes} onChange={(e) => setFormEnterprise({ ...formEnterprise, observacoes: e.target.value })} style={{ minHeight: '60px', fontFamily: 'inherit' }} />
+                  <LoadingButton
+                    type="button"
+                    loading={enviandoEnterprise}
+                    className="bb-btn"
+                    onClick={enviarContatoEnterprise}
+                    disabled={!formEnterprise.cnpj || !formEnterprise.localizacao || !formEnterprise.clientes_esperados || !formEnterprise.email_contato}
+                  >
+                    Enviar contato
+                  </LoadingButton>
+                </div>
+              )
+            )}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button type="button" className="bb-btn-secondary" onClick={() => setEtapa(2)} disabled={enviando}>Voltar</button>
               <LoadingButton type="button" loading={enviando} className="bb-btn" onClick={finalizarCadastro}>Criar conta</LoadingButton>

@@ -31,6 +31,11 @@ import AdminClientes from './pages/admin/AdminClientes';
 import AdminUnidades from './pages/admin/AdminUnidades';
 import AdminApiKeys from './pages/admin/AdminApiKeys';
 
+// Admin absoluto (dono da plataforma) — fora da árvore de tenant, ver
+// src/utils/tenantSubdominio.js (rotaIndependeDeTenant).
+import SuperAdminLogin from './pages/superadmin/SuperAdminLogin';
+import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
+
 // Base compartilhada de UX (toast, confirmação e ajuda), ver auditoria de heurísticas
 import { ToastProvider } from './components/Toast';
 import { ConfirmProvider } from './components/ConfirmDialog';
@@ -79,6 +84,14 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
           empresaId ? <Navigate to="/admin/dashboard" /> : <LoginAdmin setEmpresaLogada={setEmpresaId} />
         }
       />
+
+      {/* ================= ADMIN ABSOLUTO (dono da plataforma, fora do tenant) ================= */}
+      <Route path="/admin-absoluto/login" element={<SuperAdminLogin />} />
+      <Route
+        path="/admin-absoluto/dashboard"
+        element={localStorage.getItem('superAdminToken') ? <SuperAdminDashboard /> : <Navigate to="/admin-absoluto/login" />}
+      />
+      <Route path="/admin-absoluto/*" element={<Navigate to="/admin-absoluto/login" />} />
 
       {/* ================= ROTAS COM SIDEBAR (LAYOUT ÚNICO) ================= */}
       <Route element={<Layout setEmpresaId={setEmpresaId} />}>

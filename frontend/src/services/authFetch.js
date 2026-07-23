@@ -7,6 +7,7 @@
 // TODO (ver handoff.md, Fase 4): substituir isso por um services/api.js explícito, chamado
 // por cada página, em vez de um patch no fetch global.
 const ADMIN_LOGIN_URL_FRAGMENT = '/admin/login';
+const SUPER_ADMIN_LOGIN_URL_FRAGMENT = '/super-admin/login';
 
 // Fragmentos de rota protegidos por routes/perfil.js (token de cliente comum, chave
 // localStorage 'token'). Mantido como lista explícita em vez de "tudo que não é /admin/"
@@ -39,14 +40,19 @@ function getClienteToken() {
   return localStorage.getItem('token') || null;
 }
 
+function getSuperAdminToken() {
+  return localStorage.getItem('superAdminToken') || null;
+}
+
 const originalFetch = window.fetch.bind(window);
 
 window.fetch = (input, init = {}) => {
   const url = typeof input === 'string' ? input : input.url;
   const isAdminRoute = url.includes('/admin/') && !url.includes(ADMIN_LOGIN_URL_FRAGMENT);
-  const isClienteRoute = !isAdminRoute && CLIENTE_ROUTE_FRAGMENTS.some((frag) => url.includes(frag));
+  const isSuperAdminRoute = url.includes('/super-admin/') && !url.includes(SUPER_ADMIN_LOGIN_URL_FRAGMENT);
+  const isClienteRoute = !isAdminRoute && !isSuperAdminRoute && CLIENTE_ROUTE_FRAGMENTS.some((frag) => url.includes(frag));
 
-  const token = isAdminRoute ? getAdminToken() : isClienteRoute ? getClienteToken() : null;
+  const token = isAdminRoute ? getAdminToken() : isSuperAdminRoute ? getSuperAdminToken() : isClienteRoute ? getClienteToken() : null;
 
   if (token) {
     init = {
@@ -66,6 +72,11 @@ window.fetch = (input, init = {}) => {
         localStorage.removeItem('adminToken');
         if (!window.location.pathname.startsWith('/admin/login')) {
           window.location.href = '/admin/login';
+        }
+      } else if (isSuperAdminRoute) {
+        localStorage.removeItem('superAdminToken');
+        if (!window.location.pathname.startsWith('/admin-absoluto/login')) {
+          window.location.href = '/admin-absoluto/login';
         }
       } else if (isClienteRoute) {
         localStorage.removeItem('token');
