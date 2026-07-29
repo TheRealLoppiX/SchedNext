@@ -32,6 +32,7 @@ function AgendaModal({ barbeiro, empresaId, dataSelecionada, horaPreSelecionada,
     const [estoque, setEstoque] = useState([]);
     const [extrasSelecionados, setExtrasSelecionados] = useState([]);
     const [assinaturaCheckout, setAssinaturaCheckout] = useState({ assinante: false, servicos_ids: [], servicos_agendados_ids: [] });
+    const [formaPagamento, setFormaPagamento] = useState(null);
 
     const dataFormatadaBr = dataSelecionada ? dataSelecionada.split('-').reverse().slice(0, 2).join('/') : '';
 
@@ -257,7 +258,8 @@ const toggleServico = (servico) => {
                 body: JSON.stringify({
                     agendamento_id: modalFinalizar.id,
                     produtos_vendidos: produtosVendidos,
-                    servicos_adicionais: servicosAdd
+                    servicos_adicionais: servicosAdd,
+                    forma_pagamento: formaPagamento
                 })
             });
 
@@ -280,6 +282,7 @@ const toggleServico = (servico) => {
 
     // VALOR BASE AGORA LÊ CORRETAMENTE
     useEffect(() => {
+        setFormaPagamento(null);
         if (!modalFinalizar?.id) { setAssinaturaCheckout({ assinante: false, servicos_ids: [], servicos_agendados_ids: [] }); return; }
         fetch(`${API_URL}/admin/agendamento-usuario/${modalFinalizar.id}`)
             .then(r => r.json())
@@ -594,6 +597,34 @@ const toggleServico = (servico) => {
                                 <strong style={{ fontSize: '22px', color: '#111827' }}>Total: R$ {(getValorBaseSeguro() + getValorAdicionais()).toFixed(2)}</strong>
                             </div>
                         </div>
+
+                        {modalFinalizar.status !== 'concluido' && (
+                            <div style={{ marginBottom: '15px' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#666', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Forma de pagamento (opcional)</span>
+                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                    {[
+                                        { valor: 'dinheiro', rotulo: 'Dinheiro' },
+                                        { valor: 'credito', rotulo: 'Crédito' },
+                                        { valor: 'debito', rotulo: 'Débito' },
+                                        { valor: 'pix', rotulo: 'Pix' }
+                                    ].map((opcao) => (
+                                        <button
+                                            key={opcao.valor}
+                                            type="button"
+                                            onClick={() => setFormaPagamento(formaPagamento === opcao.valor ? null : opcao.valor)}
+                                            style={{
+                                                padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+                                                border: formaPagamento === opcao.valor ? '1px solid #111827' : '1px solid #d1d5db',
+                                                background: formaPagamento === opcao.valor ? '#111827' : '#fff',
+                                                color: formaPagamento === opcao.valor ? '#fff' : '#374151'
+                                            }}
+                                        >
+                                            {opcao.rotulo}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <button style={subModalStyles.btnCancel} onClick={() => { setModalFinalizar(null); onClose && onClose(); }}>Voltar</button>

@@ -24,6 +24,7 @@ function AdminClientes({ empresaId }) {
     const [selecionados, setSelecionados] = useState([]);
     const [processandoLote, setProcessandoLote] = useState(false);
     const [permiteIA, setPermiteIA] = useState(false);
+    const [permiteWhatsapp, setPermiteWhatsapp] = useState(false);
     const [nomeEmpresa, setNomeEmpresa] = useState('');
     const [sugestaoIA, setSugestaoIA] = useState('');
     const [gerandoSugestao, setGerandoSugestao] = useState(false);
@@ -34,6 +35,7 @@ function AdminClientes({ empresaId }) {
             .then(r => r.json())
             .then(d => {
                 setPermiteIA(!!d?.plano_plataforma?.permite_ia);
+                setPermiteWhatsapp(!!d?.plano_plataforma?.permite_whatsapp_bot);
                 if (d?.nome) setNomeEmpresa(d.nome);
             })
             .catch(() => {});
@@ -99,18 +101,19 @@ function AdminClientes({ empresaId }) {
         setLoadingId(null);
     };
 
-    const enviarFollowUp = async (cliente, tipo) => {
-        setLoadingId(cliente.id + tipo);
+    const enviarFollowUp = async (cliente, tipo, canal = 'email') => {
+        setLoadingId(cliente.id + tipo + canal);
         try {
             const res = await fetch(`${API_URL}/admin/clientes/followup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cliente_id: cliente.id, tipo, empresa_id: idEfetivo })
+                body: JSON.stringify({ cliente_id: cliente.id, tipo, canal, empresa_id: idEfetivo })
             });
             if (res.ok) {
-                mostrarFeedback(`E-mail enviado para ${cliente.nome_completo} com sucesso.`);
+                const meio = canal === 'whatsapp' ? 'WhatsApp' : 'e-mail';
+                mostrarFeedback(`Mensagem enviada por ${meio} para ${cliente.nome_completo} com sucesso.`);
             } else {
-                mostrarFeedback('Erro ao enviar e-mail.', 'erro');
+                mostrarFeedback('Erro ao enviar a mensagem.', 'erro');
             }
         } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
         setLoadingId(null);
@@ -228,7 +231,7 @@ function AdminClientes({ empresaId }) {
                 fetch(`${API_URL}/admin/clientes/followup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cliente_id: c.id, tipo: 'saudade', empresa_id: idEfetivo })
+                    body: JSON.stringify({ cliente_id: c.id, tipo: 'saudade', canal: 'email', empresa_id: idEfetivo })
                 }).then(r => r.ok)
             ));
             const sucesso = resultados.filter(Boolean).length;
@@ -434,19 +437,29 @@ function AdminClientes({ empresaId }) {
                                                 <Icons.Edit color="#4b5563" />
                                             </button>
                                             <button
-                                                onClick={() => enviarFollowUp(c, 'saudade')}
-                                                disabled={loadingId === c.id + 'saudade'}
+                                                onClick={() => enviarFollowUp(c, 'saudade', 'email')}
+                                                disabled={loadingId === c.id + 'saudadeemail'}
                                                 style={{ ...s.btnIcone, backgroundColor: '#eff6ff' }}
-                                                title="Enviar 'Sentimos sua falta'"
+                                                title="Enviar 'Sentimos sua falta' por e-mail"
                                             >
                                                 <Icons.Mail color="#1d4ed8" />
                                             </button>
+                                            {permiteWhatsapp && c.telefone && (
+                                                <button
+                                                    onClick={() => enviarFollowUp(c, 'saudade', 'whatsapp')}
+                                                    disabled={loadingId === c.id + 'saudadewhatsapp'}
+                                                    style={{ ...s.btnIcone, backgroundColor: '#ecfdf5' }}
+                                                    title="Enviar 'Sentimos sua falta' por WhatsApp"
+                                                >
+                                                    <Icons.Whatsapp color="#059669" />
+                                                </button>
+                                            )}
                                             {aniversario && (
                                                 <button
-                                                    onClick={() => enviarFollowUp(c, 'aniversario')}
-                                                    disabled={loadingId === c.id + 'aniversario'}
+                                                    onClick={() => enviarFollowUp(c, 'aniversario', 'email')}
+                                                    disabled={loadingId === c.id + 'aniversarioemail'}
                                                     style={{ ...s.btnIcone, backgroundColor: '#fffbeb' }}
-                                                    title="Enviar parabéns"
+                                                    title="Enviar parabéns por e-mail"
                                                 >
                                                     <Icons.Gift color="#d97706" />
                                                 </button>
@@ -588,9 +601,14 @@ function AdminClientes({ empresaId }) {
                         {/* Botões */}
                         <div style={{ display: 'flex', gap: '10px' }}>
                             <button onClick={salvarEdicao} style={s.btnSalvarModal}>Salvar Alterações</button>
-                            <button onClick={() => enviarFollowUp(clienteSelecionado, 'saudade')} style={s.btnFollowUp}>
-                                <Icons.Mail color="#1d4ed8" /> Sentimos sua falta
+                            <button onClick={() => enviarFollowUp(clienteSelecionado, 'saudade', 'email')} style={s.btnFollowUp}>
+                                <Icons.Mail color="#1d4ed8" /> Sentimos sua falta (e-mail)
                             </button>
+                            {permiteWhatsapp && clienteSelecionado.telefone && (
+                                <button onClick={() => enviarFollowUp(clienteSelecionado, 'saudade', 'whatsapp')} style={{ ...s.btnFollowUp, backgroundColor: '#ecfdf5', color: '#059669' }}>
+                                    <Icons.Whatsapp color="#059669" /> Por WhatsApp
+                                </button>
+                            )}
                             <button onClick={() => excluirCliente(clienteSelecionado.id, clienteSelecionado.nome_completo)} style={s.btnExcluir} title="Excluir cliente">
                                 <Icons.Trash color="#dc2626" />
                             </button>
@@ -608,6 +626,7 @@ const Icons = {
     Trash: ({ color }) => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>,
     Mail: ({ color }) => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>,
     Gift: ({ color }) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>,
+    Whatsapp: ({ color }) => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>,
     Diamond: ({ color, size = 14 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"></path><path d="M11 3L8 9l4 13 4-13-3-6"></path><line x1="2" y1="9" x2="22" y2="9"></line></svg>,
     CheckCircle: ({ color }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>,
     Alert: ({ color }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>,

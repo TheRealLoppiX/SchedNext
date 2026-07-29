@@ -370,6 +370,11 @@ function AdminBarbeiros({ empresaId }) {
                                 <span style={{ ...styles.badgeStatus, backgroundColor: b.ativo ? '#d1fae5' : '#fee2e2', color: b.ativo ? '#065f46' : '#991b1b' }}>
                                     {b.ativo ? 'Ativo na Plataforma' : 'Inativo / Oculto'}
                                 </span>
+                                {b.percentual_comissao != null && (
+                                    <span style={{ ...styles.badgeStatus, marginLeft: '6px', backgroundColor: '#ede9fe', color: '#6d28d9' }}>
+                                        Comissão {Number(b.percentual_comissao)}%
+                                    </span>
+                                )}
                             </div>
                         </div>
 
@@ -437,6 +442,14 @@ function AdminBarbeiros({ empresaId }) {
                                 </div>
                                 <label style={styles.label}>Nome do {termos.profissional}:</label>
                                 <input style={styles.inputModal} value={editando.nome} onChange={e => setEditando({...editando, nome: e.target.value})} />
+                                <label style={styles.label}>Comissão (% sobre a receita líquida):</label>
+                                <input
+                                    type="number" min="0" max="100" step="0.1"
+                                    style={styles.inputModal}
+                                    placeholder="Ex: 40"
+                                    value={editando.percentual_comissao ?? ''}
+                                    onChange={e => setEditando({...editando, percentual_comissao: e.target.value === '' ? null : e.target.value})}
+                                />
                                 <div style={styles.modalAcoes}>
                                     <button onClick={() => setEditando(null)} style={styles.btnCancelarModal}>Cancelar</button>
                                     <LoadingButton onClick={salvarEdicao} loading={salvando} style={styles.btnSalvarModal}>Salvar</LoadingButton>
