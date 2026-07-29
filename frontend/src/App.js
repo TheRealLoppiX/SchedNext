@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { obterSlugSubdominio, rotaIndependeDeTenant } from './utils/tenantSubdominio';
+import { API_URL } from './services/api';
 
 // Importação das Páginas de Cliente
 import Landing from './pages/Landing';
@@ -30,6 +31,8 @@ import AdminAssinaturas from './pages/admin/AdminAssinaturas';
 import AdminClientes from './pages/admin/AdminClientes';
 import AdminUnidades from './pages/admin/AdminUnidades';
 import AdminApiKeys from './pages/admin/AdminApiKeys';
+import AdminRelatorios from './pages/admin/AdminRelatorios';
+import AdminDominio from './pages/admin/AdminDominio';
 
 // Admin absoluto (dono da plataforma) — fora da árvore de tenant, ver
 // src/utils/tenantSubdominio.js (rotaIndependeDeTenant).
@@ -152,6 +155,10 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
 
         <Route path="/admin/api-keys" element={empresaId ? <AdminApiKeys empresaId={empresaId} /> : <Navigate to="/admin/login" />} />
 
+        <Route path="/admin/relatorios" element={empresaId ? <AdminRelatorios empresaId={empresaId} /> : <Navigate to="/admin/login" />} />
+
+        <Route path="/admin/dominio" element={empresaId ? <AdminDominio empresaId={empresaId} /> : <Navigate to="/admin/login" />} />
+
       </Route>
 
       {/* Redirecionamento de segurança para qualquer rota Admin não mapeada */}
@@ -167,6 +174,35 @@ function App() {
   // Inicializa o estado diretamente do localStorage para evitar redirecionamentos indevidos no refresh
   const [empresaId, setEmpresaId] = useState(() => localStorage.getItem('empresaId'));
   const [carregando, setCarregando] = useState(true);
+  const [carregandoDominio, setCarregandoDominio] = useState(true);
+
+  // Resolve domínio próprio de tenant (plano Enterprise) antes do primeiro render das rotas.
+  // Hostnames conhecidos (domínio raiz, subdomínios *.schednext.com.br, localhost) não
+  // precisam disso — só entra aqui quando o app é acessado por um domínio de terceiro (ver
+  // utils/tenantSubdominio.js e a rota pública GET /dominio/resolver no backend).
+  useEffect(() => {
+    const DOMINIO_RAIZ = 'schednext.com.br';
+    const resolverDominioCustomizado = async () => {
+      const host = window.location.hostname;
+      const conhecido = host === DOMINIO_RAIZ || host.endsWith(`.${DOMINIO_RAIZ}`) || host === 'localhost' || host === '127.0.0.1';
+      if (conhecido) {
+        setCarregandoDominio(false);
+        return;
+      }
+      try {
+        const res = await fetch(`${API_URL}/dominio/resolver?host=${encodeURIComponent(host)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.slug) sessionStorage.setItem('dominioCustomizadoSlug', data.slug);
+        }
+      } catch (err) {
+        console.error('Erro ao resolver domínio customizado:', err);
+      } finally {
+        setCarregandoDominio(false);
+      }
+    };
+    resolverDominioCustomizado();
+  }, []);
 
   useEffect(() => {
     const verificarLogin = () => {
@@ -194,7 +230,7 @@ function App() {
     setEmpresaId(null);
   };
 
-  if (carregando) {
+  if (carregando || carregandoDominio) {
     return (
       <div style={{ 
         display: 'flex', 
