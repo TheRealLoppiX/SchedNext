@@ -320,7 +320,7 @@ function AdminBarbeiros({ empresaId }) {
     if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280', fontSize: '16px' }}>Carregando equipe...</p>;
 
     return (
-        <div style={styles.container}>
+        <div className="admin-page-container" style={styles.container}>
             <header style={styles.header}>
                 <div>
                     <h2 style={styles.title}><Icons.Users color="#111827" /> Gestão de {termos.profissionalPlural}</h2>
@@ -535,7 +535,7 @@ const styles = {
     input: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', boxSizing: 'border-box', background: '#fff', color: '#111827' },
     btnPrincipal: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', transition: '0.2s', height: '43px' },
     
-    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' },
     card: { position: 'relative', backgroundColor: '#fff', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #f3f4f6' },
     btnXCard: { position: 'absolute', top: '15px', right: '15px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
     info: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' },
@@ -557,7 +557,7 @@ const styles = {
     btnStatus: { padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: '0.2s' },
     
     overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 },
-    modal: { backgroundColor: '#fff', padding: '30px', borderRadius: '15px', width: '90%', maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '15px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' },
+    modal: { backgroundColor: '#fff', padding: '30px', borderRadius: '15px', width: '90%', maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '15px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', boxSizing: 'border-box' },
     modalTitle: { margin: '0 0 10px 0', fontSize: '20px', color: '#111827', fontWeight: '800' },
     inputModal: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', width: '100%', boxSizing: 'border-box', fontSize: '14px', outline: 'none' },
     btnUpload: { display: 'inline-block', padding: '8px 16px', backgroundColor: '#f3f4f6', color: '#4b5563', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', border: '1px solid #d1d5db' },

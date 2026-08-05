@@ -115,7 +115,7 @@ function AdminUnidades({ empresaId }) {
 
   if (!permitido) {
     return (
-      <div style={styles.container}>
+      <div className="admin-page-container" style={styles.container}>
         <h2 style={styles.title}>🏢 Unidades</h2>
         <div style={styles.upsell}>
           <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
@@ -128,7 +128,7 @@ function AdminUnidades({ empresaId }) {
   }
 
   return (
-    <div style={styles.container}>
+    <div className="admin-page-container" style={styles.container}>
       <h2 style={styles.title}>🏢 Unidades</h2>
       <p style={styles.subtitle}>Gerencie as filiais do seu negócio, cada uma com sua própria equipe.</p>
 
@@ -182,7 +182,7 @@ const styles = {
   formRow: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
   input: { flex: '1 1 200px', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' },
   btnCadastrar: { padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '600', cursor: 'pointer' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' },
   card: { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6' },
   nomeCard: { margin: '0 0 6px', fontSize: '16px', color: '#111827' },
   endereco: { fontSize: '13px', color: '#6b7280', margin: '0 0 10px' },

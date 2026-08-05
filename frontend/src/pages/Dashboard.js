@@ -248,7 +248,7 @@ function AgendamentosView({ userId }) {
           const podeAvaliar = ag.status === 'concluido';
 
           return (
-            <div key={i} style={styles.linha}>
+            <div key={i} className="dashboard-agend-linha" style={styles.linha}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontWeight: '500' }}>{dataFormatada}</span>
                 <small style={{ color: '#888' }}>{horaFormatada}</small>
@@ -697,7 +697,8 @@ const styles = {
     width: '100%',
     maxWidth: '400px',
     textAlign: 'center',
-    boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
+    boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+    boxSizing: 'border-box'
   },
   textArea: {
     width: '100%',
@@ -805,7 +806,7 @@ function AgendamentosAdminView({ empresaId }) {
       </div>
 
       {/* Lista */}
-      <div style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+      <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#1a1a1a', color: '#fff', textAlign: 'left' }}>

@@ -262,3 +262,21 @@
     color: #94a3b8;
 }
 .slot-livre:hover .slot-livre-texto { color: #1d4ed8; }
+
+/* ===================== Responsivo (mobile) ===================== */
+@media (max-width: 600px) {
+  .admin-dashboard-container {
+    padding: 16px !important;
+  }
+
+  .coluna-agenda {
+    min-width: 260px !important;
+    width: 260px !important;
+    height: 480px !important;
+  }
+
+  .filtros-rapidos-container {
+    width: 100%;
+    overflow-x: auto;
+  }
+}

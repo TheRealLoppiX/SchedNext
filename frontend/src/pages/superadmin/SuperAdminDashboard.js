@@ -55,7 +55,8 @@ function SuperAdminDashboard() {
             ['metricas', 'Métricas'],
             ['empresas', 'Empresas'],
             ['planos', 'Planos'],
-            ['leads', 'Leads Enterprise']
+            ['leads', 'Leads Enterprise'],
+            ['superadmins', 'Super Admins']
           ].map(([valor, rotulo]) => (
             <button
               key={valor}
@@ -76,6 +77,7 @@ function SuperAdminDashboard() {
         {aba === 'empresas' && <AbaEmpresas toast={toast} confirmar={confirmar} />}
         {aba === 'planos' && <AbaPlanos toast={toast} />}
         {aba === 'leads' && <AbaLeads toast={toast} confirmar={confirmar} />}
+        {aba === 'superadmins' && <AbaSuperAdmins toast={toast} confirmar={confirmar} />}
       </div>
     </div>
   );
@@ -423,6 +425,116 @@ function AbaLeads({ toast, confirmar }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Gestão dos donos da plataforma (tabela `super_admins`, ver backend/src/routes/superAdmin.js).
+// Só existe quem já é super admin pra criar outro, e só com e-mail @schednext.com.br — o
+// backend valida isso de novo (nunca confiar só na validação do front).
+function AbaSuperAdmins({ toast, confirmar }) {
+  const [lista, setLista] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [novoEmail, setNovoEmail] = useState('');
+  const [novaSenha, setNovaSenha] = useState('');
+  const [criando, setCriando] = useState(false);
+
+  const carregar = useCallback(async () => {
+    setCarregando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/super-admins`);
+      const data = await res.json();
+      setLista(Array.isArray(data) ? data : []);
+    } catch (err) {
+      toast.error('Erro ao carregar super admins.');
+    } finally {
+      setCarregando(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const criar = async () => {
+    setCriando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/super-admins`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: novoEmail, senha: novaSenha })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Super admin criado!');
+        setNovoEmail('');
+        setNovaSenha('');
+        carregar();
+      } else {
+        toast.error(data.detalhes?.[0]?.mensagem || data.error || 'Não foi possível criar o super admin.');
+      }
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setCriando(false);
+    }
+  };
+
+  const remover = async (sa) => {
+    const ok = await confirmar(`Remover o acesso de "${sa.email}"?`, {
+      detail: 'Ele deixa de conseguir entrar no painel da plataforma imediatamente.',
+      confirmText: 'Remover',
+      danger: true
+    });
+    if (!ok) return;
+
+    const res = await fetch(`${API_URL}/super-admin/super-admins/${sa.id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok) { toast.success('Acesso removido.'); carregar(); }
+    else toast.error(data.error || 'Não foi possível remover.');
+  };
+
+  return (
+    <div>
+      <div style={{ ...cardEstilo, marginBottom: '20px', maxWidth: '420px' }}>
+        <h3 style={{ margin: '0 0 14px', fontSize: '15px' }}>Criar novo super admin</h3>
+        <label style={labelEstilo}>E-mail (precisa ser @schednext.com.br)</label>
+        <input
+          style={inputEstilo}
+          value={novoEmail}
+          onChange={(e) => setNovoEmail(e.target.value)}
+          placeholder="nome@schednext.com.br"
+        />
+        <label style={labelEstilo}>Senha (mínimo 8 caracteres)</label>
+        <input
+          type="password"
+          style={inputEstilo}
+          value={novaSenha}
+          onChange={(e) => setNovaSenha(e.target.value)}
+        />
+        <LoadingButton loading={criando} onClick={criar} style={{ ...btnPrimario, marginTop: '4px' }}>
+          Criar super admin
+        </LoadingButton>
+      </div>
+
+      {carregando ? <p>Carregando...</p> : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {lista.map((sa) => (
+            <div key={sa.id} style={{ ...cardEstilo, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <strong>{sa.email}</strong>
+                <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>
+                  {sa.ativo ? 'Ativo' : 'Removido'} · criado em {new Date(sa.criado_em).toLocaleDateString('pt-BR')}
+                </div>
+              </div>
+              {sa.ativo && (
+                <button onClick={() => remover(sa)} style={{ ...btnSecundario, color: '#ef4444', borderColor: '#ef4444' }}>
+                  Remover
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

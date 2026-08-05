@@ -236,7 +236,7 @@ function AdminConta({ empresaId }) {
     if (carregando) return <p style={{ textAlign: 'center', marginTop: '50px', color: '#6b7280' }}>Carregando configurações...</p>;
 
     return (
-        <div style={styles.container}>
+        <div className="admin-page-container" style={styles.container}>
             <header style={styles.header}>
                 <div>
                     <h2 style={styles.title}><Icons.Settings color="#111827" /> Perfil {termos.artigoContraido} {termos.local}</h2>
@@ -520,7 +520,7 @@ const styles = {
     toggleVisivo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '34px', transition: 'background-color 0.3s' },
     toggleBolinha: { position: 'absolute', content: '""', height: '18px', width: '18px', left: '3px', bottom: '3px', backgroundColor: 'white', borderRadius: '50%', transition: 'transform 0.3s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' },
     
-    inputHora: { padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px', outline: 'none', color: '#111827', backgroundColor: '#fff', width: '100px', fontWeight: '500' },
+    inputHora: { padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px', outline: 'none', color: '#111827', backgroundColor: '#fff', width: '100px', maxWidth: '38vw', fontWeight: '500', boxSizing: 'border-box' },
 
     inputCor: { width: '60px', height: '40px', border: '1px solid #d1d5db', borderRadius: '8px', cursor: 'pointer', padding: '2px' },
     upsellPaleta: { padding: '16px', backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px dashed #d1d5db' },

@@ -162,7 +162,7 @@ function AdminAssinaturas({ empresaId }) {
     );
 
     return (
-        <div style={s.container}>
+        <div className="admin-page-container" style={s.container}>
             <header style={s.header}>
                 <div>
                     <h2 style={s.title}><Icons.Diamond color="#111827" /> Planos de Assinatura</h2>
@@ -246,6 +246,7 @@ function AdminAssinaturas({ empresaId }) {
 
             {/* LISTAGEM */}
             <div style={s.cardTabela}>
+                <div style={{ overflowX: 'auto' }}>
                 <table style={s.table}>
                     <thead>
                         <tr>
@@ -311,6 +312,7 @@ function AdminAssinaturas({ empresaId }) {
                         )}
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
     );
@@ -334,7 +336,7 @@ const s = {
     alerta: { padding: '14px 18px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '600' },
     cardForm: { background: '#fff', padding: '28px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: '20px' },
     cardTitle: { margin: 0, color: '#111827', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' },
-    formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
+    formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' },
     inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
     label: { fontSize: '12px', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px' },
     input: { padding: '11px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', outline: 'none', color: '#111827', boxSizing: 'border-box' },

@@ -180,9 +180,29 @@ function Layout({ setEmpresaId }) {
     finally { setCarregando(false); }
   };
 
+  // Em telas touch (celular/tablet) não existe hover de verdade: o onMouseEnter/onMouseLeave
+  // fica instável (às vezes não abre nunca, às vezes abre e nunca fecha, cobrindo a tela toda).
+  // Por isso o hover só controla o menu em dispositivos que realmente têm mouse; no touch o
+  // menu abre/fecha só pelo clique no botão de hambúrguer.
+  const podeUsarHover = () =>
+    typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+      {aberto && (
+        <div className="bb-sidebar-overlay" onClick={() => setAberto(false)} />
+      )}
+
+      <button
+        className="bb-mobile-menu-btn"
+        onClick={() => setAberto(prev => !prev)}
+        aria-label="Abrir menu"
+      >
+        <Icons.Menu />
+      </button>
+
       <aside
+        className={`bb-sidebar${aberto ? ' aberto' : ''}`}
         style={{
           width: aberto ? '250px' : '70px',
           background: '#16161a', color: '#fff', transition: '0.3s',
@@ -190,10 +210,10 @@ function Layout({ setEmpresaId }) {
           position: 'fixed', height: '100vh', zIndex: 1000,
           overflowY: 'auto', overflowX: 'hidden'
         }}
-        onMouseEnter={() => setAberto(true)}
-        onMouseLeave={() => setAberto(false)}
+        onMouseEnter={() => { if (podeUsarHover()) setAberto(true); }}
+        onMouseLeave={() => { if (podeUsarHover()) setAberto(false); }}
       >
-        <button style={s.btnMenu}>
+        <button style={s.btnMenu} onClick={() => setAberto(prev => !prev)}>
            <Icons.Menu />
         </button>
         <div style={{...s.sidebarContent, display: aberto ? 'block' : 'none'}}>
@@ -308,7 +328,7 @@ function Layout({ setEmpresaId }) {
       </aside>
 
       {/* A MÁGICA FOI DESFEITA AQUI: Agora a aba agendamentos do cliente é repassada para o Dashboard Original dele */}
-      <main style={{ flex: 1, marginLeft: '70px', padding: '20px' }}>
+      <main className="bb-main" style={{ flex: 1, marginLeft: '70px', padding: '20px' }}>
         {isAtiva('privacidade') ? (
           <div style={s.containerPrivacidade}>
             <div style={s.cardPrivacidade}>

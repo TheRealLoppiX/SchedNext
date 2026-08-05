@@ -269,7 +269,7 @@ function AdminClientes({ empresaId }) {
     };
 
     return (
-        <div style={s.container}>
+        <div className="admin-page-container" style={s.container}>
             <header style={s.header}>
                 <div>
                     <h2 style={s.title}><Icons.Users color="#111827" /> Clientes</h2>
@@ -351,6 +351,7 @@ function AdminClientes({ empresaId }) {
 
             {/* TABELA */}
             <div style={s.cardTabela}>
+                <div style={{ overflowX: 'auto' }}>
                 <table style={s.table}>
                     <thead>
                         <tr>
@@ -477,6 +478,7 @@ function AdminClientes({ empresaId }) {
                         )}
                     </tbody>
                 </table>
+                </div>
             </div>
 
             {/* MODAL DE EDIÇÃO */}
@@ -599,7 +601,7 @@ function AdminClientes({ empresaId }) {
                         )}
 
                         {/* Botões */}
-                        <div style={{ display: 'flex', gap: '10px' }}>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                             <button onClick={salvarEdicao} style={s.btnSalvarModal}>Salvar Alterações</button>
                             <button onClick={() => enviarFollowUp(clienteSelecionado, 'saudade', 'email')} style={s.btnFollowUp}>
                                 <Icons.Mail color="#1d4ed8" /> Sentimos sua falta (e-mail)
@@ -639,11 +641,11 @@ const s = {
     subtitle: { color: '#6b7280', fontSize: '15px', margin: 0 },
     alerta: { padding: '14px 18px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '600' },
     barraTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' },
-    statsRow: { display: 'flex', gap: '12px' },
+    statsRow: { display: 'flex', gap: '12px', flexWrap: 'wrap' },
     statPill: { background: '#fff', border: '1px solid #e5e7eb', padding: '12px 20px', borderRadius: '10px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' },
     statNum: { fontSize: '22px', fontWeight: '800', color: '#111827', lineHeight: 1 },
     statLabel: { fontSize: '12px', color: '#6b7280', fontWeight: '500' },
-    inputBusca: { padding: '11px 16px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', outline: 'none', width: '280px', color: '#111827' },
+    inputBusca: { padding: '11px 16px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', outline: 'none', width: '100%', maxWidth: '280px', color: '#111827', boxSizing: 'border-box' },
     filtrosBtns: { display: 'flex', gap: '6px' },
     btnFiltro: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#6b7280', transition: '0.2s', whiteSpace: 'nowrap' },
     btnFiltroAtivo: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', border: '1px solid #2554eb', fontWeight: '700' },
@@ -659,7 +661,7 @@ const s = {
     btnPlano: { padding: '5px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: '0.2s', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.3px' },
     btnIcone: { background: '#f3f4f6', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' },
     overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 },
-    modal: { backgroundColor: '#fff', padding: '30px', borderRadius: '14px', width: '90%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '20px' },
+    modal: { backgroundColor: '#fff', padding: '30px', borderRadius: '14px', width: '90%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '20px', boxSizing: 'border-box' },
     modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '18px', borderBottom: '1px solid #f0f0f0' },
     btnFechar: { background: 'none', border: 'none', fontSize: '18px', color: '#9ca3af', cursor: 'pointer', lineHeight: 1 },
     label: { fontSize: '12px', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px' },

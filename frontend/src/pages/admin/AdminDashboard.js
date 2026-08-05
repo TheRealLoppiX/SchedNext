@@ -214,7 +214,7 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
   if (loading && !stats.total) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Atualizando dashboard...</p>;
 
   return (
-    <div style={styles.container}>
+    <div className="admin-dashboard-container" style={styles.container}>
       <header style={styles.header}>
         <div>
           <h2 style={styles.title}>Visão Geral</h2>

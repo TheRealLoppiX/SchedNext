@@ -237,8 +237,8 @@ const toggleServico = (servico) => {
 
     const subModalStyles = {
         overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000, borderRadius: '15px' },
-        card: { background: 'white', padding: '25px', borderRadius: '15px', width: '90%', maxWidth: '360px' },
-        cardCheckout: { background: 'white', padding: '25px', borderRadius: '15px', width: '90%', maxWidth: '400px', display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflowY: 'auto' },
+        card: { background: 'white', padding: '25px', borderRadius: '15px', width: '90%', maxWidth: '360px', boxSizing: 'border-box' },
+        cardCheckout: { background: 'white', padding: '25px', borderRadius: '15px', width: '90%', maxWidth: '400px', display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box' },
         clientBadge: { background: '#f8f9fa', padding: '15px', borderRadius: '10px', borderLeft: '5px solid #28a745', marginBottom: '15px' },
         label: { fontSize: '12px', fontWeight: 'bold', color: '#666', marginBottom: '4px', display: 'block', textTransform: 'uppercase' },
         btnConfirm: { flex: 1, padding: '15px', borderRadius: '8px', border: 'none', background: '#333', color: 'white', fontWeight: 'bold', cursor: 'pointer' },
@@ -626,7 +626,7 @@ const toggleServico = (servico) => {
                             </div>
                         )}
 
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             <button style={subModalStyles.btnCancel} onClick={() => { setModalFinalizar(null); onClose && onClose(); }}>Voltar</button>
                             
                             {modalFinalizar.status !== 'concluido' ? (

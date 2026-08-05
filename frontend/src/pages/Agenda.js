@@ -409,7 +409,7 @@ function Agenda() {
               }} style={styles.btnSeta}>›</button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+            <div className="agenda-slots-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
               {gerarSlotsHorario().map((slot, i) => {
                 const selecionado = horaSelecionada && isEqual(slot.data, horaSelecionada);
                 return (
@@ -534,7 +534,7 @@ function Agenda() {
 
 const styles = {
   body: { backgroundColor: '#f4f7f6', minHeight: '100vh', display: 'flex', justifyContent: 'center', padding: '40px 20px', fontFamily: '"Inter", sans-serif' },
-  container: { backgroundColor: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', width: '100%', maxWidth: '450px', textAlign: 'center' },
+  container: { backgroundColor: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', width: '100%', maxWidth: '450px', textAlign: 'center', boxSizing: 'border-box' },
   header: { fontSize: '22px', fontWeight: '700', marginBottom: '25px', color: '#333' },
   inputGroup: { marginBottom: '25px', textAlign: 'center' },
   filtroResumo: { backgroundColor: '#f0faff', padding: '15px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #cce5ff' },
@@ -557,10 +557,10 @@ const styles = {
   dropdownTitle: { padding: '12px', fontWeight: 'bold', borderBottom: '1px solid #eee' },
   listaNotif: { maxHeight: '300px', overflowY: 'auto' },
   itemNotif: { padding: '10px', borderBottom: '1px solid #eee' },
-  btnSeta: { 
-    border: 'none', background: '#f0f0f0', borderRadius: '50%', 
-    width: '30px', height: '30px', cursor: 'pointer', fontSize: '20px',
-    display: 'flex', alignItems: 'center', justifyContent: 'center' 
+  btnSeta: {
+    border: 'none', background: '#f0f0f0', borderRadius: '50%',
+    width: '38px', height: '38px', cursor: 'pointer', fontSize: '20px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
   },
 };
 

@@ -172,7 +172,7 @@ function AdminRelatorios({ empresaId }) {
   const variacao = relatorio?.resumo?.variacao_faturamento_pct ?? 0;
 
   return (
-    <div style={styles.container}>
+    <div className="admin-page-container" style={styles.container}>
       <h2 style={styles.title}>📊 Relatórios e financeiro</h2>
       <p style={styles.subtitle}>Faturamento, taxas de maquineta, comissionamento e desempenho da equipe.</p>
 
@@ -385,7 +385,7 @@ const styles = {
   barraColuna: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', minWidth: '26px' },
   barra: { width: '18px', borderRadius: '4px 4px 0 0', background: 'linear-gradient(180deg, #4c74f0, #2554eb)' },
   barraLabel: { fontSize: '10px', color: '#9ca3af', marginTop: '4px', whiteSpace: 'nowrap' },
-  duasColunas: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' },
+  duasColunas: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' },
   linhaRanking: { marginBottom: '14px' },
   linhaRankingTopo: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#374151', marginBottom: '4px' },
   barraFundo: { height: '8px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' },

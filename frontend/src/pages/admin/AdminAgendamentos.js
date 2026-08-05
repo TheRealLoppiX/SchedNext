@@ -89,7 +89,7 @@ function AdminAgendamentos({ empresaId }) {
   });
 
   return (
-    <div style={styles.container}>
+    <div className="admin-page-container" style={styles.container}>
       <header style={styles.header}>
         <div>
           <h2 style={styles.title}>🗓️ Gestão de Agendamentos</h2>
@@ -169,6 +169,7 @@ function AdminAgendamentos({ empresaId }) {
 
       {/* TABELA DE RESULTADOS */}
       <div style={styles.cardTabela}>
+        <div style={{ overflowX: 'auto' }}>
         <table style={styles.table}>
           <thead>
             <tr>
@@ -223,6 +224,7 @@ function AdminAgendamentos({ empresaId }) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

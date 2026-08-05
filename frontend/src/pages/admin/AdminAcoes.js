@@ -102,7 +102,7 @@ function AdminAcoes() {
     };
 
     return (
-        <div style={s.container}>
+        <div className="admin-page-container" style={s.container}>
             <header style={s.header}>
                 <h2 style={s.title}>⭐ Ações & Fidelidade</h2>
                 <p style={s.subtitle}>Crie campanhas sazonais e programe prêmios para reter clientes.</p>
@@ -212,6 +212,7 @@ function AdminAcoes() {
             </div>
 
             <div style={s.card}>
+                <div style={{ overflowX: 'auto' }}>
                 <table style={s.table}>
                     <thead>
                         <tr>
@@ -253,6 +254,7 @@ function AdminAcoes() {
                         ))}
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
     );

@@ -182,7 +182,7 @@ function Barbeiros() {
   };
 
   return (
-    <div style={s.wrapper}>
+    <div className="admin-page-container" style={s.wrapper}>
       <h2 style={s.header}>Olá, {nomeCliente}!</h2>
       <p style={s.subHeader}>Bem-vindo à <strong>{nomeEmpresa}</strong></p>
 
@@ -309,9 +309,9 @@ const s = {
   bubble: { minWidth: '60px', padding: '10px 5px', borderRadius: '15px', border: '1px solid #eee', cursor: 'pointer', textAlign: 'center', flexShrink: 0 },
   bubbleLabel: { fontSize: '9px', fontWeight: 'bold', display: 'block' },
   bubbleValue: { fontSize: '13px', fontWeight: 'bold' },
-  btnSeta: { border: 'none', background: '#f0f0f0', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' },
+  btnSeta: { border: 'none', background: '#f0f0f0', borderRadius: '50%', width: '38px', height: '38px', cursor: 'pointer', flexShrink: 0 },
   containerHorizontal: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '25px', maxWidth: '1200px', margin: '0 auto' },
-  card: { backgroundColor: '#fff', width: '280px', padding: '30px', borderRadius: '15px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  card: { backgroundColor: '#fff', width: '100%', maxWidth: '280px', padding: '30px', borderRadius: '15px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'center', boxSizing: 'border-box' },
   avatar: { width: '80px', height: '80px', backgroundColor: '#333', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', marginBottom: '15px', overflow: 'hidden', flexShrink: 0 },
   imgAvatar: { width: '100%', height: '100%', objectFit: 'cover' },
   name: { fontSize: '20px', color: '#333', marginBottom: '5px' },

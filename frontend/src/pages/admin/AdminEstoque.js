@@ -341,7 +341,7 @@ function AdminEstoque({ empresaId }) {
   // TELA PRINCIPAL (ESTOQUE)
   // ==========================================
   return (
-    <div style={styles.container}>
+    <div className="admin-page-container" style={styles.container}>
       
       <header style={styles.header}>
         <div>
@@ -536,7 +536,7 @@ function AdminEstoque({ empresaId }) {
                 </div>
             </div>
             
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', background: '#f9fafb', borderRadius: '10px', border: '1px solid #e5e7eb', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', background: '#f9fafb', borderRadius: '10px', border: '1px solid #e5e7eb', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1 }}>
                     <label style={styles.label}>Data Inicial:</label>
                     <input type="date" style={styles.input} value={filtroRelatorio.inicio} onChange={e => setFiltroRelatorio({...filtroRelatorio, inicio: e.target.value})} />
@@ -645,7 +645,7 @@ const styles = {
   btnIcon: { background: '#f9fafb', border: '1px solid #e5e7eb', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', transition: '0.2s' },
   
   overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '20px', backdropFilter: 'blur(4px)' },
-  modalCard: { background: '#fff', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '450px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', display: 'flex', flexDirection: 'column' }
+  modalCard: { background: '#fff', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '450px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }
 };
 
 export default AdminEstoque;

@@ -135,7 +135,7 @@ function GestaoServicos({ empresaId }) {
   };
 
   return (
-    <div style={styles.container}>
+    <div className="admin-page-container" style={styles.container}>
       <header style={styles.header}>
         <div>
           <h2 style={styles.title}>
@@ -237,6 +237,7 @@ function GestaoServicos({ empresaId }) {
       </div>
 
       <div style={styles.cardTabela}>
+        <div style={{ overflowX: 'auto' }}>
         <table style={styles.table}>
           <thead>
             <tr>
@@ -293,6 +294,7 @@ function GestaoServicos({ empresaId }) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
