@@ -76,10 +76,21 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
       {/* ================= ROTAS PÚBLICAS (SEM SIDEBAR) ================= */}
       <Route path="/" element={<Landing />} />
       <Route path="/cadastrar" element={<CadastroEmpresa setEmpresaLogada={setEmpresaId} />} />
-      <Route path="/:empresaSlug" element={<Login />} />
-      <Route path="/:empresaSlug/login" element={<Login />} />
-      <Route path="/:empresaSlug/cadastro" element={<Cadastro />} />
-      <Route path="/:empresaSlug/recuperar-senha" element={<RecuperarSenha />} />
+
+      {/* As rotas de tenant (/:empresaSlug/...) só existem quando o slug veio de um domínio
+          próprio de tenant (subdomínio ou domínio customizado, ver tenantSubdominio.js) — o
+          acesso antigo por caminho no domínio raiz (schednext.com.br/nome-da-empresa) foi
+          desativado agora que toda empresa tem seu próprio domínio/subdomínio. Sem esse
+          guard, essas mesmas rotas casariam também com qualquer /alguma-coisa/login digitado
+          direto no domínio raiz. */}
+      {slugSubdominio && (
+        <>
+          <Route path="/:empresaSlug" element={<Login />} />
+          <Route path="/:empresaSlug/login" element={<Login />} />
+          <Route path="/:empresaSlug/cadastro" element={<Cadastro />} />
+          <Route path="/:empresaSlug/recuperar-senha" element={<RecuperarSenha />} />
+        </>
+      )}
 
       <Route
         path="/admin/login"
@@ -99,10 +110,14 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
       {/* ================= ROTAS COM SIDEBAR (LAYOUT ÚNICO) ================= */}
       <Route element={<Layout setEmpresaId={setEmpresaId} />}>
 
-        {/* --- Rotas do Cliente --- */}
-        <Route path="/:empresaSlug/barbeiros" element={<Barbeiros />} />
-        <Route path="/:empresaSlug/agenda" element={<Agenda />} />
-        <Route path="/:empresaSlug/perfil" element={<Dashboard />} />
+        {/* --- Rotas do Cliente (só existem via subdomínio/domínio próprio, ver acima) --- */}
+        {slugSubdominio && (
+          <>
+            <Route path="/:empresaSlug/barbeiros" element={<Barbeiros />} />
+            <Route path="/:empresaSlug/agenda" element={<Agenda />} />
+            <Route path="/:empresaSlug/perfil" element={<Dashboard />} />
+          </>
+        )}
 
         {/* --- Rotas do Administrador (Protegidas) --- */}
         <Route
