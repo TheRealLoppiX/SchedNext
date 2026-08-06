@@ -55,7 +55,8 @@ function AdminConta({ empresaId }) {
                     plano: data.plano_plataforma,
                     status_assinatura: data.status_assinatura,
                     proxima_cobranca_em: data.proxima_cobranca_em,
-                    cancelamento_agendado: data.cancelamento_agendado
+                    cancelamento_agendado: data.cancelamento_agendado,
+                    plano_pendente: data.plano_plataforma_pendente
                 });
                 setPlanoEscolhidoId(data.plano_plataforma?.id || null);
                 setTemDocumentoSalvo(!!data.cpf_cnpj);
@@ -321,8 +322,8 @@ function AdminConta({ empresaId }) {
                                 </div>
                                 <div style={styles.linhaAssinatura}>
                                     <span style={styles.labelAssinatura}>Status</span>
-                                    <span style={{...styles.badgeStatusAssinatura, ...(assinatura.status_assinatura === 'ativa' ? styles.badgeVerde : assinatura.status_assinatura === 'trial' ? styles.badgeAzul : styles.badgeCinza)}}>
-                                        {assinatura.status_assinatura === 'ativa' ? 'Ativa' : assinatura.status_assinatura === 'trial' ? 'Teste (sem cobrança real ainda)' : assinatura.status_assinatura}
+                                    <span style={{...styles.badgeStatusAssinatura, ...(assinatura.status_assinatura === 'ativa' ? styles.badgeVerde : styles.badgeCinza)}}>
+                                        {assinatura.status_assinatura === 'ativa' ? 'Ativa' : assinatura.status_assinatura === 'inadimplente' ? 'Pagamento em atraso' : assinatura.status_assinatura}
                                     </span>
                                 </div>
                                 {assinatura.proxima_cobranca_em && (
@@ -336,6 +337,12 @@ function AdminConta({ empresaId }) {
                                     <div style={styles.avisoCancelamento}>
                                         Cobrança cancelada. Seu plano continua ativo até a data acima, depois cai automaticamente pro plano Grátis.
                                         <button onClick={reativarCobranca} disabled={processandoAssinatura} style={styles.btnLinkReativar}>Reativar cobrança</button>
+                                    </div>
+                                )}
+
+                                {assinatura.plano_pendente && (
+                                    <div style={styles.avisoCancelamento}>
+                                        Troca para o plano <strong>{assinatura.plano_pendente.nome}</strong> aguardando confirmação do pagamento. Seus recursos atuais continuam valendo normalmente até lá — se você já pagou e o plano não ativou em alguns minutos, fale com o suporte.
                                     </div>
                                 )}
 
@@ -529,7 +536,6 @@ const styles = {
     labelAssinatura: { color: '#6b7280' },
     badgeStatusAssinatura: { padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' },
     badgeVerde: { backgroundColor: '#d1fae5', color: '#065f46' },
-    badgeAzul: { backgroundColor: '#dbeafe', color: '#1e40af' },
     badgeCinza: { backgroundColor: '#f3f4f6', color: '#4b5563' },
     avisoCancelamento: { marginTop: '12px', padding: '12px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '13px', color: '#92400e', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' },
     btnLinkReativar: { background: 'none', border: 'none', color: '#2554eb', fontWeight: '700', cursor: 'pointer', padding: 0, fontSize: '13px', textDecoration: 'underline' },

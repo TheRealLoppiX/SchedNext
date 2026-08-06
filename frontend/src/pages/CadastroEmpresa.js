@@ -141,8 +141,8 @@ function CadastroEmpresa({ setEmpresaLogada }) {
 
       localStorage.setItem('adminToken', JSON.stringify({ ...data.admin, token: data.token }));
       setEmpresaLogada(data.admin.empresa_id);
-      toast.success(`Conta criada! Bem-vindo(a), ${nome}.`);
-      navigate('/admin/dashboard');
+      toast.success(data.message || `Conta criada! Bem-vindo(a), ${nome}.`);
+      navigate(data.planoPendente ? '/admin/conta' : '/admin/dashboard');
     } catch (err) {
       toast.error('Não foi possível conectar ao servidor. Tente novamente em instantes.');
     } finally {
