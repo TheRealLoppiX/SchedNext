@@ -298,6 +298,13 @@ function CadastroEmpresa({ setEmpresaLogada }) {
                 </div>
               )
             )}
+            <p style={{ fontSize: '12px', color: 'var(--bb-text-muted)', marginBottom: '12px' }}>
+              Ao criar sua conta, você concorda com os{' '}
+              <a href="/legal/termos-de-uso.pdf" target="_blank" rel="noopener noreferrer" className="bb-link">Termos de Uso</a>
+              {' '}e a{' '}
+              <a href="/legal/politica-de-privacidade.pdf" target="_blank" rel="noopener noreferrer" className="bb-link">Política de Privacidade</a>
+              {' '}da SchedNext.
+            </p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button type="button" className="bb-btn-secondary" onClick={() => setEtapa(2)} disabled={enviando}>Voltar</button>
               <LoadingButton type="button" loading={enviando} className="bb-btn" onClick={finalizarCadastro}>Criar conta</LoadingButton>

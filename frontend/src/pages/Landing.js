@@ -405,8 +405,8 @@ function Landing() {
           </div>
           <div>
             <h4 style={s.footerTitulo}>Legal</h4>
-            <span style={s.footerLink}>Termos de uso</span>
-            <span style={s.footerLink}>Privacidade</span>
+            <a href="/legal/termos-de-uso.pdf" target="_blank" rel="noopener noreferrer" style={s.footerLink}>Termos de uso</a>
+            <a href="/legal/politica-de-privacidade.pdf" target="_blank" rel="noopener noreferrer" style={s.footerLink}>Privacidade</a>
           </div>
         </div>
         <p style={{ textAlign: 'center', color: s.CORES.textoFraco, fontSize: '13px', marginTop: '30px' }}>
