@@ -72,6 +72,13 @@ window.fetch = (input, init = {}) => {
     if (res.status === 401) {
       if (isAdminRoute) {
         localStorage.removeItem('adminToken');
+        // App.js decide se o admin "está logado" pela presença de 'empresaId', não do
+        // adminToken (ver App.js: useState inicial lê localStorage.getItem('empresaId')).
+        // Sem remover os dois juntos aqui, um token expirado deixa 'empresaId' órfão no
+        // storage: o próximo load navega de volta pro dashboard, que dispara novas chamadas
+        // /admin/*, que voltam 401 de novo — loop infinito de redirect entre /admin/login e
+        // /admin/dashboard.
+        localStorage.removeItem('empresaId');
         if (!window.location.pathname.startsWith('/admin/login')) {
           window.location.href = '/admin/login';
         }
