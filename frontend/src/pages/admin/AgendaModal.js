@@ -31,7 +31,7 @@ function AgendaModal({ barbeiro, empresaId, dataSelecionada, horaPreSelecionada,
     const [justificativaCanc, setJustificativaCanc] = useState('');
     const [estoque, setEstoque] = useState([]);
     const [extrasSelecionados, setExtrasSelecionados] = useState([]);
-    const [assinaturaCheckout, setAssinaturaCheckout] = useState({ assinante: false, servicos_ids: [], servicos_agendados_ids: [] });
+    const [assinaturaCheckout, setAssinaturaCheckout] = useState({ assinante: false, servicos_ids: [], servicos_agendados_ids: [], restantes: {} });
     const [formaPagamento, setFormaPagamento] = useState(null);
 
     const dataFormatadaBr = dataSelecionada ? dataSelecionada.split('-').reverse().slice(0, 2).join('/') : '';
@@ -263,14 +263,22 @@ const toggleServico = (servico) => {
                 })
             });
 
+            const dados = await res.json().catch(() => ({}));
+
             if (res.ok) {
-                toast.success("Atendimento finalizado com sucesso!");
+                // A cobertura pela assinatura é sempre revalidada no servidor (limite mensal
+                // pode ter mudado desde que o modal abriu), então o toast reflete o que
+                // realmente foi decidido lá, não o preview local.
+                const mensagem = dados.servicos_cobrados?.length > 0
+                    ? "Atendimento finalizado! Um dos serviços já tinha estourado o limite da assinatura e foi cobrado."
+                    : "Atendimento finalizado com sucesso!";
+                toast.success(mensagem);
                 setModalFinalizar(null);
                 setExtrasSelecionados([]);
                 carregarDados();
                 onClose();
             } else {
-                toast.error("Não foi possível finalizar o atendimento. Tente novamente.");
+                toast.error(dados.error || "Não foi possível finalizar o atendimento. Tente novamente.");
             }
         } catch (err) {
             console.error(err);
@@ -283,21 +291,26 @@ const toggleServico = (servico) => {
     // VALOR BASE AGORA LÊ CORRETAMENTE
     useEffect(() => {
         setFormaPagamento(null);
-        if (!modalFinalizar?.id) { setAssinaturaCheckout({ assinante: false, servicos_ids: [], servicos_agendados_ids: [] }); return; }
+        if (!modalFinalizar?.id) { setAssinaturaCheckout({ assinante: false, servicos_ids: [], servicos_agendados_ids: [], restantes: {} }); return; }
         fetch(`${API_URL}/admin/agendamento-usuario/${modalFinalizar.id}`)
             .then(r => r.json())
             .then(d => {
-                setAssinaturaCheckout({ assinante: !!d.assinante, servicos_ids: d.servicos_ids || [], servicos_agendados_ids: d.servicos_agendados_ids || [] });
+                setAssinaturaCheckout({ assinante: !!d.assinante, servicos_ids: d.servicos_ids || [], servicos_agendados_ids: d.servicos_agendados_ids || [], restantes: d.restantes || {} });
             })
-            .catch(() => setAssinaturaCheckout({ assinante: false, servicos_ids: [], servicos_agendados_ids: [] }));
+            .catch(() => setAssinaturaCheckout({ assinante: false, servicos_ids: [], servicos_agendados_ids: [], restantes: {} }));
     }, [modalFinalizar]);
 
+    // Estimativa pra exibição antes de finalizar. A decisão real (e o desconto de fato
+    // aplicado) é sempre recalculada no servidor em /admin/finalizar-servico-checkout.
     const getValorBaseSeguro = () => {
         if (!modalFinalizar) return 0;
         const valorTotal = parseFloat(String(modalFinalizar.valor_total || '0').replace(',', '.')) || 0;
         if (!assinaturaCheckout.assinante || assinaturaCheckout.servicos_ids.length === 0) return valorTotal;
-        // Desconta servicos que estao no plano E foram agendados
-        const idsDescontar = assinaturaCheckout.servicos_agendados_ids.filter(id => assinaturaCheckout.servicos_ids.includes(id));
+        // Desconta servicos que estao no plano, foram agendados E ainda tem saldo no ciclo
+        const idsDescontar = assinaturaCheckout.servicos_agendados_ids.filter(id =>
+            assinaturaCheckout.servicos_ids.includes(id) &&
+            (assinaturaCheckout.restantes[id] == null || assinaturaCheckout.restantes[id] > 0)
+        );
         if (idsDescontar.length === 0) return valorTotal;
         // Forcar Number em ambos para evitar mismatch string vs number
         const idsDescontarNum = idsDescontar.map(Number);
@@ -587,9 +600,22 @@ const toggleServico = (servico) => {
 
                         <div style={{ marginBottom: '15px', borderTop: '2px solid #e5e7eb', paddingTop: '15px' }}>
                             {assinaturaCheckout.assinante && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', padding: '6px 10px', background: '#faf5ff', borderRadius: '6px', border: '1px solid #c4b5fd' }}>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"></path><path d="M11 3L8 9l4 13 4-13-3-6"></path><line x1="2" y1="9" x2="22" y2="9"></line></svg>
-                                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#6d28d9' }}>Assinante: serviços do plano descontados</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '6px 10px', background: '#faf5ff', borderRadius: '6px', border: '1px solid #c4b5fd' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"></path><path d="M11 3L8 9l4 13 4-13-3-6"></path><line x1="2" y1="9" x2="22" y2="9"></line></svg>
+                                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#6d28d9' }}>Assinante: serviços do plano descontados</span>
+                                    </div>
+                                    {assinaturaCheckout.servicos_agendados_ids
+                                        .filter(id => assinaturaCheckout.servicos_ids.includes(id))
+                                        .map(id => {
+                                            const nome = servicos.find(sv => Number(sv.id) === Number(id))?.nome || 'Serviço';
+                                            const restante = assinaturaCheckout.restantes[id];
+                                            return (
+                                                <span key={id} style={{ fontSize: '11px', color: '#6d28d9', paddingLeft: '18px' }}>
+                                                    {nome}: {restante == null ? 'ilimitado' : `${Math.max(0, restante)} restante(s) neste ciclo`}
+                                                </span>
+                                            );
+                                        })}
                                 </div>
                             )}
                             <div style={{ textAlign: 'right' }}>

@@ -14,7 +14,7 @@ function AdminAssinaturas({ empresaId }) {
     const [vertical, setVertical] = useState('barbearia');
     const termos = obterTerminologia(vertical);
 
-    const [form, setForm] = useState({ nome: '', preco: '', descricao: '', servicos_ids: [] });
+    const [form, setForm] = useState({ nome: '', preco: '', descricao: '', servicos: [] });
 
     const carregar = useCallback(async () => {
         if (!idEfetivo) return;
@@ -39,26 +39,26 @@ function AdminAssinaturas({ empresaId }) {
     };
 
     const toggleServico = (id) => {
-        if (editando) {
-            setEditando(prev => ({
-                ...prev,
-                servicos_ids: prev.servicos_ids.includes(id)
-                    ? prev.servicos_ids.filter(s => s !== id)
-                    : [...prev.servicos_ids, id]
-            }));
-        } else {
-            setForm(prev => ({
-                ...prev,
-                servicos_ids: prev.servicos_ids.includes(id)
-                    ? prev.servicos_ids.filter(s => s !== id)
-                    : [...prev.servicos_ids, id]
-            }));
-        }
+        const alvo = editando ? setEditando : setForm;
+        alvo(prev => ({
+            ...prev,
+            servicos: prev.servicos.some(s => s.id === id)
+                ? prev.servicos.filter(s => s.id !== id)
+                : [...prev.servicos, { id, limite_mensal: null }]
+        }));
+    };
+
+    const alterarLimiteServico = (id, limite_mensal) => {
+        const alvo = editando ? setEditando : setForm;
+        alvo(prev => ({
+            ...prev,
+            servicos: prev.servicos.map(s => s.id === id ? { ...s, limite_mensal } : s)
+        }));
     };
 
     const handleCriar = async (e) => {
         e.preventDefault();
-        if (form.servicos_ids.length === 0) return mostrarFeedback('Selecione ao menos um serviço.', 'erro');
+        if (form.servicos.length === 0) return mostrarFeedback('Selecione ao menos um serviço.', 'erro');
         try {
             const res = await fetch(`${API_URL}/admin/assinaturas`, {
                 method: 'POST',
@@ -67,7 +67,7 @@ function AdminAssinaturas({ empresaId }) {
             });
             if (res.ok) {
                 mostrarFeedback('Plano criado com sucesso.');
-                setForm({ nome: '', preco: '', descricao: '', servicos_ids: [] });
+                setForm({ nome: '', preco: '', descricao: '', servicos: [] });
                 carregar();
             } else {
                 mostrarFeedback('Erro ao criar plano.', 'erro');
@@ -76,7 +76,7 @@ function AdminAssinaturas({ empresaId }) {
     };
 
     const handleAtualizar = async () => {
-        if (editando.servicos_ids.length === 0) return mostrarFeedback('Selecione ao menos um serviço.', 'erro');
+        if (editando.servicos.length === 0) return mostrarFeedback('Selecione ao menos um serviço.', 'erro');
         try {
             const res = await fetch(`${API_URL}/admin/assinaturas/${editando.id}`, {
                 method: 'PUT',
@@ -133,29 +133,56 @@ function AdminAssinaturas({ empresaId }) {
     };
 
     const abrirEdicao = (plano) => {
-        setEditando({ ...plano, servicos_ids: plano.servicos_ids || [] });
+        setEditando({ ...plano, servicos: (plano.servicos || []).map(s => ({ id: s.id, limite_mensal: s.limite_mensal ?? null })) });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const FormularioServicos = ({ ids, onToggle }) => (
+    const FormularioServicos = ({ selecionados, onToggle, onAlterarLimite }) => (
         <div style={s.gridServicos}>
             {servicos.map(sv => {
-                const sel = ids.includes(sv.id);
+                const item = selecionados.find(s => s.id === sv.id);
+                const sel = !!item;
+                const ilimitado = sel && item.limite_mensal == null;
                 return (
-                    <label key={sv.id} style={{ ...s.itemServico, backgroundColor: sel ? '#f0fdf4' : '#f9fafb', borderColor: sel ? '#a7f3d0' : '#e5e7eb' }}>
-                        <input
-                            type="checkbox"
-                            checked={sel}
-                            onChange={() => onToggle(sv.id)}
-                            style={{ accentColor: '#111827', width: '15px', height: '15px', flexShrink: 0 }}
-                        />
-                        <span style={{ fontSize: '13px', color: sel ? '#065f46' : '#374151', fontWeight: sel ? '600' : '400' }}>
-                            {sv.nome}
-                        </span>
-                        <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                    <div key={sv.id} style={{ ...s.itemServico, backgroundColor: sel ? '#f0fdf4' : '#f9fafb', borderColor: sel ? '#a7f3d0' : '#e5e7eb', flexWrap: 'wrap' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, cursor: 'pointer', minWidth: 0 }}>
+                            <input
+                                type="checkbox"
+                                checked={sel}
+                                onChange={() => onToggle(sv.id)}
+                                style={{ accentColor: '#111827', width: '15px', height: '15px', flexShrink: 0 }}
+                            />
+                            <span style={{ fontSize: '13px', color: sel ? '#065f46' : '#374151', fontWeight: sel ? '600' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {sv.nome}
+                            </span>
+                        </label>
+                        <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
                             R$ {parseFloat(sv.valor).toFixed(2).replace('.', ',')}
                         </span>
-                    </label>
+                        {sel && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', marginTop: '4px', paddingLeft: '25px' }}>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    disabled={ilimitado}
+                                    placeholder="Limite/mês"
+                                    value={ilimitado ? '' : item.limite_mensal}
+                                    onChange={e => onAlterarLimite(sv.id, e.target.value ? parseInt(e.target.value, 10) : null)}
+                                    style={{ ...s.inputLimite, opacity: ilimitado ? 0.5 : 1 }}
+                                />
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6b7280', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={ilimitado}
+                                        onChange={() => onAlterarLimite(sv.id, ilimitado ? 1 : null)}
+                                        style={{ accentColor: '#111827', width: '13px', height: '13px' }}
+                                    />
+                                    Ilimitado
+                                </label>
+                            </div>
+                        )}
+                    </div>
                 );
             })}
         </div>
@@ -224,11 +251,12 @@ function AdminAssinaturas({ empresaId }) {
                 <div style={s.inputGroup}>
                     <label style={s.label}>Serviços Inclusos no Plano</label>
                     <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 10px 0' }}>
-                        O cliente assinante poderá agendar estes serviços sem custo.
+                        O cliente assinante poderá agendar estes serviços sem custo, até o limite mensal definido (ou sem limite).
                     </p>
                     <FormularioServicos
-                        ids={editando ? (editando.servicos_ids || []) : form.servicos_ids}
+                        selecionados={editando ? (editando.servicos || []) : form.servicos}
                         onToggle={toggleServico}
+                        onAlterarLimite={alterarLimiteServico}
                     />
                 </div>
 
@@ -267,8 +295,10 @@ function AdminAssinaturas({ empresaId }) {
                                 </td>
                                 <td style={s.td}>
                                     <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                                        {(p.servicos_nomes || '').split(',').filter(Boolean).map((nome, i) => (
-                                            <span key={i} style={s.badgeServico}>{nome.trim()}</span>
+                                        {(p.servicos || []).map(sv => (
+                                            <span key={sv.id} style={s.badgeServico}>
+                                                {sv.nome} · {sv.limite_mensal == null ? 'ilimitado' : `${sv.limite_mensal}/mês`}
+                                            </span>
                                         ))}
                                     </div>
                                 </td>
@@ -341,7 +371,8 @@ const s = {
     label: { fontSize: '12px', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px' },
     input: { padding: '11px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', outline: 'none', color: '#111827', boxSizing: 'border-box' },
     gridServicos: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' },
-    itemServico: { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', border: '1px solid', cursor: 'pointer', transition: '0.2s' },
+    itemServico: { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', border: '1px solid', transition: '0.2s' },
+    inputLimite: { width: '90px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px', outline: 'none', color: '#111827', boxSizing: 'border-box' },
     btnPrincipal: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '14px' },
     btnCancelar: { background: '#f3f4f6', color: '#4b5563', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
     cardTabela: { background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid #f3f4f6' },

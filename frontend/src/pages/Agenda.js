@@ -27,6 +27,8 @@ function Agenda() {
   const [carrinho, setCarrinho] = useState([]);
   const [isAssinante, setIsAssinante] = useState(false);
   const [servicosPlano, setServicosPlano] = useState([]); // ids dos servicos inclusos no plano
+  const [restantesPlano, setRestantesPlano] = useState({}); // saldo por servico no ciclo atual (null = ilimitado)
+  const [pendentesPlano, setPendentesPlano] = useState({}); // agendamentos ja marcados (pendente/confirmado) neste ciclo, por servico
   const [empresaHorarios, setEmpresaHorarios] = useState(null);
 
   
@@ -60,6 +62,8 @@ function Agenda() {
         .then(d => {
           setIsAssinante(!!d.assinante);
           if (d.servicos_ids) setServicosPlano(d.servicos_ids);
+          if (d.restantes) setRestantesPlano(d.restantes);
+          if (d.pendentes) setPendentesPlano(d.pendentes);
         })
         .catch(() => {});
     }
@@ -437,25 +441,49 @@ function Agenda() {
           <h4 style={{marginTop: 0, fontSize: '14px'}}>Serviços disponíveis:</h4>
           {servicos.map(s => {
             const noCarrinho = carrinho.some(item => item.id === s.id);
+            const noPlano = isAssinante && servicosPlano.includes(s.id);
+            const restante = noPlano ? restantesPlano[s.id] : undefined;
+            const esgotado = noPlano && restante != null && restante <= 0;
+            const pendentes = noPlano ? (pendentesPlano[s.id] || 0) : 0;
+            // A cota mostrada em "restante" só reflete o que já foi de fato consumido (debitado
+            // no fechamento de caixa). Se o cliente já tem, marcados nesse ciclo, agendamentos
+            // pendentes/confirmados suficientes pra esgotar o que falta, avisamos aqui — antes
+            // de finalizados, esses agendamentos não aparecem em "restante", mas já comprometem
+            // a cota na prática.
+            const risco = noPlano && !esgotado && restante != null && pendentes >= restante;
             return (
-              <div key={s.id} style={styles.serviceItem}>
-                <span style={{fontSize: '14px'}}>
-                  {s.nome}
-                  {!isAssinante && <strong> • R$ {parseFloat(s.valor).toFixed(2).replace('.',',')}</strong>}
-                  {isAssinante && servicosPlano.includes(s.id) && (
-                    <span style={{marginLeft:'6px',background:'#ede9fe',color:'#6d28d9',fontSize:'11px',fontWeight:'700',padding:'2px 7px',borderRadius:'4px',textTransform:'uppercase',letterSpacing:'0.3px'}}>Plano</span>
-                  )}
-                  {isAssinante && !servicosPlano.includes(s.id) && (
-                    <span style={{marginLeft:'4px',fontSize:'13px',color:'#6b7280'}}>• R$ {parseFloat(s.valor).toFixed(2).replace('.',',')}</span>
-                  )}
-                </span>
-                <button 
-                  onClick={() => adicionarAoCarrinho(s)} 
-                  disabled={noCarrinho}
-                  style={{...styles.addBtn, background: noCarrinho ? '#e0e0e0' : 'linear-gradient(135deg, #4c74f0, #2554eb)', color: noCarrinho ? '#999' : '#ffffff'}}
-                >
-                  {noCarrinho ? '✓' : 'Adicionar'}
-                </button>
+              <div key={s.id} style={{...styles.serviceItem, flexDirection: 'column', alignItems: 'stretch', gap: (esgotado || risco) ? '6px' : 0}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                  <span style={{fontSize: '14px'}}>
+                    {s.nome}
+                    {!isAssinante && <strong> • R$ {parseFloat(s.valor).toFixed(2).replace('.',',')}</strong>}
+                    {noPlano && (
+                      <span style={{marginLeft:'6px',background: esgotado ? '#fef3c7' : '#ede9fe', color: esgotado ? '#92400e' : '#6d28d9',fontSize:'11px',fontWeight:'700',padding:'2px 7px',borderRadius:'4px',textTransform:'uppercase',letterSpacing:'0.3px'}}>
+                        {esgotado ? 'Limite atingido' : restante != null ? `Incluso na assinatura · ${restante} restante(s)` : 'Incluso na assinatura'}
+                      </span>
+                    )}
+                    {isAssinante && !noPlano && (
+                      <span style={{marginLeft:'4px',fontSize:'13px',color:'#6b7280'}}>• R$ {parseFloat(s.valor).toFixed(2).replace('.',',')}</span>
+                    )}
+                  </span>
+                  <button
+                    onClick={() => adicionarAoCarrinho(s)}
+                    disabled={noCarrinho}
+                    style={{...styles.addBtn, background: noCarrinho ? '#e0e0e0' : 'linear-gradient(135deg, #4c74f0, #2554eb)', color: noCarrinho ? '#999' : '#ffffff'}}
+                  >
+                    {noCarrinho ? '✓' : 'Adicionar'}
+                  </button>
+                </div>
+                {esgotado && (
+                  <p style={{margin: 0, fontSize: '11px', color: '#92400e', lineHeight: 1.4}}>
+                    Você já usou todos os {s.nome.toLowerCase()} inclusos no seu plano este mês — esse aqui entra à parte, por R$ {parseFloat(s.valor).toFixed(2).replace('.',',')}.
+                  </p>
+                )}
+                {risco && (
+                  <p style={{margin: 0, fontSize: '11px', color: '#92400e', lineHeight: 1.4}}>
+                    Você já tem {pendentes === 1 ? 'um agendamento' : `${pendentes} agendamentos`} de {s.nome.toLowerCase()} marcado{pendentes > 1 ? 's' : ''} este mês. Se {pendentes === 1 ? 'ele for concluído' : 'todos forem concluídos'} pela barbearia, esse aqui pode passar do limite do seu plano e ser cobrado no valor integral (R$ {parseFloat(s.valor).toFixed(2).replace('.',',')}).
+                  </p>
+                )}
               </div>
             );
           })}
@@ -470,7 +498,7 @@ function Agenda() {
               <div key={index} style={styles.cartItem}>
                 <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
                   <span>{serv?.nome}</span>
-                  {noPlano && <span style={{background:'#ede9fe',color:'#6d28d9',fontSize:'10px',fontWeight:'700',padding:'1px 6px',borderRadius:'4px'}}>Plano</span>}
+                  {noPlano && <span style={{background:'#ede9fe',color:'#6d28d9',fontSize:'10px',fontWeight:'700',padding:'1px 6px',borderRadius:'4px'}}>Incluso na assinatura</span>}
                   {isAssinante && !noPlano && <span style={{fontSize:'12px',color:'#6b7280'}}>R$ {parseFloat(serv?.valor||0).toFixed(2).replace('.',',')}</span>}
                 </div>
                 <button onClick={() => setCarrinho(carrinho.filter((_, i) => i !== index))} style={styles.removeBtn}>✕</button>
