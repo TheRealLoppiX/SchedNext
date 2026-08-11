@@ -322,6 +322,9 @@ function Layout({ setEmpresaId }) {
                     <button onClick={() => navigate(`/${empresaSlug}/perfil?aba=dados`)} style={{...s.navItem, backgroundColor: isAtiva('dados') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
                       <Icons.User color="currentColor" /> Minha Conta
                     </button>
+                    <button onClick={() => navigate(`/${empresaSlug}/assinatura`)} style={{...s.navItem, backgroundColor: location.pathname === `/${empresaSlug}/assinatura` ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
+                      <Icons.CreditCard /> Assinatura
+                    </button>
                     <button onClick={() => navigate(`/${empresaSlug}/perfil?aba=privacidade`)} style={{...s.navItem, backgroundColor: isAtiva('privacidade') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
                       <Icons.Lock /> Privacidade
                     </button>

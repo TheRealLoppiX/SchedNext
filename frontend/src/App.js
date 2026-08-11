@@ -9,6 +9,7 @@ import CadastroEmpresa from './pages/CadastroEmpresa';
 import Login from './pages/Login';
 import Barbeiros from './pages/Barbeiros';
 import Agenda from './pages/Agenda';
+import Assinatura from './pages/Assinatura';
 import Cadastro from './pages/Cadastro';
 import RecuperarSenha from './pages/RecuperarSenha';
 import Dashboard from './pages/Dashboard';
@@ -117,6 +118,7 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
           <>
             <Route path="/:empresaSlug/barbeiros" element={<Barbeiros />} />
             <Route path="/:empresaSlug/agenda" element={<Agenda />} />
+            <Route path="/:empresaSlug/assinatura" element={<Assinatura />} />
             <Route path="/:empresaSlug/perfil" element={<Dashboard />} />
           </>
         )}
