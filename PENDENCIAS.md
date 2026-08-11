@@ -4,14 +4,18 @@ Levantamento original de 2026-07-29, atualizado no mesmo dia depois de uma rodad
 
 ---
 
-## 1. Feature pausada no meio (pagamento antecipado do cliente)
+## 1. Pagamento antecipado do cliente (Mercado Pago) — código pronto, falta credencial real + rodar o SQL
 
-**Zero código no repositório ainda** (confirmado via grep: nenhuma referência a `mercadopago`, `pagamento_status`, `asaas_wallet` em `backend/src`). O que existe:
-- Colunas mortas no banco: `empresas.asaas_wallet_id`, `agendamentos.pagamento_status`, `agendamentos.asaas_payment_id` — criadas numa sessão anterior, não usadas por nenhuma rota.
-- Decisão já tomada: Asaas foi descartado (bloqueia subconta pra quem é CPF, e a SchedNext é CPF), pivotando pra Mercado Pago (OAuth "vendedor conectado", suporta split de PIX com `marketplace_fee`).
-- Faltando: pegar as credenciais de teste do Mercado Pago (Public Key + Access Token) com o usuário, implementar o fluxo de OAuth (empresa conecta a própria conta MP), a rota de cobrança PIX no agendamento, e o webhook de confirmação automática.
+Implementado em 2026-08-11: modelo OAuth "vendedor conectado" (cada empresa conecta a própria conta Mercado Pago, cobrança de Pix sai com o access_token dela, SchedNext fica com uma fatia via `application_fee`).
+- Backend: `backend/src/services/mercadopago.js` (cliente HTTP), `backend/src/routes/mercadopago.js` (conectar/desconectar/cobrar/status/callback OAuth/webhook), `backend/src/cron/mercadoPago.js` (renovação de token), `backend/src/services/pagamentoAgendamento.js` (cálculo de valor compartilhado com o fechamento de caixa).
+- Frontend: `frontend/src/pages/admin/AdminMercadoPago.js` (conectar/desconectar), Pix no PDV em `AgendaModal.js`, Pix no agendamento do cliente em `Agenda.js`.
+- Taxa de marketplace por plano: `taxa_marketplace_percentual` em `planos_plataforma`, editável pelo admin absoluto (mesmo CRUD de planos já existente).
+- **Migração de banco já aplicada em produção (2026-08-11, via Management API do Supabase)**: colunas novas em `empresas` (`mercadopago_user_id`, `mercadopago_access_token`, `mercadopago_refresh_token`, `mercadopago_token_expira_em`), `agendamentos.asaas_payment_id` renomeada pra `mercadopago_payment_id`, `planos_plataforma.taxa_marketplace_percentual` criada (5% no Grátis, 0% nos demais).
+- **Falta pra funcionar de verdade**:
+  1. Cadastrar a aplicação da SchedNext no painel de desenvolvedor do Mercado Pago, preencher `MERCADOPAGO_CLIENT_ID`/`MERCADOPAGO_CLIENT_SECRET`/`MERCADOPAGO_WEBHOOK_SECRET` no Render (nunca commitar), configurar a Redirect URI (`{BACKEND_URL}/mercadopago/oauth/callback`).
+  2. Testar ponta a ponta com uma conta de teste do Mercado Pago (sandbox).
 
-Continua sendo o maior item pendente do projeto.
+Fora de escopo por decisão consciente: cancelamento automático de agendamento não pago, revogação de token ao desconectar, split de dinheiro pra comissão de profissional (isso continua sendo só relatório interno, não mexe em dinheiro real — ver `percentual_comissao` em `barbeiros`).
 
 ---
 
@@ -31,7 +35,7 @@ Estava "Certificate Pending" na última verificação (2026-07-29, cedo). Não f
 ## 3. Board do Trello (2026-07-29) — o que ainda falta
 
 ### 3.1 PIX de verdade no fechamento do atendimento
-O campo "forma de pagamento" (dinheiro/crédito/débito/pix) já é registrado no fechamento de caixa (`POST /admin/finalizar-servico-checkout`), com seletor em `AgendaModal.js`. **O que ainda não existe**: gerar um QR code de Pix real com o valor final pro cliente escanear e confirmar automaticamente — isso exige o mesmo gateway de pagamento (Mercado Pago) do item 1, então está no mesmo bloqueio.
+Implementado junto com o item 1 (2026-08-11): quando "Pix" é selecionado como forma de pagamento no PDV (`AgendaModal.js`) e a empresa tem o Mercado Pago conectado, aparece um botão "Gerar Pix" que cria a cobrança de verdade (`POST /admin/mercadopago/pix/:agendamentoId`) e mostra QR Code + código copia-e-cola, com confirmação automática por polling. Mesmo bloqueio do item 1 pra funcionar em produção (SQL + credenciais reais).
 
 ### 3.2 Exportar relatório em PDF ou Excel
 Os Relatórios avançados (`AdminRelatorios.js`) exportam em **CSV** hoje. PDF e `.xlsx` de verdade não foram implementados (exigiria biblioteca nova no frontend, decisão que não tomei sozinho).

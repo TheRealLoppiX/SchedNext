@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { formatarTelefone } from '../../utils/telefone';
 import { emailValido } from '../../utils/validacao';
 import { useToast } from '../../components/Toast';
@@ -33,6 +33,10 @@ function AgendaModal({ barbeiro, empresaId, dataSelecionada, horaPreSelecionada,
     const [extrasSelecionados, setExtrasSelecionados] = useState([]);
     const [assinaturaCheckout, setAssinaturaCheckout] = useState({ assinante: false, servicos_ids: [], servicos_agendados_ids: [] });
     const [formaPagamento, setFormaPagamento] = useState(null);
+    const [mpConectado, setMpConectado] = useState(false);
+    const [pixInfo, setPixInfo] = useState(null);
+    const [gerandoPix, setGerandoPix] = useState(false);
+    const pixPollRef = useRef(null);
 
     const dataFormatadaBr = dataSelecionada ? dataSelecionada.split('-').reverse().slice(0, 2).join('/') : '';
 
@@ -283,6 +287,8 @@ const toggleServico = (servico) => {
     // VALOR BASE AGORA LÊ CORRETAMENTE
     useEffect(() => {
         setFormaPagamento(null);
+        setPixInfo(null);
+        if (pixPollRef.current) { clearInterval(pixPollRef.current); pixPollRef.current = null; }
         if (!modalFinalizar?.id) { setAssinaturaCheckout({ assinante: false, servicos_ids: [], servicos_agendados_ids: [] }); return; }
         fetch(`${API_URL}/admin/agendamento-usuario/${modalFinalizar.id}`)
             .then(r => r.json())
@@ -291,6 +297,61 @@ const toggleServico = (servico) => {
             })
             .catch(() => setAssinaturaCheckout({ assinante: false, servicos_ids: [], servicos_agendados_ids: [] }));
     }, [modalFinalizar]);
+
+    useEffect(() => {
+        if (!empresaId) return;
+        fetch(`${API_URL}/admin/mercadopago`)
+            .then(r => r.json())
+            .then(d => setMpConectado(!!d.conectado))
+            .catch(() => setMpConectado(false));
+    }, [empresaId]);
+
+    // Pra parar o polling se o modal fechar/desmontar com um Pix ainda pendente.
+    useEffect(() => () => { if (pixPollRef.current) clearInterval(pixPollRef.current); }, []);
+
+    const gerarPix = async () => {
+        setGerandoPix(true);
+        try {
+            const produtosVendidos = extrasSelecionados.filter(e => e.tipo === 'produto');
+            const servicosAdd = extrasSelecionados.filter(e => e.tipo === 'servico');
+
+            const res = await fetch(`${API_URL}/admin/mercadopago/pix/${modalFinalizar.id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ produtos_vendidos: produtosVendidos, servicos_adicionais: servicosAdd })
+            });
+            const dados = await res.json();
+            if (!res.ok) { toast.error(dados.error || 'Não foi possível gerar o Pix.'); return; }
+
+            setPixInfo({ ...dados, pago: false });
+
+            const agendamentoId = modalFinalizar.id;
+            pixPollRef.current = setInterval(async () => {
+                try {
+                    const resStatus = await fetch(`${API_URL}/admin/mercadopago/pix/${agendamentoId}/status`);
+                    const statusDados = await resStatus.json();
+                    if (statusDados.pagamento_status === 'pago') {
+                        clearInterval(pixPollRef.current);
+                        pixPollRef.current = null;
+                        setPixInfo((atual) => (atual ? { ...atual, pago: true } : atual));
+                    }
+                } catch (err) {
+                    console.error('Erro ao consultar status do Pix:', err);
+                }
+            }, 4000);
+        } catch (err) {
+            toast.error('Erro de conexão. Tente novamente.');
+        } finally {
+            setGerandoPix(false);
+        }
+    };
+
+    const copiarCodigoPix = () => {
+        if (!pixInfo?.qr_code) return;
+        navigator.clipboard.writeText(pixInfo.qr_code)
+            .then(() => toast.success('Código Pix copiado!'))
+            .catch(() => toast.error('Não foi possível copiar o código.'));
+    };
 
     const getValorBaseSeguro = () => {
         if (!modalFinalizar) return 0;
@@ -623,6 +684,41 @@ const toggleServico = (servico) => {
                                         </button>
                                     ))}
                                 </div>
+                            </div>
+                        )}
+
+                        {modalFinalizar.status !== 'concluido' && formaPagamento === 'pix' && mpConectado && (
+                            <div style={{ marginBottom: '15px', padding: '14px', borderRadius: '10px', border: '1px solid #e5e7eb', background: '#f9fafb' }}>
+                                {!pixInfo ? (
+                                    <LoadingButton
+                                        loading={gerandoPix}
+                                        onClick={gerarPix}
+                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', background: '#111827', color: '#fff', fontWeight: '600', cursor: 'pointer' }}
+                                    >
+                                        Gerar Pix
+                                    </LoadingButton>
+                                ) : pixInfo.pago ? (
+                                    <p style={{ margin: 0, textAlign: 'center', color: '#059669', fontWeight: '700', fontSize: '14px' }}>✅ Pix recebido!</p>
+                                ) : (
+                                    <div style={{ textAlign: 'center' }}>
+                                        {pixInfo.qr_code_base64 && (
+                                            <img
+                                                src={`data:image/png;base64,${pixInfo.qr_code_base64}`}
+                                                alt="QR Code do Pix"
+                                                style={{ width: '160px', height: '160px', border: '1px solid #f3f4f6', borderRadius: '8px', padding: '6px', background: '#fff' }}
+                                            />
+                                        )}
+                                        <p style={{ margin: '10px 0 6px', fontSize: '12px', color: '#6b7280' }}>Peça pro cliente escanear ou copiar o código Pix abaixo.</p>
+                                        <button
+                                            type="button"
+                                            onClick={copiarCodigoPix}
+                                            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '12px' }}
+                                        >
+                                            Copiar código Pix
+                                        </button>
+                                        <p style={{ margin: '10px 0 0', fontSize: '11px', color: '#9ca3af' }}>Aguardando confirmação do pagamento...</p>
+                                    </div>
+                                )}
                             </div>
                         )}
 

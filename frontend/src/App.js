@@ -34,6 +34,7 @@ import AdminApiKeys from './pages/admin/AdminApiKeys';
 import AdminRelatorios from './pages/admin/AdminRelatorios';
 import AdminDominio from './pages/admin/AdminDominio';
 import AdminWhatsapp from './pages/admin/AdminWhatsapp';
+import AdminMercadoPago from './pages/admin/AdminMercadoPago';
 
 // Admin absoluto (dono da plataforma) — fora da árvore de tenant, ver
 // src/utils/tenantSubdominio.js (rotaIndependeDeTenant).
@@ -176,6 +177,7 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
         <Route path="/admin/dominio" element={empresaId ? <AdminDominio empresaId={empresaId} /> : <Navigate to="/admin/login" />} />
 
         <Route path="/admin/whatsapp" element={empresaId ? <AdminWhatsapp /> : <Navigate to="/admin/login" />} />
+        <Route path="/admin/mercadopago" element={empresaId ? <AdminMercadoPago /> : <Navigate to="/admin/login" />} />
 
       </Route>
 

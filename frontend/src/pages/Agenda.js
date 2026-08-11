@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import ptBR from 'date-fns/locale/pt-BR';
@@ -43,6 +43,8 @@ function Agenda() {
 
   const [horariosOcupados, setHorariosOcupados] = useState({ agendados: [], bloqueios: [] });
   const [mensagem, setMensagem] = useState('');
+  const [pixInfo, setPixInfo] = useState(null);
+  const pixPollRef = useRef(null);
   const [barbeiroNome, setBarbeiroNome] = useState('');
   
   const [notificacoes, setNotificacoes] = useState([]);
@@ -230,15 +232,17 @@ function Agenda() {
         return;
     }
     setMensagem('Aguarde...');
+    setPixInfo(null);
+    if (pixPollRef.current) { clearInterval(pixPollRef.current); pixPollRef.current = null; }
 
     try {
       const res = await fetch(`${API_URL}/agendar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           usuario_id: userId,
-          barbeiro_id: barbeiroId, 
-          empresa_slug: empresaSlug, 
+          barbeiro_id: barbeiroId,
+          empresa_slug: empresaSlug,
           data_hora: format(dataHora, 'yyyy-MM-dd HH:mm:00'),
           servicos: carrinho,
           unidade_id: unidadeId || null
@@ -246,9 +250,9 @@ function Agenda() {
       });
 
       const data = await res.json();
-      if (res.ok) { 
-          setMensagem('Agendado com sucesso'); 
-          setCarrinho([]); 
+      if (res.ok) {
+          setMensagem('Agendado com sucesso');
+          setCarrinho([]);
           const dataFormatada = format(dataHora, 'yyyy-MM-dd');
           fetch(`${API_URL}/horarios-ocupados?barbeiro_id=${barbeiroId}&data=${dataFormatada}`)
             .then(res => res.json()).then(newData => {
@@ -257,12 +261,39 @@ function Agenda() {
                   bloqueios: newData.bloqueios || []
                 });
             });
-      } else { 
+
+          // Pagamento antecipado por Pix: só vem preenchido se a empresa tiver conectado o
+          // Mercado Pago (ver POST /agendar em routes/agendamentos.js). Sem isso, o agendamento
+          // segue exatamente como sempre funcionou.
+          if (data.pix && data.agendamento_id) {
+            setPixInfo({ ...data.pix, agendamento_id: data.agendamento_id, pago: false });
+            pixPollRef.current = setInterval(async () => {
+              try {
+                const resStatus = await fetch(`${API_URL}/pix/${data.agendamento_id}/status`);
+                const statusDados = await resStatus.json();
+                if (statusDados.pagamento_status === 'pago') {
+                  clearInterval(pixPollRef.current);
+                  pixPollRef.current = null;
+                  setPixInfo((atual) => (atual ? { ...atual, pago: true } : atual));
+                }
+              } catch (err) {
+                console.error('Erro ao consultar status do Pix:', err);
+              }
+            }, 4000);
+          }
+      } else {
           setMensagem(`Erro: ${data.error || 'Horário indisponível'}`);
       }
     } catch (err) {
       setMensagem('Erro de conexão. Tente novamente.');
     }
+  };
+
+  useEffect(() => () => { if (pixPollRef.current) clearInterval(pixPollRef.current); }, []);
+
+  const copiarCodigoPix = () => {
+    if (!pixInfo?.qr_code) return;
+    navigator.clipboard.writeText(pixInfo.qr_code).catch(() => {});
   };
 
   const adicionarAoCarrinho = (servico) => {
@@ -527,6 +558,29 @@ function Agenda() {
             {mensagem}
           </div>
         )}
+
+        {pixInfo && (
+          <div style={styles.pixBox}>
+            {pixInfo.pago ? (
+              <p style={{ margin: 0, textAlign: 'center', color: '#166534', fontWeight: '700', fontSize: '14px' }}>✅ Pagamento recebido!</p>
+            ) : (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ margin: '0 0 10px', fontSize: '13px', color: '#374151', fontWeight: '600' }}>Pague por Pix para garantir seu horário</p>
+                {pixInfo.qr_code_base64 && (
+                  <img
+                    src={`data:image/png;base64,${pixInfo.qr_code_base64}`}
+                    alt="QR Code do Pix"
+                    style={{ width: '180px', height: '180px', border: '1px solid #eee', borderRadius: '8px', padding: '6px', background: '#fff' }}
+                  />
+                )}
+                <div style={{ marginTop: '10px' }}>
+                  <button type="button" onClick={copiarCodigoPix} style={styles.btnCopiarPix}>Copiar código Pix</button>
+                </div>
+                <p style={{ margin: '10px 0 0', fontSize: '11px', color: '#9ca3af' }}>Aguardando confirmação do pagamento...</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -550,6 +604,8 @@ const styles = {
   total: { fontSize: '24px', fontWeight: '800', margin: '20px 0', color: '#1a1a1a' },
   confirmBtn: { width: '100%', padding: '16px', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' },
   msgBanner: { marginTop: '16px', padding: '12px 16px', borderRadius: '8px', fontSize: '13px' },
+  pixBox: { marginTop: '16px', padding: '16px', borderRadius: '12px', border: '1px solid #e5e7eb', background: '#f9fafb' },
+  btnCopiarPix: { padding: '8px 16px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
   notificacaoContainer: { position: 'fixed', top: '20px', right: '20px', zIndex: 1000 },
   sininhoIcon: { fontSize: '22px', cursor: 'pointer', backgroundColor: '#fff', padding: '12px', borderRadius: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', position: 'relative' },
   badge: { position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '10px' },
