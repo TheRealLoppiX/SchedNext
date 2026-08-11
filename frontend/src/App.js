@@ -31,6 +31,7 @@ import AdminAcoes from './pages/admin/AdminAcoes';
 import AdminAssinaturas from './pages/admin/AdminAssinaturas';
 import AdminClientes from './pages/admin/AdminClientes';
 import AdminUnidades from './pages/admin/AdminUnidades';
+import AdminUnidadeDashboard from './pages/admin/AdminUnidadeDashboard';
 import AdminApiKeys from './pages/admin/AdminApiKeys';
 import AdminRelatorios from './pages/admin/AdminRelatorios';
 import AdminDominio from './pages/admin/AdminDominio';
@@ -134,6 +135,8 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
             )
           }
         />
+
+        <Route path="/admin/unidade/dashboard" element={empresaId ? <AdminUnidadeDashboard empresaId={empresaId} /> : <Navigate to="/admin/login" />} />
 
         <Route
           path="/admin/barbeiros"

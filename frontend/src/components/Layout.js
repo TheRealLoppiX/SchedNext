@@ -33,7 +33,10 @@ function Layout({ setEmpresaId }) {
   const userId = localStorage.getItem('usuario_id');
   const adminToken = localStorage.getItem('adminToken');
 
-  
+  // Admin de uma unidade só (ver routes/auth.js) — sidebar bem mais enxuta, sem os links que o
+  // backend já barra pra esse tipo de login (ver server.js, ROTAS_PERMITIDAS_ADMIN_UNIDADE).
+  let adminUnidadeId = null;
+  try { adminUnidadeId = adminToken ? JSON.parse(adminToken).unidade_id || null : null; } catch (e) {}
 
   useEffect(() => {
     if (isAdminPath && !adminToken) return navigate('/admin/login');
@@ -46,22 +49,40 @@ function Layout({ setEmpresaId }) {
           const adminData = JSON.parse(adminStorage);
           const empresaId = adminData.empresa_id;
 
-          try {
-            const res = await fetch(`${API_URL}/admin/empresa/${empresaId}`);
-            const data = await res.json();
-            // res.ok evita reintroduzir o bug de "vertical sempre vira barbearia": sem essa
-            // checagem, qualquer falha temporária da API (ex: cold start do Render) fazia
-            // `data` ser um objeto de erro sem `.vertical`, caindo sempre no fallback.
-            if (res.ok && data) {
+          if (adminData.unidade_id) {
+            // Admin de unidade não tem acesso a /admin/empresa/:id (fora da allowlist, ver
+            // server.js) — busca o nome da própria unidade em vez do nome da empresa.
+            try {
+              const res = await fetch(`${API_URL}/admin/unidade/minhas`);
+              const data = await res.json();
+              const unidade = Array.isArray(data) ? data[0] : null;
               setDados({
-                nome_completo: data.nome || "Painel Administrativo",
-                foto_url: data.logo_url || null,
+                nome_completo: unidade?.nome || 'Painel da Unidade',
+                foto_url: null,
                 empresa_id: empresaId,
-                vertical: data.vertical || 'barbearia'
+                vertical: 'barbearia'
               });
+            } catch (err) {
+              console.error('Erro ao buscar dados da unidade:', err);
             }
-          } catch (err) {
-            console.error("Erro ao buscar dados da empresa:", err);
+          } else {
+            try {
+              const res = await fetch(`${API_URL}/admin/empresa/${empresaId}`);
+              const data = await res.json();
+              // res.ok evita reintroduzir o bug de "vertical sempre vira barbearia": sem essa
+              // checagem, qualquer falha temporária da API (ex: cold start do Render) fazia
+              // `data` ser um objeto de erro sem `.vertical`, caindo sempre no fallback.
+              if (res.ok && data) {
+                setDados({
+                  nome_completo: data.nome || "Painel Administrativo",
+                  foto_url: data.logo_url || null,
+                  empresa_id: empresaId,
+                  vertical: data.vertical || 'barbearia'
+                });
+              }
+            } catch (err) {
+              console.error("Erro ao buscar dados da empresa:", err);
+            }
           }
         }
       } else {
@@ -229,9 +250,17 @@ function Layout({ setEmpresaId }) {
              )}
              <nav style={s.nav}>
                 {isAdminPath ? (
+                  adminUnidadeId ? (
+                    <button
+                       onClick={() => navigate('/admin/unidade/dashboard')}
+                       style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/unidade/dashboard') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
+                    >
+                       <Icons.Stats /> Dashboard da unidade
+                    </button>
+                  ) : (
                   <>
-                    <button 
-                       onClick={() => navigate('/admin/dashboard')} 
+                    <button
+                       onClick={() => navigate('/admin/dashboard')}
                        style={{...s.navItem, backgroundColor: (isRotaAdminAtiva('/admin/dashboard') && !location.search) ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
                     >
                        <Icons.Stats /> Dashboard
@@ -311,6 +340,7 @@ function Layout({ setEmpresaId }) {
                        <Icons.Settings /> Perfil
                     </button>
                   </>
+                  )
                 ) : (
                   <>
                     <button onClick={() => navigate(`/${empresaSlug}/barbeiros`)} style={s.navItem}>
