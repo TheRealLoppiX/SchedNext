@@ -18,6 +18,10 @@ function Layout({ setEmpresaId }) {
   const [etapaPrivacidade, setEtapaPrivacidade] = useState(1);
   const [dadosAssinante, setDadosAssinante] = useState({ assinante: false, plano_nome: '' });
   const [empresaTenant, setEmpresaTenant] = useState(null);
+  // Controla se o slug da URL já foi confirmado como uma empresa de verdade — sem isso, um
+  // navegador com sessão de cliente salva de OUTRA empresa conseguia abrir /:slug/barbeiros de
+  // um slug inexistente e ver a página renderizada (vazia, mas aberta) em vez de barrada.
+  const [empresaValidada, setEmpresaValidada] = useState(false);
 
   usePaletaTenant(empresaTenant);
  
@@ -122,11 +126,26 @@ function Layout({ setEmpresaId }) {
 
   useEffect(() => {
     if (isAdminPath || !empresaSlug) return;
+    setEmpresaValidada(false);
+    let cancelado = false;
     fetch(`${API_URL}/empresa/slug/${empresaSlug}`)
-      .then((r) => r.json())
-      .then(setEmpresaTenant)
-      .catch(() => {});
-  }, [isAdminPath, empresaSlug]);
+      .then((r) => {
+        if (!r.ok) throw new Error('Empresa não encontrada');
+        return r.json();
+      })
+      .then((data) => {
+        if (cancelado) return;
+        setEmpresaTenant(data);
+        setEmpresaValidada(true);
+      })
+      .catch(() => {
+        if (cancelado) return;
+        toast.error('Essa empresa não existe.');
+        navigate('/', { replace: true });
+      });
+    return () => { cancelado = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdminPath, empresaSlug, navigate]);
 
   const handleSair = () => {
     // Apaga APENAS os dados de quem está clicando em Sair
@@ -432,10 +451,10 @@ function Layout({ setEmpresaId }) {
               )}
             </div>
           </div>
-        ) : (
+        ) : isAdminPath || empresaValidada ? (
           /* PASSA O CONTEXTO PARA OS FILHOS (ISSO DEVOLVE A VISÃO ORIGINAL DO CLIENTE) */
           <Outlet context={{ dados, setDados, userId, empresaId: dados?.empresa_id }} />
-        )}
+        ) : null}
         {!isAdminPath && <MarcaPlataforma empresa={empresaTenant} />}
       </main>
     </div>
