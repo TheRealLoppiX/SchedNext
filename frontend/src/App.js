@@ -9,6 +9,7 @@ import CadastroEmpresa from './pages/CadastroEmpresa';
 import Login from './pages/Login';
 import Barbeiros from './pages/Barbeiros';
 import Agenda from './pages/Agenda';
+import Assinatura from './pages/Assinatura';
 import Cadastro from './pages/Cadastro';
 import RecuperarSenha from './pages/RecuperarSenha';
 import Dashboard from './pages/Dashboard';
@@ -30,10 +31,12 @@ import AdminAcoes from './pages/admin/AdminAcoes';
 import AdminAssinaturas from './pages/admin/AdminAssinaturas';
 import AdminClientes from './pages/admin/AdminClientes';
 import AdminUnidades from './pages/admin/AdminUnidades';
+import AdminUnidadeDashboard from './pages/admin/AdminUnidadeDashboard';
 import AdminApiKeys from './pages/admin/AdminApiKeys';
 import AdminRelatorios from './pages/admin/AdminRelatorios';
 import AdminDominio from './pages/admin/AdminDominio';
 import AdminWhatsapp from './pages/admin/AdminWhatsapp';
+import AdminMercadoPago from './pages/admin/AdminMercadoPago';
 
 // Admin absoluto (dono da plataforma) — fora da árvore de tenant, ver
 // src/utils/tenantSubdominio.js (rotaIndependeDeTenant).
@@ -116,6 +119,7 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
           <>
             <Route path="/:empresaSlug/barbeiros" element={<Barbeiros />} />
             <Route path="/:empresaSlug/agenda" element={<Agenda />} />
+            <Route path="/:empresaSlug/assinatura" element={<Assinatura />} />
             <Route path="/:empresaSlug/perfil" element={<Dashboard />} />
           </>
         )}
@@ -131,6 +135,8 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
             )
           }
         />
+
+        <Route path="/admin/unidade/dashboard" element={empresaId ? <AdminUnidadeDashboard empresaId={empresaId} /> : <Navigate to="/admin/login" />} />
 
         <Route
           path="/admin/barbeiros"
@@ -176,6 +182,7 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
         <Route path="/admin/dominio" element={empresaId ? <AdminDominio empresaId={empresaId} /> : <Navigate to="/admin/login" />} />
 
         <Route path="/admin/whatsapp" element={empresaId ? <AdminWhatsapp /> : <Navigate to="/admin/login" />} />
+        <Route path="/admin/mercadopago" element={empresaId ? <AdminMercadoPago /> : <Navigate to="/admin/login" />} />
 
       </Route>
 

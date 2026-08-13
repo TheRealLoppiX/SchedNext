@@ -30,8 +30,6 @@ function AdminConta({ empresaId }) {
     const [planosDisponiveis, setPlanosDisponiveis] = useState([]);
     const [planoEscolhidoId, setPlanoEscolhidoId] = useState(null);
     const [processandoAssinatura, setProcessandoAssinatura] = useState(false);
-    const [cpfCnpj, setCpfCnpj] = useState('');
-    const [temDocumentoSalvo, setTemDocumentoSalvo] = useState(false);
     const [formEnterprise, setFormEnterprise] = useState({ cnpj: '', localizacao: '', clientes_esperados: '', observacoes: '', email_contato: '', telefone_contato: '' });
     const [enterpriseEnviado, setEnterpriseEnviado] = useState(false);
 
@@ -59,7 +57,6 @@ function AdminConta({ empresaId }) {
                     plano_pendente: data.plano_plataforma_pendente
                 });
                 setPlanoEscolhidoId(data.plano_plataforma?.id || null);
-                setTemDocumentoSalvo(!!data.cpf_cnpj);
             }
             setCarregando(false);
         } catch (err) {
@@ -77,7 +74,6 @@ function AdminConta({ empresaId }) {
     }, []);
 
     const planoSelecionado = planosDisponiveis.find(p => p.id === planoEscolhidoId);
-    const planoEscolhidoEhPago = planoSelecionado?.preco_mensal > 0;
     const planoEscolhidoEhEnterprise = planoSelecionado && planoSelecionado.preco_mensal == null;
 
     const enviarContatoEnterprise = async () => {
@@ -109,19 +105,17 @@ function AdminConta({ empresaId }) {
             const res = await fetch(`${API_URL}/admin/assinatura-plataforma/iniciar-upgrade`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plano_plataforma_id: planoEscolhidoId, ...(cpfCnpj ? { cpf_cnpj: cpfCnpj } : {}) })
+                body: JSON.stringify({ plano_plataforma_id: planoEscolhidoId })
             });
             const data = await res.json();
             if (res.ok) {
                 if (data.checkoutUrl) {
                     window.open(data.checkoutUrl, '_blank', 'noopener,noreferrer');
-                    toast.success('Finalize o pagamento na aba que abriu. Seu plano ativa automaticamente assim que o pagamento for confirmado.');
+                    toast.success('Finalize a autorização na aba que abriu. Seu plano ativa automaticamente assim que for confirmado.');
                 } else {
                     toast.success(data.message || 'Plano atualizado!');
                 }
                 carregarDados();
-            } else if (data.requerDocumento) {
-                toast.error('Informe seu CPF ou CNPJ para assinar um plano pago.');
             } else {
                 toast.error(data.error || 'Não foi possível trocar de plano.');
             }
@@ -370,18 +364,6 @@ function AdminConta({ empresaId }) {
                                             </button>
                                         )}
                                     </div>
-                                    {planoEscolhidoEhPago && !temDocumentoSalvo && planoEscolhidoId !== assinatura.plano?.id && (
-                                        <div style={{ marginTop: '10px' }}>
-                                            <label style={styles.label}>CPF ou CNPJ (necessário para ativar cobrança)</label>
-                                            <input
-                                                type="text"
-                                                value={cpfCnpj}
-                                                onChange={e => setCpfCnpj(e.target.value)}
-                                                placeholder="Só números"
-                                                style={styles.selectPlano}
-                                            />
-                                        </div>
-                                    )}
                                     {planoEscolhidoEhEnterprise && planoEscolhidoId !== assinatura.plano?.id && (
                                         enterpriseEnviado ? (
                                             <p style={{ marginTop: '10px', fontSize: '13px', color: '#059669' }}>

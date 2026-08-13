@@ -16,6 +16,11 @@ function AdminUnidades({ empresaId }) {
   const [novoEndereco, setNovoEndereco] = useState('');
   const [cadastrando, setCadastrando] = useState(false);
 
+  const [unidadeExpandida, setUnidadeExpandida] = useState(null);
+  const [adminsPorUnidade, setAdminsPorUnidade] = useState({});
+  const [formAdmin, setFormAdmin] = useState({ nome: '', email: '', senha: '' });
+  const [criandoAdmin, setCriandoAdmin] = useState(false);
+
   const idEfetivo = empresaId || localStorage.getItem('empresaId');
 
   const carregar = useCallback(async () => {
@@ -111,6 +116,86 @@ function AdminUnidades({ empresaId }) {
     }
   };
 
+  const carregarAdmins = async (unidadeId) => {
+    try {
+      const res = await fetch(`${API_URL}/admin/unidades/${unidadeId}/admins`);
+      const data = await res.json();
+      setAdminsPorUnidade((prev) => ({ ...prev, [unidadeId]: Array.isArray(data) ? data : [] }));
+    } catch (err) {
+      console.error('Erro ao carregar administradores da unidade:', err);
+    }
+  };
+
+  const toggleExpandir = (unidadeId) => {
+    if (unidadeExpandida === unidadeId) {
+      setUnidadeExpandida(null);
+      return;
+    }
+    setUnidadeExpandida(unidadeId);
+    setFormAdmin({ nome: '', email: '', senha: '' });
+    if (!adminsPorUnidade[unidadeId]) carregarAdmins(unidadeId);
+  };
+
+  const criarAdmin = async (unidadeId) => {
+    if (!formAdmin.nome.trim() || !formAdmin.email.trim() || !formAdmin.senha) {
+      return toast.error('Preencha nome, e-mail e senha.');
+    }
+    setCriandoAdmin(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/unidades/${unidadeId}/admins`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formAdmin)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Administrador da unidade criado!');
+        setFormAdmin({ nome: '', email: '', senha: '' });
+        carregarAdmins(unidadeId);
+      } else {
+        toast.error(data.error || 'Não foi possível criar o administrador.');
+      }
+    } catch (err) {
+      toast.error('Erro de conexão. Tente novamente.');
+    } finally {
+      setCriandoAdmin(false);
+    }
+  };
+
+  const alternarStatusAdmin = async (unidadeId, admin) => {
+    try {
+      const res = await fetch(`${API_URL}/admin/unidade-admins/${admin.id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ativo: !admin.ativo })
+      });
+      if (res.ok) {
+        toast.success(admin.ativo ? 'Administrador desativado.' : 'Administrador reativado.');
+        carregarAdmins(unidadeId);
+      } else {
+        toast.error('Não foi possível atualizar o administrador.');
+      }
+    } catch (err) {
+      toast.error('Erro de conexão. Tente novamente.');
+    }
+  };
+
+  const removerAdmin = async (unidadeId, admin) => {
+    const ok = await confirmar(`Remover o acesso de ${admin.nome} a esta unidade?`, { confirmText: 'Remover', danger: true });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/admin/unidade-admins/${admin.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Administrador removido.');
+        carregarAdmins(unidadeId);
+      } else {
+        toast.error('Não foi possível remover o administrador.');
+      }
+    } catch (err) {
+      toast.error('Erro de conexão. Tente novamente.');
+    }
+  };
+
   if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Carregando unidades...</p>;
 
   if (!permitido) {
@@ -165,6 +250,39 @@ function AdminUnidades({ empresaId }) {
                 <button onClick={() => alternarStatus(u)} style={styles.btnSecundario}>{u.ativo ? 'Desativar' : 'Reativar'}</button>
                 <button onClick={() => excluirUnidade(u)} style={styles.btnExcluir}>Excluir</button>
               </div>
+              <button onClick={() => toggleExpandir(u.id)} style={styles.btnAdmins}>
+                {unidadeExpandida === u.id ? 'Ocultar administradores' : 'Administradores desta unidade'}
+              </button>
+
+              {unidadeExpandida === u.id && (
+                <div style={styles.painelAdmins}>
+                  {(adminsPorUnidade[u.id] || []).map((admin) => (
+                    <div key={admin.id} style={styles.linhaAdmin}>
+                      <div>
+                        <strong style={{ fontSize: '13px' }}>{admin.nome}</strong>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{admin.email}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <span style={{ ...styles.badge, backgroundColor: admin.ativo ? '#d1fae5' : '#fee2e2', color: admin.ativo ? '#065f46' : '#991b1b' }}>
+                          {admin.ativo ? 'Ativo' : 'Inativo'}
+                        </span>
+                        <button onClick={() => alternarStatusAdmin(u.id, admin)} style={styles.btnMini}>{admin.ativo ? 'Desativar' : 'Reativar'}</button>
+                        <button onClick={() => removerAdmin(u.id, admin)} style={styles.btnMiniExcluir}>Remover</button>
+                      </div>
+                    </div>
+                  ))}
+                  {(adminsPorUnidade[u.id] || []).length === 0 && (
+                    <p style={{ fontSize: '12px', color: '#9ca3af', margin: '4px 0 10px' }}>Nenhum administrador nesta unidade ainda.</p>
+                  )}
+
+                  <div style={styles.formAdminRow}>
+                    <input style={styles.inputPequeno} placeholder="Nome" value={formAdmin.nome} onChange={(e) => setFormAdmin({ ...formAdmin, nome: e.target.value })} />
+                    <input style={styles.inputPequeno} placeholder="E-mail" value={formAdmin.email} onChange={(e) => setFormAdmin({ ...formAdmin, email: e.target.value })} />
+                    <input style={styles.inputPequeno} placeholder="Senha" type="password" value={formAdmin.senha} onChange={(e) => setFormAdmin({ ...formAdmin, senha: e.target.value })} />
+                    <LoadingButton loading={criandoAdmin} onClick={() => criarAdmin(u.id)} style={styles.btnCadastrarPequeno}>Adicionar</LoadingButton>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -189,7 +307,15 @@ const styles = {
   badge: { display: 'inline-block', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' },
   acoes: { display: 'flex', gap: '8px', marginTop: '14px' },
   btnSecundario: { flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '13px' },
-  btnExcluir: { flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontSize: '13px' }
+  btnExcluir: { flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontSize: '13px' },
+  btnAdmins: { width: '100%', marginTop: '10px', padding: '8px', borderRadius: '6px', border: '1px solid #c7d2fe', background: '#eef2ff', color: '#4f46e5', cursor: 'pointer', fontSize: '12px', fontWeight: '600' },
+  painelAdmins: { marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f3f4f6' },
+  linhaAdmin: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f9fafb', gap: '8px', flexWrap: 'wrap' },
+  btnMini: { padding: '4px 8px', borderRadius: '5px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '11px' },
+  btnMiniExcluir: { padding: '4px 8px', borderRadius: '5px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontSize: '11px' },
+  formAdminRow: { display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '10px' },
+  inputPequeno: { flex: '1 1 100px', padding: '7px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px' },
+  btnCadastrarPequeno: { padding: '7px 14px', borderRadius: '6px', border: 'none', background: '#111827', color: '#fff', fontWeight: '600', cursor: 'pointer', fontSize: '12px' }
 };
 
 export default AdminUnidades;

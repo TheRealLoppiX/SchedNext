@@ -33,7 +33,10 @@ function Layout({ setEmpresaId }) {
   const userId = localStorage.getItem('usuario_id');
   const adminToken = localStorage.getItem('adminToken');
 
-  
+  // Admin de uma unidade só (ver routes/auth.js) — sidebar bem mais enxuta, sem os links que o
+  // backend já barra pra esse tipo de login (ver server.js, ROTAS_PERMITIDAS_ADMIN_UNIDADE).
+  let adminUnidadeId = null;
+  try { adminUnidadeId = adminToken ? JSON.parse(adminToken).unidade_id || null : null; } catch (e) {}
 
   useEffect(() => {
     if (isAdminPath && !adminToken) return navigate('/admin/login');
@@ -46,22 +49,40 @@ function Layout({ setEmpresaId }) {
           const adminData = JSON.parse(adminStorage);
           const empresaId = adminData.empresa_id;
 
-          try {
-            const res = await fetch(`${API_URL}/admin/empresa/${empresaId}`);
-            const data = await res.json();
-            // res.ok evita reintroduzir o bug de "vertical sempre vira barbearia": sem essa
-            // checagem, qualquer falha temporária da API (ex: cold start do Render) fazia
-            // `data` ser um objeto de erro sem `.vertical`, caindo sempre no fallback.
-            if (res.ok && data) {
+          if (adminData.unidade_id) {
+            // Admin de unidade não tem acesso a /admin/empresa/:id (fora da allowlist, ver
+            // server.js) — busca o nome da própria unidade em vez do nome da empresa.
+            try {
+              const res = await fetch(`${API_URL}/admin/unidade/minhas`);
+              const data = await res.json();
+              const unidade = Array.isArray(data) ? data[0] : null;
               setDados({
-                nome_completo: data.nome || "Painel Administrativo",
-                foto_url: data.logo_url || null,
+                nome_completo: unidade?.nome || 'Painel da Unidade',
+                foto_url: null,
                 empresa_id: empresaId,
-                vertical: data.vertical || 'barbearia'
+                vertical: 'barbearia'
               });
+            } catch (err) {
+              console.error('Erro ao buscar dados da unidade:', err);
             }
-          } catch (err) {
-            console.error("Erro ao buscar dados da empresa:", err);
+          } else {
+            try {
+              const res = await fetch(`${API_URL}/admin/empresa/${empresaId}`);
+              const data = await res.json();
+              // res.ok evita reintroduzir o bug de "vertical sempre vira barbearia": sem essa
+              // checagem, qualquer falha temporária da API (ex: cold start do Render) fazia
+              // `data` ser um objeto de erro sem `.vertical`, caindo sempre no fallback.
+              if (res.ok && data) {
+                setDados({
+                  nome_completo: data.nome || "Painel Administrativo",
+                  foto_url: data.logo_url || null,
+                  empresa_id: empresaId,
+                  vertical: data.vertical || 'barbearia'
+                });
+              }
+            } catch (err) {
+              console.error("Erro ao buscar dados da empresa:", err);
+            }
           }
         }
       } else {
@@ -229,9 +250,17 @@ function Layout({ setEmpresaId }) {
              )}
              <nav style={s.nav}>
                 {isAdminPath ? (
+                  adminUnidadeId ? (
+                    <button
+                       onClick={() => navigate('/admin/unidade/dashboard')}
+                       style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/unidade/dashboard') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
+                    >
+                       <Icons.Stats /> Dashboard da unidade
+                    </button>
+                  ) : (
                   <>
-                    <button 
-                       onClick={() => navigate('/admin/dashboard')} 
+                    <button
+                       onClick={() => navigate('/admin/dashboard')}
                        style={{...s.navItem, backgroundColor: (isRotaAdminAtiva('/admin/dashboard') && !location.search) ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
                     >
                        <Icons.Stats /> Dashboard
@@ -300,6 +329,10 @@ function Layout({ setEmpresaId }) {
                       <Icons.MessageCircle /> WhatsApp
                     </button>
 
+                    <button onClick={() => navigate('/admin/mercadopago')} style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/mercadopago') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
+                      <Icons.CreditCard /> Mercado Pago
+                    </button>
+
                     <button 
                        onClick={() => navigate('/admin/conta')} 
                        style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/conta') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
@@ -307,6 +340,7 @@ function Layout({ setEmpresaId }) {
                        <Icons.Settings /> Perfil
                     </button>
                   </>
+                  )
                 ) : (
                   <>
                     <button onClick={() => navigate(`/${empresaSlug}/barbeiros`)} style={s.navItem}>
@@ -317,6 +351,9 @@ function Layout({ setEmpresaId }) {
                     </button>
                     <button onClick={() => navigate(`/${empresaSlug}/perfil?aba=dados`)} style={{...s.navItem, backgroundColor: isAtiva('dados') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
                       <Icons.User color="currentColor" /> Minha Conta
+                    </button>
+                    <button onClick={() => navigate(`/${empresaSlug}/assinatura`)} style={{...s.navItem, backgroundColor: location.pathname === `/${empresaSlug}/assinatura` ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
+                      <Icons.CreditCard /> Assinatura
                     </button>
                     <button onClick={() => navigate(`/${empresaSlug}/perfil?aba=privacidade`)} style={{...s.navItem, backgroundColor: isAtiva('privacidade') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
                       <Icons.Lock /> Privacidade
@@ -424,6 +461,7 @@ const Icons = {
   Chart: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><rect x="7" y="12" width="3" height="6"></rect><rect x="12" y="8" width="3" height="10"></rect><rect x="17" y="5" width="3" height="13"></rect></svg>,
   Globe: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>,
   MessageCircle: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>,
+  CreditCard: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>,
 
 };
 

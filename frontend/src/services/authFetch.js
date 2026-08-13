@@ -24,7 +24,8 @@ const CLIENTE_ROUTE_FRAGMENTS = [
   '/avaliar',
   '/fidelidade/',
   '/usuario/',
-  '/agendar'
+  '/agendar',
+  '/pix/'
 ];
 
 function getAdminToken() {

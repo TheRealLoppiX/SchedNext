@@ -28,6 +28,9 @@ function AdminBarbeiros({ empresaId }) {
     const [listaServicos, setListaServicos] = useState([]);
     const [servicosMarcados, setServicosMarcados] = useState([]);
     const [vertical, setVertical] = useState('barbearia');
+    const [permiteMultiUnidade, setPermiteMultiUnidade] = useState(false);
+    const [unidades, setUnidades] = useState([]);
+    const [novaUnidadeId, setNovaUnidadeId] = useState('');
 
     useEscToClose(!!(editando || bloqueando || modalServicos), () => {
         setEditando(null);
@@ -89,9 +92,20 @@ function AdminBarbeiros({ empresaId }) {
         if (!idEfetivo) return;
         fetch(`${API_URL}/admin/empresa/${idEfetivo}`)
             .then(r => r.json())
-            .then(d => d?.vertical && setVertical(d.vertical))
+            .then(d => {
+                if (d?.vertical) setVertical(d.vertical);
+                setPermiteMultiUnidade(!!d?.plano_plataforma?.permite_multi_unidade);
+            })
             .catch(() => {});
     }, [idEfetivo]);
+
+    useEffect(() => {
+        if (!idEfetivo || !permiteMultiUnidade) return;
+        fetch(`${API_URL}/admin/unidades/${idEfetivo}`)
+            .then(r => r.json())
+            .then(d => setUnidades(Array.isArray(d) ? d : []))
+            .catch(() => {});
+    }, [idEfetivo, permiteMultiUnidade]);
 
     const termos = obterTerminologia(vertical);
 
@@ -129,11 +143,11 @@ function AdminBarbeiros({ empresaId }) {
             const res = await fetch(`${API_URL}/admin/barbeiro`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nome: novoNome, empresa_id: idEfetivo, foto_url: novaFoto })
+                body: JSON.stringify({ nome: novoNome, empresa_id: idEfetivo, foto_url: novaFoto, unidade_id: novaUnidadeId || null })
             });
 
             if (res.ok) {
-                setNovoNome(''); setNovaFoto('');
+                setNovoNome(''); setNovaFoto(''); setNovaUnidadeId('');
                 carregarEquipe();
                 toast.success("Profissional cadastrado com sucesso!");
             } else {
@@ -342,13 +356,22 @@ function AdminBarbeiros({ empresaId }) {
                     </div>
                     <div style={styles.inputGroup}>
                         <label style={styles.label}>Foto do Profissional</label>
-                        <input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={e => aoMudarFoto(e, 'cadastro')} 
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={e => aoMudarFoto(e, 'cadastro')}
                             style={{ ...styles.input, padding: '9px 12px' }}
                         />
                     </div>
+                    {permiteMultiUnidade && unidades.length > 0 && (
+                        <div style={styles.inputGroup}>
+                            <label style={styles.label}>Unidade</label>
+                            <select value={novaUnidadeId} onChange={e => setNovaUnidadeId(e.target.value)} style={styles.input}>
+                                <option value="">Sem unidade específica</option>
+                                {unidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                            </select>
+                        </div>
+                    )}
                     <div style={{...styles.inputGroup, justifyContent: 'flex-end'}}>
                         <LoadingButton type="submit" loading={cadastrando} style={styles.btnPrincipal}>Cadastrar Profissional</LoadingButton>
                     </div>
@@ -373,6 +396,11 @@ function AdminBarbeiros({ empresaId }) {
                                 {b.percentual_comissao != null && (
                                     <span style={{ ...styles.badgeStatus, marginLeft: '6px', backgroundColor: '#ede9fe', color: '#6d28d9' }}>
                                         Comissão {Number(b.percentual_comissao)}%
+                                    </span>
+                                )}
+                                {b.unidade_id && (
+                                    <span style={{ ...styles.badgeStatus, marginLeft: '6px', backgroundColor: '#e0f2fe', color: '#0369a1' }}>
+                                        {unidades.find(u => u.id === b.unidade_id)?.nome || 'Unidade'}
                                     </span>
                                 )}
                             </div>
@@ -450,6 +478,19 @@ function AdminBarbeiros({ empresaId }) {
                                     value={editando.percentual_comissao ?? ''}
                                     onChange={e => setEditando({...editando, percentual_comissao: e.target.value === '' ? null : e.target.value})}
                                 />
+                                {permiteMultiUnidade && unidades.length > 0 && (
+                                    <>
+                                        <label style={styles.label}>Unidade:</label>
+                                        <select
+                                            style={styles.inputModal}
+                                            value={editando.unidade_id ?? ''}
+                                            onChange={e => setEditando({...editando, unidade_id: e.target.value ? Number(e.target.value) : null})}
+                                        >
+                                            <option value="">Sem unidade específica</option>
+                                            {unidades.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                                        </select>
+                                    </>
+                                )}
                                 <div style={styles.modalAcoes}>
                                     <button onClick={() => setEditando(null)} style={styles.btnCancelarModal}>Cancelar</button>
                                     <LoadingButton onClick={salvarEdicao} loading={salvando} style={styles.btnSalvarModal}>Salvar</LoadingButton>

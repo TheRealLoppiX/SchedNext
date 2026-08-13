@@ -28,8 +28,9 @@ function LoginAdmin({ setEmpresaLogada }) {
         localStorage.setItem('adminToken', JSON.stringify({ ...data.admin, token: data.token }));
         // Avisa o App.js que a empresa logou
         setEmpresaLogada(data.admin.empresa_id);
-        // Manda para o Dashboard
-        navigate('/admin/dashboard');
+        // Admin de uma unidade só (data.admin.unidade_id setado, ver routes/auth.js) cai numa
+        // dashboard bem mais enxuta, restrita à própria unidade.
+        navigate(data.admin.unidade_id ? '/admin/unidade/dashboard' : '/admin/dashboard');
       } else {
         toast.error(data.error || "E-mail ou senha incorretos.");
       }
