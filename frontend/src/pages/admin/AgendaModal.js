@@ -251,6 +251,11 @@ const toggleServico = (servico) => {
     };
 
     const handleFinalizarAtendimento = async () => {
+        // Meio de pagamento só é exigido quando sobra algo pra cobrar (produto/serviço fora do
+        // plano) — um atendimento 100% coberto pela assinatura não precisa vincular nada.
+        if (getValorBaseSeguro() + getValorAdicionais() > 0 && !formaPagamento) {
+            return toast.error('Selecione a forma de pagamento.');
+        }
         setFinalizando(true);
         try {
             const produtosVendidos = extrasSelecionados.filter(e => e.tipo === 'produto');
@@ -685,9 +690,9 @@ const toggleServico = (servico) => {
                             </div>
                         </div>
 
-                        {modalFinalizar.status !== 'concluido' && (
+                        {modalFinalizar.status !== 'concluido' && (getValorBaseSeguro() + getValorAdicionais() > 0) && (
                             <div style={{ marginBottom: '15px' }}>
-                                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#666', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Forma de pagamento (opcional)</span>
+                                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#666', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Forma de pagamento</span>
                                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                                     {[
                                         { valor: 'dinheiro', rotulo: 'Dinheiro' },
@@ -754,7 +759,9 @@ const toggleServico = (servico) => {
                             {modalFinalizar.status !== 'concluido' ? (
                                 <>
                                     <button style={{...subModalStyles.btnConfirm, background: '#ef4444'}} onClick={() => { setModalCancelamento(modalFinalizar); setModalFinalizar(null); }}>Cancelar Horário</button>
-                                    <LoadingButton loading={finalizando} style={{...subModalStyles.btnConfirm, background: '#10b981'}} onClick={handleFinalizarAtendimento}>Cobrar & Finalizar</LoadingButton>
+                                    <LoadingButton loading={finalizando} style={{...subModalStyles.btnConfirm, background: '#10b981'}} onClick={handleFinalizarAtendimento}>
+                                        {(getValorBaseSeguro() + getValorAdicionais() > 0) ? 'Cobrar & Finalizar' : 'Finalizar Serviço'}
+                                    </LoadingButton>
                                 </>
                             ) : (
                                 <button style={{...subModalStyles.btnConfirm, background: '#9ca3af', cursor: 'not-allowed'}} disabled>Atendimento Fechado</button>
