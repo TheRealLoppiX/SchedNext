@@ -36,7 +36,7 @@ function Login() {
       const res = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha })
+        body: JSON.stringify({ email, senha, empresaSlug })
       });
       const data = await res.json();
       if (res.ok) {
