@@ -32,7 +32,7 @@ function RecuperarSenha() {
       const res = await fetch(`${API_URL}/recuperar-senha`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email, empresaSlug })
       });
       if (res.ok) { setEtapa(2); setErro(''); }
       else { setErro('E-mail não encontrado.'); }
