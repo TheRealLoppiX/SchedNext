@@ -3,8 +3,10 @@ import AgendaModal from './AgendaModal';
 import './AdminDashboard.css';
 import { obterTerminologia } from '../../utils/terminologia';
 import { API_URL } from '../../services/api';
+import { useToast } from '../../components/Toast';
 
 function AdminDashboard({ empresaId: propEmpresaId }) {
+  const toast = useToast();
   const [stats, setStats] = useState({
     total: 0, concluidos: 0, cancelados: 0, nao_compareceu: 0,
     novos_clientes: 0, taxa_conclusao: 0, taxa_cancelamento: 0, taxa_nao_compareceu: 0
@@ -27,7 +29,11 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
   
   const [horaEncaixe, setHoraEncaixe] = useState(null);
   const [agendamentoCheckout, setAgendamentoCheckout] = useState(null);
-  
+
+  const [agendamentoArrastando, setAgendamentoArrastando] = useState(null);
+  const [slotDestaque, setSlotDestaque] = useState(null);
+  const [movendo, setMovendo] = useState(false);
+
   const empresaIdEfetivo = propEmpresaId || localStorage.getItem('empresaId');
   const [vertical, setVertical] = useState('barbearia');
   const [nomeEmpresa, setNomeEmpresa] = useState('');
@@ -142,6 +148,35 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
     const interval = setInterval(carregarDadosDashboard, 30000);
     return () => clearInterval(interval);
   }, [carregarDadosDashboard]);
+
+  // Arrastar-e-soltar pra reagendar (igual Outlook/Teams): pega o card em cima de um horário
+  // livre e move o agendamento pra lá, sem precisar abrir o modal e reescrever tudo.
+  const moverAgendamento = async (ag, barbeiro, novaHora) => {
+    if (movendo) return;
+    setMovendo(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/reagendar-agendamento`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agendamento_id: ag.id,
+          barbeiro_id: barbeiro.id,
+          data_hora: `${dataAgenda} ${novaHora}:00`
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Agendamento movido para ${novaHora}!`);
+        carregarDadosDashboard();
+      } else {
+        toast.error(data.error || 'Não foi possível mover o agendamento.');
+      }
+    } catch (err) {
+      toast.error('Não foi possível conectar ao servidor. Tente novamente em instantes.');
+    } finally {
+      setMovendo(false);
+    }
+  };
 
   const limparFiltros = () => {
     setDataInicio('');
@@ -394,11 +429,26 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
                       else if (ag.status === 'concluido') { corBorda = '#10b981'; corTexto = '#059669'; bgStatus = '#d1fae5'; }
                       else if (ehNaoCompareceu(ag)) { corBorda = '#6b7280'; corTexto = '#4b5563'; bgStatus = '#f3f4f6'; statusLabel = 'NÃO COMPARECEU'; }
 
+                      // Só dá pra arrastar agendamento ativo (cancelado/concluído/não compareceu
+                      // ficam fixos, são registro histórico — ver mesma regra no backend).
+                      const podeArrastar = ag.status === 'pendente' || ag.status === 'confirmado';
+
                       elementos.push(
                         <div
                           key={ag.id}
-                          className="card-vivo"
-                          style={{ borderLeftColor: corBorda, cursor: 'pointer' }}
+                          className={`card-vivo ${agendamentoArrastando?.id === ag.id ? 'card-vivo-arrastando' : ''}`}
+                          style={{ borderLeftColor: corBorda, cursor: podeArrastar ? 'grab' : 'pointer' }}
+                          draggable={podeArrastar}
+                          onDragStart={(e) => {
+                            if (!podeArrastar) return;
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', String(ag.id));
+                            setAgendamentoArrastando(ag);
+                          }}
+                          onDragEnd={() => {
+                            setAgendamentoArrastando(null);
+                            setSlotDestaque(null);
+                          }}
                           onClick={() => {
                             setBarbeiroSelecionado(barbeiro);
                             setAgendamentoCheckout(ag);
@@ -420,18 +470,39 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
                       const jaPassou = isHoraPassada(hora);
 
                       if (!jaPassou) {
+                          const slotKey = `${barbeiro.id}-${hora}`;
+                          const emDestaque = slotDestaque === slotKey;
+
                           elementos.push(
-                            <div 
-                              key={`${barbeiro.id}-${hora}`} 
-                              className="slot-livre"
+                            <div
+                              key={slotKey}
+                              className={`slot-livre ${emDestaque ? 'slot-livre-destaque' : ''}`}
                               onClick={() => {
                                 setBarbeiroSelecionado(barbeiro);
                                 setHoraEncaixe(hora);
                                 setAgendamentoCheckout(null);
                               }}
+                              onDragOver={(e) => {
+                                if (!agendamentoArrastando) return;
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = 'move';
+                                if (slotDestaque !== slotKey) setSlotDestaque(slotKey);
+                              }}
+                              onDragLeave={() => {
+                                if (slotDestaque === slotKey) setSlotDestaque(null);
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                setSlotDestaque(null);
+                                if (!agendamentoArrastando) return;
+                                const agArrastado = agendamentoArrastando;
+                                setAgendamentoArrastando(null);
+                                if (agArrastado.hora === hora && agArrastado.barbeiro_id === barbeiro.id) return;
+                                moverAgendamento(agArrastado, barbeiro, hora);
+                              }}
                             >
                               <span className="slot-hora-texto">{hora}</span>
-                              <span className="slot-livre-texto">+ Novo Encaixe</span>
+                              <span className="slot-livre-texto">{agendamentoArrastando ? 'Soltar aqui' : '+ Novo Encaixe'}</span>
                             </div>
                           );
                       }

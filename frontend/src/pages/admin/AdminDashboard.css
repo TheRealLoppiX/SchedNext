@@ -230,6 +230,7 @@
     transition: transform 0.2s;
 }
 .card-vivo:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.08); }
+.card-vivo-arrastando { opacity: 0.4; }
 .card-vivo-topo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .hora-viva { font-weight: 800; font-size: 14px; color: #1e293b; }
 .status-viva { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 12px; }
@@ -262,6 +263,8 @@
     color: #94a3b8;
 }
 .slot-livre:hover .slot-livre-texto { color: #1d4ed8; }
+.slot-livre-destaque { background: #eff6ff; border-color: #2554eb; border-style: solid; }
+.slot-livre-destaque .slot-livre-texto { color: #1d4ed8; }
 
 /* ===================== Responsivo (mobile) ===================== */
 @media (max-width: 600px) {
