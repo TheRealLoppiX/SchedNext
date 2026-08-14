@@ -11,6 +11,13 @@ import { obterSlugSubdominio } from '../utils/tenantSubdominio';
 const ADMIN_LOGIN_URL_FRAGMENT = '/admin/login';
 const SUPER_ADMIN_LOGIN_URL_FRAGMENT = '/super-admin/login';
 
+// Este endpoint mora sob /admin/* (exige o Bearer token do dono da empresa, ver
+// verificarTokenAdmin) mas também responde 401 quando a senha do estoque (admin ou
+// colaborador) está errada — isso não significa que o token do admin expirou. Sem esta
+// exclusão, o handler de 401 abaixo interpretava "senha do estoque errada" como "sessão
+// expirada" e deslogava a conta inteira, mesmo a tela já mostrando o toast de erro certo.
+const ESTOQUE_LOGIN_URL_FRAGMENT = '/admin/estoque/login';
+
 // Fragmentos de rota protegidos por routes/perfil.js (token de cliente comum, chave
 // localStorage 'token'). Mantido como lista explícita em vez de "tudo que não é /admin/"
 // porque várias rotas públicas (login, cadastro, empresasPublico, disponibilidade, agendar)
@@ -71,7 +78,9 @@ window.fetch = (input, init = {}) => {
     // Sessão expirada/token inválido: antes disso o app só mostrava um toast genérico de
     // "não foi possível conectar" e ficava preso na tela, sem nunca deslogar de verdade.
     if (res.status === 401) {
-      if (isAdminRoute) {
+      if (isAdminRoute && url.includes(ESTOQUE_LOGIN_URL_FRAGMENT)) {
+        // Deixa o componente (AdminEstoque.js) tratar e mostrar o erro de senha incorreta.
+      } else if (isAdminRoute) {
         localStorage.removeItem('adminToken');
         // App.js decide se o admin "está logado" pela presença de 'empresaId', não do
         // adminToken (ver App.js: useState inicial lê localStorage.getItem('empresaId')).
