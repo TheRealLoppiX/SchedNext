@@ -736,7 +736,7 @@ const toggleServico = (servico) => {
                                             <img
                                                 src={`data:image/png;base64,${pixInfo.qr_code_base64}`}
                                                 alt="QR Code do Pix"
-                                                style={{ width: '160px', height: '160px', border: '1px solid #f3f4f6', borderRadius: '8px', padding: '6px', background: '#fff' }}
+                                                style={{ width: '160px', maxWidth: '100%', height: 'auto', aspectRatio: '1', border: '1px solid #f3f4f6', borderRadius: '8px', padding: '6px', background: '#fff' }}
                                             />
                                         )}
                                         <p style={{ margin: '10px 0 6px', fontSize: '12px', color: '#6b7280' }}>Peça pro cliente escanear ou copiar o código Pix abaixo.</p>

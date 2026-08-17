@@ -598,7 +598,7 @@ function Agenda() {
                   <img
                     src={`data:image/png;base64,${pixInfo.qr_code_base64}`}
                     alt="QR Code do Pix"
-                    style={{ width: '180px', height: '180px', border: '1px solid #eee', borderRadius: '8px', padding: '6px', background: '#fff' }}
+                    style={{ width: '180px', maxWidth: '100%', height: 'auto', aspectRatio: '1', border: '1px solid #eee', borderRadius: '8px', padding: '6px', background: '#fff' }}
                   />
                 )}
                 <div style={{ marginTop: '10px' }}>
