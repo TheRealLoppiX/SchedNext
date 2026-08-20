@@ -4,6 +4,7 @@ import { useToast } from '../components/Toast';
 import LoadingButton from '../components/LoadingButton';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 import { obterTerminologia } from '../utils/terminologia';
+import { emailValido } from '../utils/validacao';
 import { API_URL } from '../services/api';
 
 function gerarSlug(nome) {
@@ -72,7 +73,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
 
   const avancarDe1 = () => {
     if (!nome.trim()) return toast.error('Informe o nome do seu negócio.');
-    if (!email.trim()) return toast.error('Informe um e-mail.');
+    if (!emailValido(email)) return toast.error('Informe um e-mail válido.');
     if (senha.length < 6) return toast.error('A senha precisa ter ao menos 6 caracteres.');
     if (statusSlug.disponivel === false) return toast.error(statusSlug.motivo || 'Esse endereço já está em uso.');
     setEtapa(2);

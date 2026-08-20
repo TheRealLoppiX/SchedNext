@@ -32,6 +32,8 @@ function AdminConta({ empresaId }) {
     const [processandoAssinatura, setProcessandoAssinatura] = useState(false);
     const [formEnterprise, setFormEnterprise] = useState({ cnpj: '', localizacao: '', clientes_esperados: '', observacoes: '', email_contato: '', telefone_contato: '' });
     const [enterpriseEnviado, setEnterpriseEnviado] = useState(false);
+    const [codigoChave, setCodigoChave] = useState('');
+    const [ativandoChave, setAtivandoChave] = useState(false);
 
     const idEfetivo = empresaId || localStorage.getItem('empresaId');
 
@@ -54,7 +56,8 @@ function AdminConta({ empresaId }) {
                     status_assinatura: data.status_assinatura,
                     proxima_cobranca_em: data.proxima_cobranca_em,
                     cancelamento_agendado: data.cancelamento_agendado,
-                    plano_pendente: data.plano_plataforma_pendente
+                    plano_pendente: data.plano_plataforma_pendente,
+                    chave_ativacao_expira_em: data.chave_ativacao_expira_em
                 });
                 setPlanoEscolhidoId(data.plano_plataforma?.id || null);
             }
@@ -151,6 +154,30 @@ function AdminConta({ empresaId }) {
             toast.error('Erro de conexão. Tente novamente.');
         } finally {
             setProcessandoAssinatura(false);
+        }
+    };
+
+    const ativarChave = async () => {
+        if (!codigoChave.trim()) return;
+        setAtivandoChave(true);
+        try {
+            const res = await fetch(`${API_URL}/admin/assinatura-plataforma/ativar-chave`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codigo: codigoChave.trim() })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                toast.success(data.message || 'Chave ativada!');
+                setCodigoChave('');
+                carregarDados();
+            } else {
+                toast.error(data.error || 'Não foi possível ativar essa chave.');
+            }
+        } catch (err) {
+            toast.error('Erro de conexão. Tente novamente.');
+        } finally {
+            setAtivandoChave(false);
         }
     };
 
@@ -340,6 +367,13 @@ function AdminConta({ empresaId }) {
                                     </div>
                                 )}
 
+                                {assinatura.chave_ativacao_expira_em && new Date(assinatura.chave_ativacao_expira_em) > new Date() && (
+                                    <div style={styles.linhaAssinatura}>
+                                        <span style={styles.labelAssinatura}>Plano promocional válido até</span>
+                                        <strong>{new Date(assinatura.chave_ativacao_expira_em).toLocaleDateString('pt-BR')}</strong>
+                                    </div>
+                                )}
+
                                 <div style={{ marginTop: '16px' }}>
                                     <label style={styles.label}>Trocar de plano</label>
                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -390,6 +424,26 @@ function AdminConta({ empresaId }) {
                                             </div>
                                         )
                                     )}
+                                </div>
+
+                                <div style={{ marginTop: '16px' }}>
+                                    <label style={styles.label}>Ativar chave promocional</label>
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        <input
+                                            type="text"
+                                            value={codigoChave}
+                                            onChange={e => setCodigoChave(e.target.value.toUpperCase())}
+                                            placeholder="Ex: ABCD-EFGH-JKLM-NPQR"
+                                            style={{ ...styles.selectPlano, fontFamily: 'monospace', letterSpacing: '0.5px' }}
+                                        />
+                                        <button
+                                            onClick={ativarChave}
+                                            disabled={ativandoChave || !codigoChave.trim()}
+                                            style={styles.btnTrocarPlano}
+                                        >
+                                            {ativandoChave ? 'Ativando...' : 'Ativar'}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div style={styles.acoesAssinatura}>

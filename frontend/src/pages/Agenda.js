@@ -124,7 +124,8 @@ function Agenda() {
             setEmpresaHorarios(JSON.parse(barbeiro.horarios_funcionamento));
           }
         }
-      });
+      })
+      .catch(err => console.error("Falha na carga de barbeiros:", err));
 
     if (barbeiroId) {
       fetch(`${API_URL}/servicos-por-barbeiro/${barbeiroId}`)
@@ -146,16 +147,23 @@ function Agenda() {
   // --- BUSCA HORÁRIOS OCUPADOS ---
   useEffect(() => {
     if (!barbeiroId) return;
+    // Cliente pode trocar de dia rapidamente (vários cliques seguidos nos botões de dia); sem
+    // essa flag, uma resposta antiga (do dia anterior) que chegue DEPOIS da resposta do dia
+    // atual sobrescreve horariosOcupados com os dados errados, liberando/bloqueando horários
+    // do dia errado na grade.
+    let cancelado = false;
     const dataFormatada = format(dataHora, 'yyyy-MM-dd');
     fetch(`${API_URL}/horarios-ocupados?barbeiro_id=${barbeiroId}&data=${dataFormatada}`)
       .then(res => res.json())
       .then(data => {
+        if (cancelado) return;
         setHorariosOcupados({
             agendados: data.agendados || [],
             bloqueios: data.bloqueios || []
         });
       })
-      .catch(() => setHorariosOcupados({ agendados: [], bloqueios: [] }));
+      .catch(() => { if (!cancelado) setHorariosOcupados({ agendados: [], bloqueios: [] }); });
+    return () => { cancelado = true; };
   }, [dataHora, barbeiroId]);
 
   // --- LÓGICA DE EXCLUSÃO DE HORÁRIOS ---

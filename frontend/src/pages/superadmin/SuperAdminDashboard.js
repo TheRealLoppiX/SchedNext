@@ -55,6 +55,7 @@ function SuperAdminDashboard() {
             ['metricas', 'Métricas'],
             ['empresas', 'Empresas'],
             ['planos', 'Planos'],
+            ['chaves', 'Chaves de Ativação'],
             ['leads', 'Leads Enterprise'],
             ['superadmins', 'Super Admins']
           ].map(([valor, rotulo]) => (
@@ -76,6 +77,7 @@ function SuperAdminDashboard() {
         {aba === 'metricas' && <AbaMetricas toast={toast} />}
         {aba === 'empresas' && <AbaEmpresas toast={toast} confirmar={confirmar} />}
         {aba === 'planos' && <AbaPlanos toast={toast} />}
+        {aba === 'chaves' && <AbaChaves toast={toast} confirmar={confirmar} />}
         {aba === 'leads' && <AbaLeads toast={toast} confirmar={confirmar} />}
         {aba === 'superadmins' && <AbaSuperAdmins toast={toast} confirmar={confirmar} />}
       </div>
@@ -336,6 +338,187 @@ function AbaPlanos({ toast }) {
               <button onClick={() => { setEditando(null); setCriandoNovo(false); }} style={btnSecundario}>Cancelar</button>
               <LoadingButton loading={salvando} onClick={salvar} style={btnPrimario}>Salvar</LoadingButton>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const CHAVE_VAZIA = { plano_plataforma_id: '', duracao_dias: 90, quantidade: 1, observacao: '', prazo_resgate_dias: '' };
+
+// Chaves de ativação: super admin gera uma chave promocional (ex: "3 meses de Profissional")
+// e o admin da empresa resgata em Assinatura -> Ativar chave promocional (ver AdminConta.js e
+// backend/src/routes/chavesAtivacao.js).
+function AbaChaves({ toast, confirmar }) {
+  const [chaves, setChaves] = useState([]);
+  const [planos, setPlanos] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [criando, setCriando] = useState(false);
+  const [gerando, setGerando] = useState(false);
+  const [form, setForm] = useState({ ...CHAVE_VAZIA });
+  const [ultimasGeradas, setUltimasGeradas] = useState(null);
+
+  const carregar = useCallback(async () => {
+    setCarregando(true);
+    try {
+      const [resChaves, resPlanos] = await Promise.all([
+        fetch(`${API_URL}/super-admin/chaves-ativacao`),
+        fetch(`${API_URL}/super-admin/planos`)
+      ]);
+      const dadosChaves = await resChaves.json();
+      const dadosPlanos = await resPlanos.json();
+      setChaves(Array.isArray(dadosChaves) ? dadosChaves : []);
+      setPlanos(Array.isArray(dadosPlanos) ? dadosPlanos : []);
+    } catch (err) {
+      toast.error('Erro ao carregar chaves de ativação.');
+    } finally {
+      setCarregando(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const gerar = async () => {
+    if (!form.plano_plataforma_id || !form.duracao_dias) {
+      toast.error('Escolha o plano e a duração.');
+      return;
+    }
+    setGerando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/chaves-ativacao`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plano_plataforma_id: form.plano_plataforma_id,
+          duracao_dias: form.duracao_dias,
+          quantidade: form.quantidade || 1,
+          observacao: form.observacao || null,
+          prazo_resgate_dias: form.prazo_resgate_dias || null
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.length > 1 ? `${data.length} chaves geradas!` : 'Chave gerada!');
+        setUltimasGeradas(data.map((c) => c.codigo));
+        setCriando(false);
+        setForm({ ...CHAVE_VAZIA });
+        carregar();
+      } else {
+        toast.error(data.detalhes?.[0]?.mensagem || data.error || 'Não foi possível gerar a chave.');
+      }
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setGerando(false);
+    }
+  };
+
+  const revogar = async (chave) => {
+    const ok = await confirmar(`Revogar a chave ${chave.codigo}?`, {
+      detail: 'Ela deixa de poder ser resgatada por qualquer empresa.',
+      confirmText: 'Revogar',
+      danger: true
+    });
+    if (!ok) return;
+
+    const res = await fetch(`${API_URL}/super-admin/chaves-ativacao/${chave.id}/revogar`, { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) { toast.success('Chave revogada.'); carregar(); }
+    else toast.error(data.error || 'Não foi possível revogar a chave.');
+  };
+
+  const statusChave = (c) => {
+    if (c.revogada_em) return { rotulo: 'Revogada', cor: '#9ca3af' };
+    if (c.usada_em) return { rotulo: `Usada por ${c.usada_por_empresa?.nome || 'empresa'}`, cor: '#059669' };
+    if (c.prazo_resgate_ate && new Date(c.prazo_resgate_ate) < new Date()) return { rotulo: 'Expirada (não resgatada)', cor: '#dc2626' };
+    return { rotulo: 'Disponível', cor: '#2563eb' };
+  };
+
+  return (
+    <div>
+      <button onClick={() => { setCriando(true); setUltimasGeradas(null); }} style={{ ...btnPrimario, marginBottom: '16px' }}>
+        + Gerar chave(s)
+      </button>
+
+      {carregando ? <p>Carregando...</p> : chaves.length === 0 ? (
+        <p style={{ color: '#9ca3af' }}>Nenhuma chave gerada ainda.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {chaves.map((c) => {
+            const status = statusChave(c);
+            return (
+              <div key={c.id} style={cardEstilo}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <strong style={{ fontFamily: 'monospace', fontSize: '15px', letterSpacing: '0.5px' }}>{c.codigo}</strong>
+                    <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
+                      {c.plano_plataforma?.nome} · {c.duracao_dias} dias · gerada em {new Date(c.criado_em).toLocaleDateString('pt-BR')}
+                      {c.prazo_resgate_ate && ` · prazo pra resgatar até ${new Date(c.prazo_resgate_ate).toLocaleDateString('pt-BR')}`}
+                    </div>
+                    {c.observacao && <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>{c.observacao}</div>}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: status.cor }}>{status.rotulo}</span>
+                    {!c.usada_em && !c.revogada_em && (
+                      <button onClick={() => revogar(c)} style={{ ...btnSecundario, color: '#ef4444', borderColor: '#ef4444' }}>Revogar</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {criando && (
+        <div style={overlayEstilo}>
+          <div style={{ ...cardEstilo, maxWidth: '440px', width: '90%' }}>
+            {ultimasGeradas ? (
+              <>
+                <h3 style={{ margin: '0 0 14px' }}>Chave(s) gerada(s)</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
+                  {ultimasGeradas.map((codigo) => (
+                    <code key={codigo} style={{ background: '#0f1115', border: '1px solid #374151', borderRadius: '6px', padding: '8px', fontSize: '14px', letterSpacing: '0.5px' }}>{codigo}</code>
+                  ))}
+                </div>
+                <button onClick={() => { setCriando(false); setUltimasGeradas(null); }} style={btnPrimario}>Fechar</button>
+              </>
+            ) : (
+              <>
+                <h3 style={{ margin: '0 0 14px' }}>Gerar chave de ativação</h3>
+
+                <label style={labelEstilo}>Plano</label>
+                <select
+                  style={inputEstilo}
+                  value={form.plano_plataforma_id}
+                  onChange={(e) => setForm({ ...form, plano_plataforma_id: e.target.value })}
+                >
+                  <option value="">Selecione...</option>
+                  {planos.filter((p) => p.preco_mensal > 0).map((p) => (
+                    <option key={p.id} value={p.id}>{p.nome} · R$ {Number(p.preco_mensal).toFixed(2)}/mês</option>
+                  ))}
+                </select>
+
+                <label style={labelEstilo}>Duração (dias) — ex: 90 para 3 meses</label>
+                <input type="number" style={inputEstilo} value={form.duracao_dias} onChange={(e) => setForm({ ...form, duracao_dias: e.target.value })} />
+
+                <label style={labelEstilo}>Quantidade de chaves</label>
+                <input type="number" min="1" max="50" style={inputEstilo} value={form.quantidade} onChange={(e) => setForm({ ...form, quantidade: e.target.value })} />
+
+                <label style={labelEstilo}>Prazo para resgatar, em dias (opcional — vazio = sem prazo)</label>
+                <input type="number" style={inputEstilo} value={form.prazo_resgate_dias} onChange={(e) => setForm({ ...form, prazo_resgate_dias: e.target.value })} />
+
+                <label style={labelEstilo}>Observação (opcional, uso interno)</label>
+                <input style={inputEstilo} value={form.observacao} onChange={(e) => setForm({ ...form, observacao: e.target.value })} placeholder="Ex: parceria com influencer X" />
+
+                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                  <button onClick={() => { setCriando(false); setForm({ ...CHAVE_VAZIA }); }} style={btnSecundario}>Cancelar</button>
+                  <LoadingButton loading={gerando} onClick={gerar} style={btnPrimario}>Gerar</LoadingButton>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

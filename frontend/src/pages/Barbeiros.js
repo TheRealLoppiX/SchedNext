@@ -89,27 +89,34 @@ function Barbeiros() {
   };
 
   useEffect(() => {
+    // Cliente pode trocar de dia/horário rapidamente antes da resposta anterior voltar; sem
+    // essa flag, uma resposta antiga (de outro dia/hora) que chegue DEPOIS sobrescreve
+    // barbeirosFiltrados com a disponibilidade errada.
+    let cancelado = false;
     const aplicarFiltroReal = async () => {
       const regrasDia = getHorarioDoDia(dataSelecionada);
-      
+
       // 1. Verificação inteligente baseada no AdminConta
       if (!regrasDia.aberto) {
-        setEmpresaFechada(true);
-        setBarbeirosFiltrados([]);
+        if (!cancelado) {
+          setEmpresaFechada(true);
+          setBarbeirosFiltrados([]);
+        }
         return;
       }
 
-      setEmpresaFechada(false);
+      if (!cancelado) setEmpresaFechada(false);
 
       if (!horaSelecionada) {
-        setBarbeirosFiltrados(barbeiros.filter(b => b.ativo == 1 || b.ativo == true || b.ativo === 'Ativo'));
+        if (!cancelado) setBarbeirosFiltrados(barbeiros.filter(b => b.ativo == 1 || b.ativo == true || b.ativo === 'Ativo'));
         return;
       }
 
       const dataF = format(dataSelecionada, 'yyyy-MM-dd');
       try {
         const response = await fetch(`${API_URL}/disponibilidade-filtro?data=${dataF}&hora=${horaSelecionada}&empresa=${empresaSlug}`);
-        const dataStatus = await response.json(); 
+        const dataStatus = await response.json();
+        if (cancelado) return;
 
         if (dataStatus.fechado) {
           setEmpresaFechada(true);
@@ -128,6 +135,7 @@ function Barbeiros() {
       }
     };
     aplicarFiltroReal();
+    return () => { cancelado = true; };
   }, [dataSelecionada, horaSelecionada, barbeiros, empresaSlug, empresaHorarios]);
 
   const gerarHorariosDisponiveis = () => {
