@@ -200,7 +200,8 @@ function AdminAgendamentos({ empresaId }) {
                       padding: '6px 12px',
                       borderRadius: '20px',
                       fontSize: '12px',
-                      fontWeight: '700'
+                      fontWeight: '700',
+                      whiteSpace: 'nowrap'
                     }}>
                       {status.label}
                     </span>
@@ -248,9 +249,9 @@ const styles = {
   
   cardTabela: { background: '#fff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', overflow: 'hidden' },
   table: { width: '100%', minWidth: '640px', borderCollapse: 'collapse', tableLayout: 'fixed' },
-  th: { padding: '15px 20px', background: '#f9fafb', color: '#888', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid #f0f0f0' },
+  th: { padding: '15px 20px', background: '#f9fafb', color: '#888', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid #f0f0f0', whiteSpace: 'nowrap' },
   tr: { borderBottom: '1px solid #f0f0f0', transition: 'background-color 0.2s' },
-  td: { padding: '18px 20px', fontSize: '14px', verticalAlign: 'middle', wordWrap: 'break-word', color: '#333' },
+  td: { padding: '18px 20px', fontSize: '14px', verticalAlign: 'middle', color: '#333' },
   
   btnZap: { backgroundColor: '#25D366', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13px', transition: '0.2s', margin: '0 auto' }
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './Landing.css';
 import useRevelarAoRolar from '../hooks/useRevelarAoRolar';
@@ -169,6 +169,21 @@ function Landing() {
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 
+  const refHeroVideo = useRef(null);
+  useEffect(() => {
+    // Autoplay declarativo (autoPlay+muted+playsInline) às vezes não "pega" no Safari iOS quando
+    // o vídeo ainda não terminou de bufferizar em dados móveis (preload é conservador por padrão
+    // pra economizar dados) — o elemento fica parado mostrando o poster até algum evento (ex:
+    // rolar a página) fazer o Safari reconsiderar. Chamar .play() de novo assim que o navegador
+    // sinalizar que já tem dados suficientes (canplay) força o início sem esperar esse gatilho.
+    const video = refHeroVideo.current;
+    if (!video) return;
+    const tentarTocar = () => { video.play().catch(() => {}); };
+    tentarTocar();
+    video.addEventListener('canplay', tentarTocar);
+    return () => video.removeEventListener('canplay', tentarTocar);
+  }, [reduzirMovimento]);
+
   const [refComoFunciona, visivelComoFunciona] = useRevelarAoRolar();
   const [refRecursos, visivelRecursos] = useRevelarAoRolar();
   const [refCasos, visivelCasos] = useRevelarAoRolar();
@@ -202,10 +217,12 @@ function Landing() {
           <img src="/videos/hero-barbearia-poster.jpg" alt="" aria-hidden="true" style={s.heroVideo} />
         ) : (
           <video
+            ref={refHeroVideo}
             className="ln-hero-video"
             style={s.heroVideo}
             src="/videos/hero-barbearia.mp4"
             poster="/videos/hero-barbearia-poster.jpg"
+            preload="auto"
             autoPlay
             loop
             muted

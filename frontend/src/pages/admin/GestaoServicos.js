@@ -265,7 +265,7 @@ function GestaoServicos({ empresaId }) {
                   </td>
                   <td style={{...styles.td, width: '15%', textAlign: 'center'}}>
                     <span style={{
-                        padding: '4px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase',
+                        padding: '4px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', whiteSpace: 'nowrap',
                         backgroundColor: isAtivo ? '#ecfdf5' : '#fef2f2',
                         color: isAtivo ? '#059669' : '#dc2626'
                     }}>
@@ -330,11 +330,11 @@ const styles = {
   btnCancelar: { background: '#f3f4f6', color: '#4b5563', padding: '12px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', transition: '0.2s' },
   cardTabela: { background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid #f3f4f6' },
   table: { width: '100%', minWidth: '620px', borderCollapse: 'collapse', tableLayout: 'fixed' },
-  th: { padding: '15px 20px', background: '#f9fafb', color: '#6b7280', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' },
+  th: { padding: '15px 20px', background: '#f9fafb', color: '#6b7280', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' },
   tr: { borderBottom: '1px solid #f3f4f6', transition: '0.2s' },
-  td: { padding: '18px 20px', fontSize: '14px', verticalAlign: 'middle', wordWrap: 'break-word', color: '#4b5563' },
-  badgeDuracao: { background: '#eef2ff', color: '#4f46e5', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' },
-  textoPreco: { fontWeight: '700', color: '#059669' },
+  td: { padding: '18px 20px', fontSize: '14px', verticalAlign: 'middle', color: '#4b5563' },
+  badgeDuracao: { background: '#eef2ff', color: '#4f46e5', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' },
+  textoPreco: { fontWeight: '700', color: '#059669', whiteSpace: 'nowrap' },
   btnIconEdit: { background: '#f3f4f6', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer', marginRight: '5px', display: 'inline-flex', alignItems: 'center', transition: '0.2s' },
   btnIconDelete: { background: '#fef2f2', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', transition: '0.2s' },
   btnIconPower: { background: '#f9fafb', border: '1px solid #e5e7eb', padding: '7px', borderRadius: '6px', cursor: 'pointer', marginRight: '5px', display: 'inline-flex', alignItems: 'center', transition: '0.2s' }
