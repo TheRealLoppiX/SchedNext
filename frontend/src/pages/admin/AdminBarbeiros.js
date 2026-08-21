@@ -390,19 +390,21 @@ function AdminBarbeiros({ empresaId }) {
                             </div>
                             <div>
                                 <h3 style={styles.nomeCard}>{b.nome}</h3>
-                                <span style={{ ...styles.badgeStatus, backgroundColor: b.ativo ? '#d1fae5' : '#fee2e2', color: b.ativo ? '#065f46' : '#991b1b' }}>
-                                    {b.ativo ? 'Ativo na Plataforma' : 'Inativo / Oculto'}
-                                </span>
-                                {b.percentual_comissao != null && (
-                                    <span style={{ ...styles.badgeStatus, marginLeft: '6px', backgroundColor: '#ede9fe', color: '#6d28d9' }}>
-                                        Comissão {Number(b.percentual_comissao)}%
+                                <div style={styles.badgeRow}>
+                                    <span style={{ ...styles.badgeStatus, backgroundColor: b.ativo ? '#d1fae5' : '#fee2e2', color: b.ativo ? '#065f46' : '#991b1b' }}>
+                                        {b.ativo ? 'Ativo na Plataforma' : 'Inativo / Oculto'}
                                     </span>
-                                )}
-                                {b.unidade_id && (
-                                    <span style={{ ...styles.badgeStatus, marginLeft: '6px', backgroundColor: '#e0f2fe', color: '#0369a1' }}>
-                                        {unidades.find(u => u.id === b.unidade_id)?.nome || 'Unidade'}
-                                    </span>
-                                )}
+                                    {b.percentual_comissao != null && (
+                                        <span style={{ ...styles.badgeStatus, backgroundColor: '#ede9fe', color: '#6d28d9' }}>
+                                            Comissão {Number(b.percentual_comissao)}%
+                                        </span>
+                                    )}
+                                    {b.unidade_id && (
+                                        <span style={{ ...styles.badgeStatus, backgroundColor: '#e0f2fe', color: '#0369a1' }}>
+                                            {unidades.find(u => u.id === b.unidade_id)?.nome || 'Unidade'}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -584,8 +586,9 @@ const styles = {
     avatar: { width: '65px', height: '65px', borderRadius: '50%', backgroundColor: '#f3f4f6', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #e5e7eb' },
     img: { width: '100%', height: '100%', objectFit: 'cover' },
     
-    nomeCard: { margin: '0 0 4px 0', fontSize: '18px', color: '#111827', fontWeight: '700' },
-    badgeStatus: { padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase' },
+    nomeCard: { margin: '0 0 6px 0', fontSize: '18px', color: '#111827', fontWeight: '700' },
+    badgeRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' },
+    badgeStatus: { display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', lineHeight: 1.4, whiteSpace: 'nowrap' },
     
     areaBloqueios: { backgroundColor: '#f9fafb', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #e5e7eb' },
     tituloBloqueio: { fontSize: '11px', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' },
