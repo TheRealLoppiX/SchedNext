@@ -178,7 +178,14 @@ function Landing() {
     // sinalizar que já tem dados suficientes (canplay) força o início sem esperar esse gatilho.
     const video = refHeroVideo.current;
     if (!video) return;
-    const tentarTocar = () => { video.play().catch(() => {}); };
+    // React às vezes não reflete a prop JSX `muted` na propriedade real do elemento a tempo do
+    // Safari avaliar se o autoplay é elegível (issue conhecida do React com <video>) — força
+    // explicitamente antes de cada tentativa de play() por segurança.
+    const tentarTocar = () => {
+      video.muted = true;
+      video.defaultMuted = true;
+      video.play().catch(() => {});
+    };
     tentarTocar();
     video.addEventListener('canplay', tentarTocar);
     return () => video.removeEventListener('canplay', tentarTocar);
@@ -458,7 +465,7 @@ const s = {
   btnHeader: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '14px' },
 
   hero: { position: 'relative', padding: '110px 20px 90px', overflow: 'hidden', background: CORES.fundo },
-  heroVideo: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 },
+  heroVideo: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0, transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)', willChange: 'transform' },
   heroOverlay: { position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(5,6,13,0.86) 0%, rgba(5,6,13,0.75) 45%, rgba(5,6,13,0.96) 100%)', zIndex: 1 },
   heroGlow: { position: 'absolute', top: 0, left: 0, width: '70%', height: '70%', background: 'radial-gradient(circle at 20% 15%, rgba(37,84,235,0.35), transparent 60%), radial-gradient(circle at 35% 5%, rgba(224,41,62,0.14), transparent 55%)', zIndex: 1, pointerEvents: 'none' },
   heroConteudo: { position: 'relative', zIndex: 2 },
