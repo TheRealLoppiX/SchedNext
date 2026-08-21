@@ -209,18 +209,15 @@ const toggleServico = (servico) => {
     };
 
     const handleAtualizarStatus = async (id, novoStatus) => {
-        const bodyData = { status: novoStatus };
-        if (novoStatus === 'cancelado') {
-            bodyData.justificativa = justificativaCanc;
-            if (!justificativaCanc) return toast.error("Digite o motivo do cancelamento.");
-        }
+        if (novoStatus !== 'cancelado') return;
+        if (!justificativaCanc) return toast.error("Digite o motivo do cancelamento.");
 
         setAtualizandoStatus(true);
         try {
-            const res = await fetch(`${API_URL}/admin/agendamentos/${id}/status`, {
-                method: 'PUT',
+            const res = await fetch(`${API_URL}/admin/cancelar-agendamento`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(bodyData)
+                body: JSON.stringify({ agendamento_id: id, justificativa: justificativaCanc, enviadoPor: 'Barbeiro' })
             });
 
             if (res.ok) {
@@ -370,10 +367,27 @@ const toggleServico = (servico) => {
     // aplicado) é sempre recalculada no servidor em /admin/finalizar-servico-checkout.
     const getValorBaseSeguro = () => {
         if (!modalFinalizar) return 0;
-        const valorTotal = parseFloat(String(modalFinalizar.valor_total || '0').replace(',', '.')) || 0;
-        if (!assinaturaCheckout.assinante || assinaturaCheckout.servicos_ids.length === 0) return valorTotal;
+        const valorGravado = parseFloat(String(modalFinalizar.valor_total || '0').replace(',', '.')) || 0;
+        if (!assinaturaCheckout.assinante || assinaturaCheckout.servicos_ids.length === 0) return valorGravado;
+
+        const idsAgendados = assinaturaCheckout.servicos_agendados_ids;
+        // Agendamento sem serviço vinculado (encaixe legado): não dá pra recalcular a partir dos
+        // serviços, cai no valor gravado — igual o backend faz (ver calcularValorComLimiteAssinante).
+        if (idsAgendados.length === 0) return valorGravado;
+
+        // Recalcula o valor cheio a partir dos serviços de fato vinculados, em vez de partir do
+        // valor_total gravado na criação: aquele valor já saía ZERADO pra qualquer serviço do
+        // plano (a rota /agendar só checa se o serviço está no plano, não se o limite mensal já
+        // estourou — ver comentário em calcularValorComLimiteAssinante). Descontar em cima de um
+        // valor que já nasceu 0 nunca conseguia recolocar o preço cheio quando o cliente já tinha
+        // batido a cota, mesmo com "restante: 0" sendo mostrado corretamente ao lado.
+        const valorTotal = idsAgendados.reduce((acc, id) => {
+            const s = servicos.find(sv => Number(sv.id) === Number(id));
+            return acc + (s ? (parseFloat(String(s.valor || s.preco || '0').replace(',', '.')) || 0) : 0);
+        }, 0);
+
         // Desconta servicos que estao no plano, foram agendados E ainda tem saldo no ciclo
-        const idsDescontar = assinaturaCheckout.servicos_agendados_ids.filter(id =>
+        const idsDescontar = idsAgendados.filter(id =>
             assinaturaCheckout.servicos_ids.includes(id) &&
             (assinaturaCheckout.restantes[id] == null || assinaturaCheckout.restantes[id] > 0)
         );
