@@ -188,7 +188,18 @@ function Landing() {
     };
     tentarTocar();
     video.addEventListener('canplay', tentarTocar);
-    return () => video.removeEventListener('canplay', tentarTocar);
+
+    // Com o Modo de Baixo Consumo ativado, o Safari iOS bloqueia autoplay de vídeo mesmo com
+    // muted+playsinline até haver uma interação real do usuário na página — nesse caso nenhum
+    // retry programático sem gesto resolve. Qualquer toque/scroll conta como gesto válido, então
+    // tenta de novo no primeiro que acontecer (once, pra não ficar escutando pra sempre).
+    const eventosGesto = ['touchstart', 'touchend', 'scroll', 'click'];
+    eventosGesto.forEach((ev) => window.addEventListener(ev, tentarTocar, { once: true, passive: true }));
+
+    return () => {
+      video.removeEventListener('canplay', tentarTocar);
+      eventosGesto.forEach((ev) => window.removeEventListener(ev, tentarTocar));
+    };
   }, [reduzirMovimento]);
 
   const [refComoFunciona, visivelComoFunciona] = useRevelarAoRolar();
