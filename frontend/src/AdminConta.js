@@ -34,8 +34,22 @@ function AdminConta({ empresaId }) {
     const [enterpriseEnviado, setEnterpriseEnviado] = useState(false);
     const [codigoChave, setCodigoChave] = useState('');
     const [ativandoChave, setAtivandoChave] = useState(false);
+    const [slug, setSlug] = useState('');
+    const [dominioCustomizado, setDominioCustomizado] = useState(null);
+    const [dominioVerificado, setDominioVerificado] = useState(false);
 
     const idEfetivo = empresaId || localStorage.getItem('empresaId');
+
+    const linkLogin = dominioCustomizado && dominioVerificado
+        ? `https://${dominioCustomizado}`
+        : (slug ? `https://${slug}.schednext.com.br` : '');
+
+    const copiarLinkLogin = () => {
+        if (!linkLogin) return;
+        navigator.clipboard.writeText(linkLogin)
+            .then(() => toast.success('Link copiado!'))
+            .catch(() => toast.error('Não foi possível copiar o link.'));
+    };
 
     const carregarDados = useCallback(async () => {
         try {
@@ -51,6 +65,9 @@ function AdminConta({ empresaId }) {
                 if (data.vertical) setVertical(data.vertical);
                 if (data.cor_principal) setCorPrincipal(data.cor_principal);
                 if (data.cor_destaque) setCorDestaque(data.cor_destaque);
+                setSlug(data.slug || '');
+                setDominioCustomizado(data.dominio_customizado || null);
+                setDominioVerificado(!!data.dominio_verificado);
                 setAssinatura({
                     plano: data.plano_plataforma,
                     status_assinatura: data.status_assinatura,
@@ -303,6 +320,24 @@ function AdminConta({ empresaId }) {
                                 />
                             </div>
                         </div>
+                    </div>
+
+                    <div style={{...styles.card, marginTop: '20px'}}>
+                        <div style={styles.cardHeader}>
+                            <h3 style={styles.cardTitle}>Link de acesso {termos.artigoContraido} {termos.local}</h3>
+                        </div>
+                        <p style={{ margin: '0 0 15px 0', fontSize: '13px', color: '#6b7280' }}>
+                            Compartilhe este link com seus clientes para eles fazerem login e agendar.
+                        </p>
+                        {linkLogin ? (
+                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                <input readOnly value={linkLogin} style={styles.inputLink} onFocus={e => e.target.select()} />
+                                <button type="button" onClick={copiarLinkLogin} style={styles.btnCopiarLink}>Copiar</button>
+                                <a href={linkLogin} target="_blank" rel="noopener noreferrer" style={styles.btnAbrirLink}>Abrir</a>
+                            </div>
+                        ) : (
+                            <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af' }}>Link indisponível no momento.</p>
+                        )}
                     </div>
 
                     <div style={{...styles.card, marginTop: '20px'}}>
@@ -566,6 +601,9 @@ const styles = {
     inputHora: { padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px', outline: 'none', color: '#111827', backgroundColor: '#fff', width: '100px', maxWidth: '38vw', fontWeight: '500', boxSizing: 'border-box' },
 
     inputCor: { width: '60px', height: '40px', border: '1px solid #d1d5db', borderRadius: '8px', cursor: 'pointer', padding: '2px' },
+    inputLink: { flex: '1 1 220px', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '13px', color: '#111827', backgroundColor: '#f9fafb' },
+    btnCopiarLink: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', color: '#374151', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+    btnAbrirLink: { padding: '10px 16px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '600', fontSize: '13px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' },
     upsellPaleta: { padding: '16px', backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px dashed #d1d5db' },
 
     linhaAssinatura: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: '14px' },
