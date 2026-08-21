@@ -247,7 +247,7 @@ const styles = {
   btnFiltroAtivo: { padding: '8px 16px', borderRadius: '20px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', cursor: 'pointer', fontSize: '13px', fontWeight: '700', transition: '0.2s' },
   
   cardTabela: { background: '#fff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', overflow: 'hidden' },
-  table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
+  table: { width: '100%', minWidth: '640px', borderCollapse: 'collapse', tableLayout: 'fixed' },
   th: { padding: '15px 20px', background: '#f9fafb', color: '#888', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid #f0f0f0' },
   tr: { borderBottom: '1px solid #f0f0f0', transition: 'background-color 0.2s' },
   td: { padding: '18px 20px', fontSize: '14px', verticalAlign: 'middle', wordWrap: 'break-word', color: '#333' },

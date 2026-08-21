@@ -329,7 +329,7 @@ const styles = {
   btnPrincipal: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', padding: '12px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '700', transition: '0.2s', flex: 1 },
   btnCancelar: { background: '#f3f4f6', color: '#4b5563', padding: '12px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', transition: '0.2s' },
   cardTabela: { background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid #f3f4f6' },
-  table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
+  table: { width: '100%', minWidth: '620px', borderCollapse: 'collapse', tableLayout: 'fixed' },
   th: { padding: '15px 20px', background: '#f9fafb', color: '#6b7280', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' },
   tr: { borderBottom: '1px solid #f3f4f6', transition: '0.2s' },
   td: { padding: '18px 20px', fontSize: '14px', verticalAlign: 'middle', wordWrap: 'break-word', color: '#4b5563' },
