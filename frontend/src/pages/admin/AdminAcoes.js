@@ -15,6 +15,9 @@ function AdminAcoes() {
     const [produtos, setProdutos] = useState([]);
     const [carregando, setCarregando] = useState(true);
     const [lancando, setLancando] = useState(false);
+    const [permiteIA, setPermiteIA] = useState(false);
+    const [gerandoSugestao, setGerandoSugestao] = useState(false);
+    const [sugestaoIA, setSugestaoIA] = useState('');
 
     const [form, setForm] = useState({ nome: '', data_inicio: '', data_fim: '', cortes_necessarios: '', valor_minimo: '0.00', tipo_premio: 'servico', premio_selecionado: '', valor_desconto: '' });
 
@@ -38,6 +41,28 @@ function AdminAcoes() {
     }, [empresaId]);
 
     useEffect(() => { carregarDados(); }, [carregarDados]);
+
+    useEffect(() => {
+        if (!empresaId) return;
+        fetch(`${API_URL}/admin/empresa/${empresaId}`)
+            .then(r => r.json())
+            .then(d => setPermiteIA(!!d?.plano_plataforma?.permite_ia))
+            .catch(() => {});
+    }, [empresaId]);
+
+    const gerarSugestaoCampanha = async () => {
+        setGerandoSugestao(true);
+        try {
+            const res = await fetch(`${API_URL}/admin/ia/sugestao-campanha`, { method: 'POST' });
+            const dados = await res.json();
+            if (res.ok) setSugestaoIA(dados.sugestao);
+            else toast.error(dados.error || 'Não foi possível gerar a sugestão agora.');
+        } catch (err) {
+            toast.error('Erro de conexão. Tente novamente.');
+        } finally {
+            setGerandoSugestao(false);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -107,6 +132,19 @@ function AdminAcoes() {
                 <h2 style={s.title}>⭐ Ações & Fidelidade</h2>
                 <p style={s.subtitle}>Crie campanhas sazonais e programe prêmios para reter clientes.</p>
             </header>
+
+            {permiteIA && (
+                <div style={s.card}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                        <h3 style={{ ...s.cardTitle, margin: 0 }}>✨ Sugestão de campanha com IA</h3>
+                        <LoadingButton loading={gerandoSugestao} onClick={gerarSugestaoCampanha} style={s.btnPrincipal}>
+                            {sugestaoIA ? 'Gerar outra' : 'Sugerir campanha'}
+                        </LoadingButton>
+                    </div>
+                    {sugestaoIA && <p style={{ margin: '14px 0 0', fontSize: '14px', color: '#374151', lineHeight: '1.6' }}>{sugestaoIA}</p>}
+                    {!sugestaoIA && <p style={{ margin: '10px 0 0', fontSize: '13px', color: '#6b7280' }}>Baseada no faturamento e frequência de atendimento dos últimos 30 dias.</p>}
+                </div>
+            )}
 
             <div style={s.card}>
                 <h3 style={s.cardTitle}>Criar Nova Ação</h3>

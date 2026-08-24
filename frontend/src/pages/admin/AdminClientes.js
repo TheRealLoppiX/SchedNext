@@ -28,6 +28,7 @@ function AdminClientes({ empresaId }) {
     const [nomeEmpresa, setNomeEmpresa] = useState('');
     const [sugestaoIA, setSugestaoIA] = useState('');
     const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+    const [riscoFaltas, setRiscoFaltas] = useState(null);
     const [gerandoSugestao, setGerandoSugestao] = useState(false);
 
     useEffect(() => {
@@ -76,6 +77,18 @@ function AdminClientes({ empresaId }) {
 
     useEffect(() => { carregarClientes(); }, [carregarClientes]);
     useEffect(() => { setSelecionados([]); }, [filtro, buscaDebounced]);
+
+    // Risco de não comparecimento (regra simples em cima do histórico, ver
+    // routes/clientes.js GET /admin/clientes/:id/risco-faltas) — recalculado toda vez que o
+    // modal de um cliente diferente abre.
+    useEffect(() => {
+        if (!clienteSelecionado?.id) { setRiscoFaltas(null); return; }
+        setRiscoFaltas(null);
+        fetch(`${API_URL}/admin/clientes/${clienteSelecionado.id}/risco-faltas`)
+            .then(r => r.ok ? r.json() : null)
+            .then(setRiscoFaltas)
+            .catch(() => setRiscoFaltas(null));
+    }, [clienteSelecionado?.id]);
 
     const mostrarFeedback = (texto, tipo = 'sucesso') => {
         setMensagem({ texto, tipo });
@@ -500,7 +513,17 @@ function AdminClientes({ empresaId }) {
                                         </h3>
                                         {clienteSelecionado.assinante && <Icons.Diamond color="#6d28d9" size={16} />}
                                     </div>
-                                    {clienteSelecionado.assinante && <span style={s.badgeAssinante}>Assinante</span>}
+                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                        {clienteSelecionado.assinante && <span style={s.badgeAssinante}>Assinante</span>}
+                                        {riscoFaltas && (riscoFaltas.risco === 'alto' || riscoFaltas.risco === 'medio') && (
+                                            <span
+                                                title={`${riscoFaltas.faltas} de ${riscoFaltas.total} atendimentos passados cancelados ou sem comparecimento (${riscoFaltas.percentual}%)`}
+                                                style={{ ...s.badgeAssinante, backgroundColor: riscoFaltas.risco === 'alto' ? '#fef2f2' : '#fffbeb', color: riscoFaltas.risco === 'alto' ? '#dc2626' : '#b45309' }}
+                                            >
+                                                ⚠️ Risco de falta {riscoFaltas.risco === 'alto' ? 'alto' : 'médio'}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <button onClick={() => setClienteSelecionado(null)} style={s.btnFechar}>✕</button>

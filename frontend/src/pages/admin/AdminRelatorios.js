@@ -19,12 +19,12 @@ function formatarMoeda(valor) {
 function AdminRelatorios({ empresaId }) {
   const toast = useToast();
   const [carregando, setCarregando] = useState(true);
-  const [permitido, setPermitido] = useState(false);
   const [gerando, setGerando] = useState(false);
   const [relatorio, setRelatorio] = useState(null);
   const [erro, setErro] = useState('');
   const [dataInicio, setDataInicio] = useState(inicioDoMes());
   const [dataFim, setDataFim] = useState(formatarDataLocal(new Date()));
+  const [ia, setIa] = useState({ disponivel: false, gerando: false, texto: '' });
 
   // Taxas de maquineta e comissionamento não são exclusivos do plano Enterprise — são
   // necessidade operacional básica de qualquer negócio com equipe (ver PENDENCIAS.md).
@@ -40,15 +40,36 @@ function AdminRelatorios({ empresaId }) {
     try {
       const res = await fetch(`${API_URL}/admin/empresa/${idEfetivo}`);
       const dados = await res.json();
-      setPermitido(!!dados?.plano_plataforma?.permite_relatorios_avancados);
+      setIa((prev) => ({ ...prev, disponivel: !!dados?.plano_plataforma?.permite_ia }));
     } catch (err) {
-      console.error('Erro ao verificar permissão de relatórios:', err);
+      console.error('Erro ao verificar plano da empresa:', err);
     } finally {
       setCarregando(false);
     }
   }, [idEfetivo]);
 
   useEffect(() => { carregarPermissao(); }, [carregarPermissao]);
+
+  // Resumo executivo em texto do período filtrado — reaproveita o mesmo endpoint/padrão de
+  // resumo-dashboard (ver routes/ia.js e AdminDashboard.js), só trocando os dados enviados.
+  const gerarResumoIA = async () => {
+    if (!relatorio) return;
+    setIa((prev) => ({ ...prev, gerando: true }));
+    try {
+      const res = await fetch(`${API_URL}/admin/ia/resumo-relatorio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stats: { periodo: relatorio.periodo, ...relatorio.resumo, top_servicos: relatorio.top_servicos, top_profissionais: relatorio.top_profissionais } })
+      });
+      const dados = await res.json();
+      if (res.ok) setIa((prev) => ({ ...prev, texto: dados.resumo }));
+      else toast.error(dados.error || 'Não foi possível gerar o resumo agora.');
+    } catch (err) {
+      toast.error('Erro de conexão. Tente novamente.');
+    } finally {
+      setIa((prev) => ({ ...prev, gerando: false }));
+    }
+  };
 
   const carregarTaxas = useCallback(async () => {
     if (!idEfetivo) return;
@@ -74,7 +95,7 @@ function AdminRelatorios({ empresaId }) {
       if (res.ok) {
         toast.success('Taxas salvas!');
         carregarComissionamento();
-        if (permitido) gerarRelatorio();
+        gerarRelatorio();
       } else {
         toast.error('Não foi possível salvar as taxas.');
       }
@@ -101,8 +122,11 @@ function AdminRelatorios({ empresaId }) {
 
   useEffect(() => { carregarComissionamento(); }, [carregarComissionamento]);
 
+  // O endpoint agora devolve um resumo pra todo plano pago (com filtro de data), não só
+  // Enterprise — a resposta traz `avancado` pra decidir se as seções extras
+  // (rankings/recorrência/comparação) aparecem ou ficam atrás do upsell abaixo.
   const gerarRelatorio = useCallback(async () => {
-    if (!idEfetivo || !permitido) return;
+    if (!idEfetivo) return;
     setGerando(true);
     setErro('');
     try {
@@ -118,9 +142,9 @@ function AdminRelatorios({ empresaId }) {
     } finally {
       setGerando(false);
     }
-  }, [idEfetivo, permitido, dataInicio, dataFim]);
+  }, [idEfetivo, dataInicio, dataFim]);
 
-  useEffect(() => { if (permitido) gerarRelatorio(); }, [permitido, gerarRelatorio]);
+  useEffect(() => { gerarRelatorio(); }, [gerarRelatorio]);
 
   const exportarCsv = () => {
     if (!relatorio) return;
@@ -185,7 +209,7 @@ function AdminRelatorios({ empresaId }) {
           <label style={styles.label}>Até</label>
           <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} style={styles.input} />
         </div>
-        <button onClick={() => { carregarComissionamento(); if (permitido) gerarRelatorio(); }} disabled={gerando} style={styles.btnGerar}>
+        <button onClick={() => { carregarComissionamento(); gerarRelatorio(); }} disabled={gerando} style={styles.btnGerar}>
           {gerando ? 'Gerando...' : 'Aplicar'}
         </button>
         {relatorio && (
@@ -254,107 +278,121 @@ function AdminRelatorios({ empresaId }) {
         <p style={{ ...styles.vazio, marginTop: '12px' }}>Atendimentos de clientes assinantes entram pela fatia proporcional da mensalidade (valor do plano ÷ visitas no mês), já que o serviço em si sai de graça pro cliente.</p>
       </div>
 
-      {!permitido ? (
-        <div style={styles.upsell}>
-          <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
-            O restante dos relatórios (faturamento por dia, comparação com período anterior, top serviços, recorrência de clientes) é um recurso exclusivo do <strong>plano Enterprise</strong>.
-            Fale com o suporte para fazer upgrade.
-          </p>
-        </div>
-      ) : (
+      {erro && <p style={{ color: '#dc2626', fontSize: '14px' }}>{erro}</p>}
+
+      {relatorio && (
         <>
-          {erro && <p style={{ color: '#dc2626', fontSize: '14px' }}>{erro}</p>}
-
-          {relatorio && (
-            <>
-              <div style={styles.grid}>
-                <div style={styles.card}>
-                  <span style={styles.cardLabel}>Faturamento no período</span>
-                  <span style={styles.cardValor}>{formatarMoeda(relatorio.resumo.faturamento_total)}</span>
-                  <span style={{ ...styles.cardVariacao, color: variacao >= 0 ? '#059669' : '#dc2626' }}>
-                    {variacao >= 0 ? '▲' : '▼'} {Math.abs(variacao)}% vs período anterior
-                  </span>
-                </div>
-                <div style={styles.card}>
-                  <span style={styles.cardLabel}>Receita líquida</span>
-                  <span style={styles.cardValor}>{formatarMoeda(relatorio.resumo.receita_liquida)}</span>
-                  <span style={styles.cardVariacao}>Já descontando taxa de maquineta</span>
-                </div>
-                <div style={styles.card}>
-                  <span style={styles.cardLabel}>Ticket médio</span>
-                  <span style={styles.cardValor}>{formatarMoeda(relatorio.resumo.ticket_medio)}</span>
-                </div>
-                <div style={styles.card}>
-                  <span style={styles.cardLabel}>Atendimentos concluídos</span>
-                  <span style={styles.cardValor}>{relatorio.resumo.quantidade_concluidos}</span>
-                </div>
-                <div style={styles.card}>
-                  <span style={styles.cardLabel}>Taxa de cancelamento</span>
-                  <span style={styles.cardValor}>{relatorio.resumo.taxa_cancelamento}%</span>
-                </div>
-                <div style={styles.card}>
-                  <span style={styles.cardLabel}>Clientes recorrentes</span>
-                  <span style={styles.cardValor}>{relatorio.recorrencia.taxa_recorrencia_pct}%</span>
-                  <span style={styles.cardVariacao}>{relatorio.recorrencia.clientes_recorrentes} de {relatorio.recorrencia.total_clientes_periodo} clientes</span>
-                </div>
+          <div style={styles.grid}>
+            <div style={styles.card}>
+              <span style={styles.cardLabel}>Faturamento no período</span>
+              <span style={styles.cardValor}>{formatarMoeda(relatorio.resumo.faturamento_total)}</span>
+              {relatorio.avancado && (
+                <span style={{ ...styles.cardVariacao, color: variacao >= 0 ? '#059669' : '#dc2626' }}>
+                  {variacao >= 0 ? '▲' : '▼'} {Math.abs(variacao)}% vs período anterior
+                </span>
+              )}
+            </div>
+            <div style={styles.card}>
+              <span style={styles.cardLabel}>Receita líquida</span>
+              <span style={styles.cardValor}>{formatarMoeda(relatorio.resumo.receita_liquida)}</span>
+              <span style={styles.cardVariacao}>Já descontando taxa de maquineta</span>
+            </div>
+            <div style={styles.card}>
+              <span style={styles.cardLabel}>Ticket médio</span>
+              <span style={styles.cardValor}>{formatarMoeda(relatorio.resumo.ticket_medio)}</span>
+            </div>
+            <div style={styles.card}>
+              <span style={styles.cardLabel}>Atendimentos concluídos</span>
+              <span style={styles.cardValor}>{relatorio.resumo.quantidade_concluidos}</span>
+            </div>
+            <div style={styles.card}>
+              <span style={styles.cardLabel}>Taxa de cancelamento</span>
+              <span style={styles.cardValor}>{relatorio.resumo.taxa_cancelamento}%</span>
+            </div>
+            {relatorio.avancado && relatorio.recorrencia && (
+              <div style={styles.card}>
+                <span style={styles.cardLabel}>Clientes recorrentes</span>
+                <span style={styles.cardValor}>{relatorio.recorrencia.taxa_recorrencia_pct}%</span>
+                <span style={styles.cardVariacao}>{relatorio.recorrencia.clientes_recorrentes} de {relatorio.recorrencia.total_clientes_periodo} clientes</span>
               </div>
+            )}
+          </div>
 
-              <div style={styles.secao}>
-                <h3 style={styles.secaoTitulo}>Faturamento por dia</h3>
-                {relatorio.serie_diaria.length === 0 ? (
-                  <p style={styles.vazio}>Nenhum atendimento concluído nesse período.</p>
-                ) : (
-                  <div style={styles.grafico}>
-                    {relatorio.serie_diaria.map((d) => (
-                      <div key={d.data} style={styles.barraColuna} title={`${d.data}: ${formatarMoeda(d.faturamento)}`}>
-                        <div style={{ ...styles.barra, height: `${Math.max(4, (d.faturamento / maiorFaturamentoDiario) * 120)}px` }} />
-                        <span style={styles.barraLabel}>{d.data.slice(8, 10)}/{d.data.slice(5, 7)}</span>
-                      </div>
-                    ))}
+          <div style={styles.secao}>
+            <h3 style={styles.secaoTitulo}>Faturamento por dia</h3>
+            {relatorio.serie_diaria.length === 0 ? (
+              <p style={styles.vazio}>Nenhum atendimento concluído nesse período.</p>
+            ) : (
+              <div style={styles.grafico}>
+                {relatorio.serie_diaria.map((d) => (
+                  <div key={d.data} style={styles.barraColuna} title={`${d.data}: ${formatarMoeda(d.faturamento)}`}>
+                    <div style={{ ...styles.barra, height: `${Math.max(4, (d.faturamento / maiorFaturamentoDiario) * 120)}px` }} />
+                    <span style={styles.barraLabel}>{d.data.slice(8, 10)}/{d.data.slice(5, 7)}</span>
                   </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {ia.disponivel && (
+            <div style={styles.secao}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <h3 style={{ ...styles.secaoTitulo, margin: 0 }}>✨ Resumo com IA</h3>
+                <LoadingButton loading={ia.gerando} onClick={gerarResumoIA} style={styles.btnExportar}>
+                  {ia.texto ? 'Gerar de novo' : 'Gerar resumo'}
+                </LoadingButton>
+              </div>
+              {ia.texto && <p style={{ margin: '14px 0 0', fontSize: '14px', color: '#374151', lineHeight: '1.6' }}>{ia.texto}</p>}
+            </div>
+          )}
+
+          {!relatorio.avancado ? (
+            <div style={styles.upsell}>
+              <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+                Comparação com o período anterior, top serviços, top profissionais e recorrência de clientes são recursos exclusivos do <strong>plano Enterprise</strong>.
+                Fale com o suporte para fazer upgrade.
+              </p>
+            </div>
+          ) : (
+            <div style={styles.duasColunas}>
+              <div style={styles.secao}>
+                <h3 style={styles.secaoTitulo}>Top serviços</h3>
+                {relatorio.top_servicos.length === 0 ? (
+                  <p style={styles.vazio}>Sem dados nesse período.</p>
+                ) : (
+                  relatorio.top_servicos.map((s) => (
+                    <div key={s.nome} style={styles.linhaRanking}>
+                      <div style={styles.linhaRankingTopo}>
+                        <span>{s.nome}</span>
+                        <span>{formatarMoeda(s.faturamento)} · {s.quantidade}x</span>
+                      </div>
+                      <div style={styles.barraFundo}>
+                        <div style={{ ...styles.barraPreenchida, width: `${(s.faturamento / maiorFaturamentoServico) * 100}%` }} />
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
 
-              <div style={styles.duasColunas}>
-                <div style={styles.secao}>
-                  <h3 style={styles.secaoTitulo}>Top serviços</h3>
-                  {relatorio.top_servicos.length === 0 ? (
-                    <p style={styles.vazio}>Sem dados nesse período.</p>
-                  ) : (
-                    relatorio.top_servicos.map((s) => (
-                      <div key={s.nome} style={styles.linhaRanking}>
-                        <div style={styles.linhaRankingTopo}>
-                          <span>{s.nome}</span>
-                          <span>{formatarMoeda(s.faturamento)} · {s.quantidade}x</span>
-                        </div>
-                        <div style={styles.barraFundo}>
-                          <div style={{ ...styles.barraPreenchida, width: `${(s.faturamento / maiorFaturamentoServico) * 100}%` }} />
-                        </div>
+              <div style={styles.secao}>
+                <h3 style={styles.secaoTitulo}>Top profissionais</h3>
+                {relatorio.top_profissionais.length === 0 ? (
+                  <p style={styles.vazio}>Sem dados nesse período.</p>
+                ) : (
+                  relatorio.top_profissionais.map((p) => (
+                    <div key={p.nome} style={styles.linhaRanking}>
+                      <div style={styles.linhaRankingTopo}>
+                        <span>{p.nome}</span>
+                        <span>{formatarMoeda(p.faturamento)} · {p.quantidade}x</span>
                       </div>
-                    ))
-                  )}
-                </div>
-
-                <div style={styles.secao}>
-                  <h3 style={styles.secaoTitulo}>Top profissionais</h3>
-                  {relatorio.top_profissionais.length === 0 ? (
-                    <p style={styles.vazio}>Sem dados nesse período.</p>
-                  ) : (
-                    relatorio.top_profissionais.map((p) => (
-                      <div key={p.nome} style={styles.linhaRanking}>
-                        <div style={styles.linhaRankingTopo}>
-                          <span>{p.nome}</span>
-                          <span>{formatarMoeda(p.faturamento)} · {p.quantidade}x</span>
-                        </div>
-                        <div style={styles.barraFundo}>
-                          <div style={{ ...styles.barraPreenchida, width: `${(p.faturamento / maiorFaturamentoProfissional) * 100}%`, background: 'linear-gradient(90deg, #6d28d9, #9333ea)' }} />
-                        </div>
+                      <div style={styles.barraFundo}>
+                        <div style={{ ...styles.barraPreenchida, width: `${(p.faturamento / maiorFaturamentoProfissional) * 100}%`, background: 'linear-gradient(90deg, #6d28d9, #9333ea)' }} />
                       </div>
-                    ))
-                  )}
-                </div>
+                    </div>
+                  ))
+                )}
               </div>
-            </>
+            </div>
           )}
         </>
       )}
