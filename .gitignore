@@ -15,6 +15,7 @@ frontend/build/
 
 # documento de trabalho interno, não vai pro repo público
 handoff.md
+relatorio-desenvolvimento-*.pdf
 
 # logs
 npm-debug.log*
