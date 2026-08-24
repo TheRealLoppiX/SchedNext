@@ -46,6 +46,7 @@ function Agenda() {
   const [horariosOcupados, setHorariosOcupados] = useState({ agendados: [], bloqueios: [] });
   const [mensagem, setMensagem] = useState('');
   const [pixInfo, setPixInfo] = useState(null);
+  const [confirmando, setConfirmando] = useState(false);
   const pixPollRef = useRef(null);
   const [barbeiroNome, setBarbeiroNome] = useState('');
   
@@ -239,10 +240,11 @@ function Agenda() {
   })();
 
   const confirmarAgendamento = async () => {
-    if (!horaSelecionada || erroConflito || carrinho.length === 0) {
+    if (!horaSelecionada || erroConflito || carrinho.length === 0 || confirmando) {
         if (!horaSelecionada) setMensagem('Selecione um horário para continuar.');
         return;
     }
+    setConfirmando(true);
     setMensagem('Aguarde...');
     setPixInfo(null);
     if (pixPollRef.current) { clearInterval(pixPollRef.current); pixPollRef.current = null; }
@@ -278,8 +280,15 @@ function Agenda() {
           // Mercado Pago (ver POST /agendar em routes/agendamentos.js). Sem isso, o agendamento
           // segue exatamente como sempre funcionou.
           if (data.pix && data.agendamento_id) {
-            setPixInfo({ ...data.pix, agendamento_id: data.agendamento_id, pago: false });
+            setPixInfo({ ...data.pix, agendamento_id: data.agendamento_id, pago: false, falhou: false });
+            // Limite de tentativas: sem isso, um Pix que nunca é pago (cliente desiste, QR
+            // expira) deixava o polling rodando pra sempre a cada 4s enquanto a aba ficasse
+            // aberta. 150 tentativas de 4s = 10 minutos, tempo de sobra pro pagador escanear
+            // e confirmar um Pix (que costuma expirar em bem menos tempo que isso).
+            let tentativas = 0;
+            const LIMITE_TENTATIVAS = 150;
             pixPollRef.current = setInterval(async () => {
+              tentativas += 1;
               try {
                 const resStatus = await fetch(`${API_URL}/pix/${data.agendamento_id}/status`);
                 const statusDados = await resStatus.json();
@@ -287,6 +296,10 @@ function Agenda() {
                   clearInterval(pixPollRef.current);
                   pixPollRef.current = null;
                   setPixInfo((atual) => (atual ? { ...atual, pago: true } : atual));
+                } else if (statusDados.pagamento_status === 'falhou' || tentativas >= LIMITE_TENTATIVAS) {
+                  clearInterval(pixPollRef.current);
+                  pixPollRef.current = null;
+                  setPixInfo((atual) => (atual ? { ...atual, falhou: true } : atual));
                 }
               } catch (err) {
                 console.error('Erro ao consultar status do Pix:', err);
@@ -298,6 +311,8 @@ function Agenda() {
       }
     } catch (err) {
       setMensagem('Erro de conexão. Tente novamente.');
+    } finally {
+      setConfirmando(false);
     }
   };
 
@@ -583,10 +598,10 @@ function Agenda() {
 
         <button
           onClick={confirmarAgendamento}
-          disabled={carrinho.length === 0 || !!erroConflito}
+          disabled={carrinho.length === 0 || !!erroConflito || confirmando}
           style={{ ...styles.confirmBtn, background: (carrinho.length > 0 && !erroConflito) ? 'linear-gradient(135deg, #4c74f0, #2554eb)' : '#ccc', color: (carrinho.length > 0 && !erroConflito) ? '#ffffff' : '#fff' }}
         >
-          Confirmar Agendamento
+          {confirmando ? 'Confirmando...' : 'Confirmar Agendamento'}
         </button>
 
         {mensagem && (
@@ -599,6 +614,11 @@ function Agenda() {
           <div style={styles.pixBox}>
             {pixInfo.pago ? (
               <p style={{ margin: 0, textAlign: 'center', color: '#166534', fontWeight: '700', fontSize: '14px' }}>✅ Pagamento recebido!</p>
+            ) : pixInfo.falhou ? (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ margin: 0, color: '#991b1b', fontWeight: '700', fontSize: '14px' }}>⚠️ Não foi possível confirmar o pagamento.</p>
+                <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#6b7280' }}>Seu agendamento continua reservado — combine o pagamento diretamente com o estabelecimento.</p>
+              </div>
             ) : (
               <div style={{ textAlign: 'center' }}>
                 <p style={{ margin: '0 0 10px', fontSize: '13px', color: '#374151', fontWeight: '600' }}>Pague por Pix para garantir seu horário</p>

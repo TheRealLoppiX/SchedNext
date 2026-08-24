@@ -8,6 +8,7 @@ function Login() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
+  const [entrando, setEntrando] = useState(false);
   const [empresa, setEmpresa] = useState({ nome: '', logo_url: null }); // Estado para a logo
   const navigate = useNavigate();
   const { empresaSlug } = useParams();
@@ -32,6 +33,8 @@ function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (entrando) return;
+    setEntrando(true);
     try {
       const res = await fetch(`${API_URL}/login`, {
         method: 'POST',
@@ -49,6 +52,8 @@ function Login() {
       }
     } catch (err) {
       setErro('Erro ao conectar com o servidor');
+    } finally {
+      setEntrando(false);
     }
   };
 
@@ -82,7 +87,7 @@ function Login() {
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
           />
-          <button type="submit" className="bb-btn">Entrar</button>
+          <button type="submit" className="bb-btn" disabled={entrando}>{entrando ? 'Entrando...' : 'Entrar'}</button>
         </form>
 
         <p

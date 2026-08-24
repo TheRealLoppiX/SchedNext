@@ -12,6 +12,7 @@ function RecuperarSenha() {
   const [novaSenha, setNovaSenha] = useState('');
   const [erro, setErro] = useState('');
   const [empresa, setEmpresa] = useState(null);
+  const [enviando, setEnviando] = useState(false);
   const { empresaSlug } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -28,6 +29,8 @@ function RecuperarSenha() {
   // ENVIA O CÓDIGO
   const handleEnviarEmail = async (e) => {
     if (e) e.preventDefault();
+    if (enviando) return;
+    setEnviando(true);
     try {
       const res = await fetch(`${API_URL}/recuperar-senha`, {
         method: 'POST',
@@ -38,6 +41,8 @@ function RecuperarSenha() {
       else { setErro('E-mail não encontrado.'); }
     } catch (err) {
       setErro('Erro de conexão. Tente novamente.');
+    } finally {
+      setEnviando(false);
     }
   };
 
@@ -51,6 +56,8 @@ function RecuperarSenha() {
   // FINALIZA E TROCA A SENHA
   const handleFinalizarReset = async (e) => {
     if (e) e.preventDefault();
+    if (enviando) return;
+    setEnviando(true);
     try {
       const res = await fetch(`${API_URL}/resetar-senha`, {
         method: 'POST',
@@ -67,6 +74,8 @@ function RecuperarSenha() {
       }
     } catch (err) {
       setErro('Erro de conexão. Tente novamente.');
+    } finally {
+      setEnviando(false);
     }
   };
 
@@ -80,7 +89,7 @@ function RecuperarSenha() {
           <form onSubmit={handleEnviarEmail}>
             <p className="bb-subtitle">Informe seu e-mail cadastrado:</p>
             <input className="bb-input" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} />
-            <button type="submit" className="bb-btn">Enviar Código</button>
+            <button type="submit" className="bb-btn" disabled={enviando}>{enviando ? 'Enviando...' : 'Enviar Código'}</button>
           </form>
         )}
 
@@ -96,7 +105,7 @@ function RecuperarSenha() {
           <form onSubmit={handleFinalizarReset}>
             <p className="bb-subtitle">Crie sua nova senha:</p>
             <input className="bb-input" type="password" placeholder="Nova Senha" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} />
-            <button type="submit" className="bb-btn">Alterar Senha Agora</button>
+            <button type="submit" className="bb-btn" disabled={enviando}>{enviando ? 'Alterando...' : 'Alterar Senha Agora'}</button>
           </form>
         )}
 

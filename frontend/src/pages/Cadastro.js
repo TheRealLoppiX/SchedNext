@@ -13,6 +13,7 @@ function Cadastro() {
   const [etapa, setEtapa] = useState('cadastro');
   const [codigo, setCodigo] = useState('');
   const [empresa, setEmpresa] = useState(null);
+  const [enviando, setEnviando] = useState(false);
   const navigate = useNavigate();
   const { empresaSlug } = useParams();
   const toast = useToast();
@@ -44,28 +45,34 @@ function Cadastro() {
       return;
     }
 
+    if (enviando) return;
+    setEnviando(true);
     try {
       const res = await fetch(`${API_URL}/registrar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, empresaSlug })
       });
-      
+
       const data = await res.json();
 
       if (res.ok) {
         setErro('');
-        setEtapa('verificacao'); 
+        setEtapa('verificacao');
       } else {
         setErro(data.error || 'Erro ao cadastrar.');
       }
     } catch (err) {
       setErro('Erro de conexão com o servidor.');
+    } finally {
+      setEnviando(false);
     }
   };
 
   const handleConfirmarCodigo = async (e) => {
     if (e) e.preventDefault();
+    if (enviando) return;
+    setEnviando(true);
     try {
       const res = await fetch(`${API_URL}/confirmar-codigo`, {
         method: 'POST',
@@ -81,6 +88,8 @@ function Cadastro() {
       }
     } catch (err) {
       setErro('Erro ao validar código.');
+    } finally {
+      setEnviando(false);
     }
   };
 
@@ -115,7 +124,7 @@ function Cadastro() {
                 onChange={e => handleTelefone(e.target.value)}
               />
               <input className="bb-input" type="password" placeholder="Senha" value={form.senha} onChange={e => setForm({...form, senha: e.target.value})} />
-              <button type="submit" className="bb-btn">Cadastrar</button>
+              <button type="submit" className="bb-btn" disabled={enviando}>{enviando ? 'Cadastrando...' : 'Cadastrar'}</button>
               <button type="button" className="bb-btn-secondary" onClick={() => navigate(`/${empresaSlug}`)}>Voltar</button>
             </form>
           </>
@@ -133,7 +142,7 @@ function Cadastro() {
                 onChange={e => setCodigo(e.target.value)}
                 autoFocus
               />
-              <button type="submit" className="bb-btn">Ativar Conta</button>
+              <button type="submit" className="bb-btn" disabled={enviando}>{enviando ? 'Ativando...' : 'Ativar Conta'}</button>
               <button type="button" className="bb-btn-secondary" onClick={() => { setEtapa('cadastro'); setErro(''); }}>Voltar ao cadastro</button>
             </form>
           </>

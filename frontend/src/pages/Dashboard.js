@@ -91,8 +91,8 @@ function AgendamentosView({ userId }) {
 
   const carregarAgendamentos = () => {
     fetch(`${API_URL}/meus-agendamentos/${userId}`)
-      .then(r => r.json())
-      .then(setLista)
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('Falha ao carregar agendamentos')))
+      .then(dados => setLista(Array.isArray(dados) ? dados : []))
       .catch(err => console.error("Erro ao carregar lista:", err));
   };
 

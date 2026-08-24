@@ -5,6 +5,10 @@ import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
 
 const INTERVALO_POLL_MS = 5000;
+// Depois de conectado, o poll rápido de 5s (feito só enquanto tem QR pendente) para de rodar —
+// sem um poll mais espaçado por cima, uma queda silenciosa da sessão do WhatsApp (ex: o
+// celular foi desconectado do app) só aparecia pro admin se ele desse F5 na página.
+const INTERVALO_POLL_CONECTADO_MS = 45000;
 
 function AdminWhatsapp() {
   const toast = useToast();
@@ -17,7 +21,11 @@ function AdminWhatsapp() {
   const [qrcode, setQrcode] = useState(null);
   const [conectando, setConectando] = useState(false);
   const [desconectando, setDesconectando] = useState(false);
+  const [telefoneTeste, setTelefoneTeste] = useState('');
+  const [testando, setTestando] = useState(false);
   const pollRef = useRef(null);
+  const pollLentoRef = useRef(null);
+  const conectadoRef = useRef(false);
 
   const pararPoll = () => {
     if (pollRef.current) clearInterval(pollRef.current);
@@ -34,13 +42,18 @@ function AdminWhatsapp() {
       if (dados.conectado) {
         setQrcode(null);
         pararPoll();
+      } else if (conectadoRef.current && !dados.erroConsulta) {
+        // Estava conectado e agora não está mais — sessão caiu sozinha (ex: celular desparelhado
+        // do lado do WhatsApp). Sem isso, o admin só descobria recarregando a página por acaso.
+        toast.error('O WhatsApp desconectou. Escaneie o QR Code novamente para reconectar.');
       }
+      conectadoRef.current = !!dados.conectado;
       return dados;
     } catch (err) {
       console.error('Erro ao carregar status do WhatsApp:', err);
       return null;
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     carregarStatus().finally(() => setCarregando(false));
@@ -54,6 +67,32 @@ function AdminWhatsapp() {
     pollRef.current = setInterval(() => { carregarStatus(); }, INTERVALO_POLL_MS);
     return pararPoll;
   }, [qrcode, carregarStatus]);
+
+  // Já conectado: poll bem mais espaçado só pra detectar uma queda silenciosa da sessão.
+  useEffect(() => {
+    if (!conectado) return;
+    pollLentoRef.current = setInterval(() => { carregarStatus(); }, INTERVALO_POLL_CONECTADO_MS);
+    return () => { if (pollLentoRef.current) clearInterval(pollLentoRef.current); };
+  }, [conectado, carregarStatus]);
+
+  const enviarTeste = async () => {
+    if (!telefoneTeste.trim()) return toast.error('Informe um número de telefone para o teste.');
+    setTestando(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/whatsapp/testar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefone: telefoneTeste })
+      });
+      const dados = await res.json();
+      if (res.ok) toast.success('Mensagem de teste enviada! Confira o WhatsApp do número informado.');
+      else toast.error(dados.error || 'Não foi possível enviar a mensagem de teste.');
+    } catch (err) {
+      toast.error('Erro de conexão. Tente novamente.');
+    } finally {
+      setTestando(false);
+    }
+  };
 
   const conectar = async () => {
     setConectando(true);
@@ -142,6 +181,23 @@ function AdminWhatsapp() {
             </div>
             <LoadingButton loading={desconectando} onClick={desconectar} style={styles.btnExcluir}>Desconectar</LoadingButton>
           </div>
+
+          <div style={styles.blocoTeste}>
+            <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>Testar o envio</p>
+            <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#6b7280' }}>
+              Envie uma mensagem de teste pro seu próprio WhatsApp pra confirmar que a conexão está funcionando. Pra testar o bot de agendamento completo, mande uma mensagem qualquer (ex: "oi") de outro número pra este WhatsApp conectado.
+            </p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <input
+                type="tel"
+                placeholder="Seu número com DDD"
+                value={telefoneTeste}
+                onChange={(e) => setTelefoneTeste(e.target.value)}
+                style={styles.inputTeste}
+              />
+              <LoadingButton loading={testando} onClick={enviarTeste} style={styles.btnSecundario}>Enviar teste</LoadingButton>
+            </div>
+          </div>
         </div>
       ) : qrcode ? (
         <div style={styles.cardAtual}>
@@ -181,7 +237,9 @@ const styles = {
   btnCadastrar: { padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '600', cursor: 'pointer' },
   btnSecundario: { padding: '8px 14px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '13px' },
   btnExcluir: { padding: '8px 14px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontSize: '13px' },
-  qrImg: { width: '220px', maxWidth: '100%', height: 'auto', aspectRatio: '1', border: '1px solid #f3f4f6', borderRadius: '8px', padding: '8px' }
+  qrImg: { width: '220px', maxWidth: '100%', height: 'auto', aspectRatio: '1', border: '1px solid #f3f4f6', borderRadius: '8px', padding: '8px' },
+  blocoTeste: { marginTop: '18px', paddingTop: '16px', borderTop: '1px solid #f3f4f6' },
+  inputTeste: { flex: '1 1 200px', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px' }
 };
 
 export default AdminWhatsapp;

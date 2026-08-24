@@ -169,10 +169,12 @@ function AbaEmpresas({ toast, confirmar }) {
     });
     if (!ok) return;
 
-    const res = await fetch(`${API_URL}/super-admin/empresas/${empresa.id}/${suspender ? 'suspender' : 'reativar'}`, { method: 'POST' });
-    const data = await res.json();
-    if (res.ok) { toast.success(data.message); carregar(); }
-    else toast.error(data.error || 'Não foi possível atualizar a empresa.');
+    try {
+      const res = await fetch(`${API_URL}/super-admin/empresas/${empresa.id}/${suspender ? 'suspender' : 'reativar'}`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregar(); }
+      else toast.error(data.error || 'Não foi possível atualizar a empresa.');
+    } catch (err) { toast.error('Erro de conexão. Tente novamente.'); }
   };
 
   return (
@@ -423,10 +425,12 @@ function AbaChaves({ toast, confirmar }) {
     });
     if (!ok) return;
 
-    const res = await fetch(`${API_URL}/super-admin/chaves-ativacao/${chave.id}/revogar`, { method: 'POST' });
-    const data = await res.json();
-    if (res.ok) { toast.success('Chave revogada.'); carregar(); }
-    else toast.error(data.error || 'Não foi possível revogar a chave.');
+    try {
+      const res = await fetch(`${API_URL}/super-admin/chaves-ativacao/${chave.id}/revogar`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) { toast.success('Chave revogada.'); carregar(); }
+      else toast.error(data.error || 'Não foi possível revogar a chave.');
+    } catch (err) { toast.error('Erro de conexão. Tente novamente.'); }
   };
 
   const statusChave = (c) => {
@@ -546,13 +550,15 @@ function AbaLeads({ toast, confirmar }) {
   useEffect(() => { carregarLeads(); }, [carregarLeads]);
 
   const atualizarStatus = async (id, status) => {
-    const res = await fetch(`${API_URL}/super-admin/leads-enterprise/${id}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
-    });
-    if (res.ok) { toast.success('Status atualizado.'); carregarLeads(); }
-    else toast.error('Não foi possível atualizar o status.');
+    try {
+      const res = await fetch(`${API_URL}/super-admin/leads-enterprise/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) { toast.success('Status atualizado.'); carregarLeads(); }
+      else toast.error('Não foi possível atualizar o status.');
+    } catch (err) { toast.error('Erro de conexão. Tente novamente.'); }
   };
 
   const ativarEmpresa = async (lead) => {
@@ -562,10 +568,12 @@ function AbaLeads({ toast, confirmar }) {
     });
     if (!ok) return;
 
-    const res = await fetch(`${API_URL}/super-admin/leads-enterprise/${lead.id}/ativar-empresa`, { method: 'POST' });
-    const data = await res.json();
-    if (res.ok) { toast.success(data.message); carregarLeads(); }
-    else toast.error(data.error || 'Não foi possível ativar o plano.');
+    try {
+      const res = await fetch(`${API_URL}/super-admin/leads-enterprise/${lead.id}/ativar-empresa`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregarLeads(); }
+      else toast.error(data.error || 'Não foi possível ativar o plano.');
+    } catch (err) { toast.error('Erro de conexão. Tente novamente.'); }
   };
 
   if (carregando) return <p>Carregando...</p>;
@@ -670,10 +678,12 @@ function AbaSuperAdmins({ toast, confirmar }) {
     });
     if (!ok) return;
 
-    const res = await fetch(`${API_URL}/super-admin/super-admins/${sa.id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (res.ok) { toast.success('Acesso removido.'); carregar(); }
-    else toast.error(data.error || 'Não foi possível remover.');
+    try {
+      const res = await fetch(`${API_URL}/super-admin/super-admins/${sa.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) { toast.success('Acesso removido.'); carregar(); }
+      else toast.error(data.error || 'Não foi possível remover.');
+    } catch (err) { toast.error('Erro de conexão. Tente novamente.'); }
   };
 
   return (

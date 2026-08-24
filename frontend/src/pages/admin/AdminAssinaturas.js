@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useConfirm } from '../../components/ConfirmDialog';
+import LoadingButton from '../../components/LoadingButton';
 import { obterTerminologia } from '../../utils/terminologia';
 import { API_URL } from '../../services/api';
 
@@ -56,9 +57,12 @@ function AdminAssinaturas({ empresaId }) {
         }));
     };
 
+    const [salvando, setSalvando] = useState(false);
+
     const handleCriar = async (e) => {
         e.preventDefault();
         if (form.servicos.length === 0) return mostrarFeedback('Selecione ao menos um serviço.', 'erro');
+        setSalvando(true);
         try {
             const res = await fetch(`${API_URL}/admin/assinaturas`, {
                 method: 'POST',
@@ -73,10 +77,12 @@ function AdminAssinaturas({ empresaId }) {
                 mostrarFeedback('Erro ao criar plano.', 'erro');
             }
         } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
+        finally { setSalvando(false); }
     };
 
     const handleAtualizar = async () => {
         if (editando.servicos.length === 0) return mostrarFeedback('Selecione ao menos um serviço.', 'erro');
+        setSalvando(true);
         try {
             const res = await fetch(`${API_URL}/admin/assinaturas/${editando.id}`, {
                 method: 'PUT',
@@ -91,6 +97,7 @@ function AdminAssinaturas({ empresaId }) {
                 mostrarFeedback('Erro ao atualizar plano.', 'erro');
             }
         } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
+        finally { setSalvando(false); }
     };
 
     const toggleAtivo = async (plano) => {
@@ -126,9 +133,14 @@ function AdminAssinaturas({ empresaId }) {
         });
         if (!ok) return;
         try {
-            await fetch(`${API_URL}/admin/assinaturas/${id}`, { method: 'DELETE' });
-            mostrarFeedback('Plano excluído.');
-            carregar();
+            const res = await fetch(`${API_URL}/admin/assinaturas/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                mostrarFeedback('Plano excluído.');
+                carregar();
+            } else {
+                const dados = await res.json().catch(() => ({}));
+                mostrarFeedback(dados.error || 'Não foi possível excluir o plano.', 'erro');
+            }
         } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
     };
 
@@ -263,11 +275,11 @@ function AdminAssinaturas({ empresaId }) {
                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                     {editando ? (
                         <>
-                            <button onClick={handleAtualizar} style={s.btnPrincipal}>Salvar Alterações</button>
+                            <LoadingButton loading={salvando} onClick={handleAtualizar} style={s.btnPrincipal}>Salvar Alterações</LoadingButton>
                             <button onClick={() => setEditando(null)} style={s.btnCancelar}>Cancelar</button>
                         </>
                     ) : (
-                        <button onClick={handleCriar} style={s.btnPrincipal}>Criar Plano</button>
+                        <LoadingButton loading={salvando} onClick={handleCriar} style={s.btnPrincipal}>Criar Plano</LoadingButton>
                     )}
                 </div>
             </div>

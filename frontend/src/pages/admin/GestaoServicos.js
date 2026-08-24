@@ -12,12 +12,14 @@ function GestaoServicos({ empresaId }) {
   const [vertical, setVertical] = useState('barbearia');
   const [permiteIA, setPermiteIA] = useState(false);
   const [gerandoDescricao, setGerandoDescricao] = useState(false);
+  const [salvando, setSalvando] = useState(false);
   const termos = obterTerminologia(vertical);
 
   const carregarServicos = () => {
     fetch(`${API_URL}/admin/servicos-gestao`)
-      .then(res => res.json())
-      .then(data => setServicos(data));
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('Falha ao carregar serviços')))
+      .then(data => setServicos(Array.isArray(data) ? data : []))
+      .catch(err => { console.error(err); mostrarFeedback('Não foi possível carregar os serviços.', 'erro'); });
   };
 
   useEffect(() => {
@@ -68,6 +70,7 @@ function GestaoServicos({ empresaId }) {
       ? `${API_URL}/admin/servicos-gestao/${editandoId}`
       : `${API_URL}/admin/servicos-gestao`;
 
+    setSalvando(true);
     fetch(url, {
       method: editandoId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -82,7 +85,9 @@ function GestaoServicos({ empresaId }) {
       } else {
         mostrarFeedback("Erro ao processar a requisição.", "erro");
       }
-    });
+    })
+    .catch(err => { console.error(err); mostrarFeedback('Erro de conexão. Tente novamente.', 'erro'); })
+    .finally(() => setSalvando(false));
   };
 
   const prepararEdicao = (servico) => {
@@ -103,7 +108,8 @@ function GestaoServicos({ empresaId }) {
         } else {
            mostrarFeedback("Erro ao excluir. Verifique se o serviço já não foi utilizado.", "erro");
         }
-      });
+      })
+      .catch(err => { console.error(err); mostrarFeedback('Erro de conexão. Tente novamente.', 'erro'); });
   };
 
   // --- NOVA FUNÇÃO DE LIGAR/DESLIGAR SERVIÇO ---
@@ -131,7 +137,7 @@ function GestaoServicos({ empresaId }) {
           } else {
               mostrarFeedback("Não foi possível atualizar o status.", "erro");
           }
-      });
+      }).catch(err => { console.error(err); mostrarFeedback('Erro de conexão. Tente novamente.', 'erro'); });
   };
 
   return (
@@ -224,8 +230,8 @@ function GestaoServicos({ empresaId }) {
           )}
 
           <div style={styles.areaAcoes}>
-            <button type="submit" style={styles.btnPrincipal}>
-              {editandoId ? 'Atualizar Serviço' : 'Cadastrar Serviço'}
+            <button type="submit" disabled={salvando} style={{ ...styles.btnPrincipal, opacity: salvando ? 0.7 : 1 }}>
+              {salvando ? 'Salvando...' : editandoId ? 'Atualizar Serviço' : 'Cadastrar Serviço'}
             </button>
             {editandoId && (
               <button type="button" onClick={() => {setEditandoId(null); setFormData({nome:'', valor:'', duracao:'30', descricao:''})}} style={styles.btnCancelar}>

@@ -27,6 +27,7 @@ function AdminClientes({ empresaId }) {
     const [permiteWhatsapp, setPermiteWhatsapp] = useState(false);
     const [nomeEmpresa, setNomeEmpresa] = useState('');
     const [sugestaoIA, setSugestaoIA] = useState('');
+    const [salvandoEdicao, setSalvandoEdicao] = useState(false);
     const [gerandoSugestao, setGerandoSugestao] = useState(false);
 
     useEffect(() => {
@@ -140,6 +141,7 @@ function AdminClientes({ empresaId }) {
         if (!emailValido(clienteSelecionado.email)) {
             return mostrarFeedback('Insira um e-mail válido antes de salvar.', 'erro');
         }
+        setSalvandoEdicao(true);
         try {
             // 1. Salva dados pessoais
             const res = await fetch(`${API_URL}/admin/clientes/${clienteSelecionado.id}`, {
@@ -166,6 +168,7 @@ function AdminClientes({ empresaId }) {
             setClienteSelecionado(null);
             carregarClientes();
         } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
+        finally { setSalvandoEdicao(false); }
     };
 
     const excluirCliente = async (id, nome) => {
@@ -571,7 +574,28 @@ function AdminClientes({ empresaId }) {
                                         <span style={{ fontSize: '12px', color: '#6b7280' }}>{clienteSelecionado.assinante ? 'Ativo' : 'Inativo'}</span>
                                     </div>
                                 </div>
-                                <button onClick={() => setClienteSelecionado(prev => ({ ...prev, assinante: prev.assinante ? 0 : 1, plano_id: prev.assinante ? null : prev.plano_id }))} style={{ padding: '9px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '13px', backgroundColor: clienteSelecionado.assinante ? '#dc2626' : '#6d28d9', color: '#fff' }}>
+                                <button
+                                    onClick={() => {
+                                        if (clienteSelecionado.assinante) {
+                                            setClienteSelecionado(prev => ({ ...prev, assinante: 0, plano_id: null }));
+                                            return;
+                                        }
+                                        // O backend deriva "assinante" da presença de plano_id (ver
+                                        // routes/assinaturas.js) — sem um plano escolhido, "Ativar" marcava
+                                        // assinante=1 no state local só pra "Salvar Alterações" enviar
+                                        // plano_id=null, que no servidor não ativa nada: o modal fechava
+                                        // com "Cliente atualizado com sucesso" mas a assinatura nunca saía
+                                        // do papel.
+                                        if (!clienteSelecionado.plano_id) {
+                                            if (planosDisponiveis.length === 0) {
+                                                return mostrarFeedback('Cadastre um plano de assinatura antes de ativar um cliente.', 'erro');
+                                            }
+                                            return mostrarFeedback('Escolha um plano no campo abaixo para ativar a assinatura.', 'erro');
+                                        }
+                                        setClienteSelecionado(prev => ({ ...prev, assinante: 1 }));
+                                    }}
+                                    style={{ padding: '9px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '13px', backgroundColor: clienteSelecionado.assinante ? '#dc2626' : '#6d28d9', color: '#fff' }}
+                                >
                                     {clienteSelecionado.assinante ? 'Remover' : 'Ativar'}
                                 </button>
                             </div>
@@ -602,7 +626,7 @@ function AdminClientes({ empresaId }) {
 
                         {/* Botões */}
                         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                            <button onClick={salvarEdicao} style={s.btnSalvarModal}>Salvar Alterações</button>
+                            <LoadingButton loading={salvandoEdicao} onClick={salvarEdicao} style={s.btnSalvarModal}>Salvar Alterações</LoadingButton>
                             <button onClick={() => enviarFollowUp(clienteSelecionado, 'saudade', 'email')} style={s.btnFollowUp}>
                                 <Icons.Mail color="#1d4ed8" /> Sentimos sua falta (e-mail)
                             </button>

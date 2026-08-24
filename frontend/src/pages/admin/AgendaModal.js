@@ -333,10 +333,15 @@ const toggleServico = (servico) => {
             const dados = await res.json();
             if (!res.ok) { toast.error(dados.error || 'Não foi possível gerar o Pix.'); return; }
 
-            setPixInfo({ ...dados, pago: false });
+            setPixInfo({ ...dados, pago: false, falhou: false });
 
             const agendamentoId = modalFinalizar.id;
+            // Mesmo limite de tentativas usado em pages/Agenda.js — sem isso o polling ficava
+            // pra sempre a cada 4s mesmo com o Pix já expirado/recusado na Mercado Pago.
+            let tentativas = 0;
+            const LIMITE_TENTATIVAS = 150;
             pixPollRef.current = setInterval(async () => {
+                tentativas += 1;
                 try {
                     const resStatus = await fetch(`${API_URL}/admin/mercadopago/pix/${agendamentoId}/status`);
                     const statusDados = await resStatus.json();
@@ -344,6 +349,10 @@ const toggleServico = (servico) => {
                         clearInterval(pixPollRef.current);
                         pixPollRef.current = null;
                         setPixInfo((atual) => (atual ? { ...atual, pago: true } : atual));
+                    } else if (statusDados.pagamento_status === 'falhou' || tentativas >= LIMITE_TENTATIVAS) {
+                        clearInterval(pixPollRef.current);
+                        pixPollRef.current = null;
+                        setPixInfo((atual) => (atual ? { ...atual, falhou: true } : atual));
                     }
                 } catch (err) {
                     console.error('Erro ao consultar status do Pix:', err);
@@ -744,6 +753,17 @@ const toggleServico = (servico) => {
                                     </LoadingButton>
                                 ) : pixInfo.pago ? (
                                     <p style={{ margin: 0, textAlign: 'center', color: '#059669', fontWeight: '700', fontSize: '14px' }}>✅ Pix recebido!</p>
+                                ) : pixInfo.falhou ? (
+                                    <div style={{ textAlign: 'center' }}>
+                                        <p style={{ margin: '0 0 10px', color: '#dc2626', fontWeight: '700', fontSize: '13px' }}>⚠️ Esse Pix não foi confirmado (recusado ou expirado).</p>
+                                        <LoadingButton
+                                            loading={gerandoPix}
+                                            onClick={gerarPix}
+                                            style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#111827', color: '#fff', fontWeight: '600', cursor: 'pointer' }}
+                                        >
+                                            Gerar novo Pix
+                                        </LoadingButton>
+                                    </div>
                                 ) : (
                                     <div style={{ textAlign: 'center' }}>
                                         {pixInfo.qr_code_base64 && (
