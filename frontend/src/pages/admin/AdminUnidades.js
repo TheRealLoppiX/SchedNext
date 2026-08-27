@@ -201,7 +201,7 @@ function AdminUnidades({ empresaId }) {
   if (!permitido) {
     return (
       <div className="admin-page-container" style={styles.container}>
-        <h2 style={styles.title}>🏢 Unidades</h2>
+        <h2 style={styles.title}><Icons.Building color="#111827" /> Unidades</h2>
         <div style={styles.upsell}>
           <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
             Gerenciar múltiplas unidades (filiais) é um recurso exclusivo do <strong>plano Enterprise</strong>.
@@ -214,7 +214,7 @@ function AdminUnidades({ empresaId }) {
 
   return (
     <div className="admin-page-container" style={styles.container}>
-      <h2 style={styles.title}>🏢 Unidades</h2>
+      <h2 style={styles.title}><Icons.Building color="#111827" /> Unidades</h2>
       <p style={styles.subtitle}>Gerencie as filiais do seu negócio, cada uma com sua própria equipe.</p>
 
       <form onSubmit={cadastrarUnidade} style={styles.cardForm}>
@@ -290,6 +290,10 @@ function AdminUnidades({ empresaId }) {
     </div>
   );
 }
+
+const Icons = {
+  Building: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>,
+};
 
 const styles = {
   container: { padding: '40px', maxWidth: '1000px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },

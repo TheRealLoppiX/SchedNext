@@ -55,7 +55,7 @@ function AdminUnidadeDashboard() {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>🏢 Dashboard da unidade</h2>
+      <h2 style={styles.title}><Icons.Building color="#111827" /> Dashboard da unidade</h2>
 
       {unidades.length > 1 && (
         <div style={{ marginBottom: '20px' }}>
@@ -144,6 +144,10 @@ function corStatus(status) {
   if (status === 'cancelado') return { backgroundColor: '#fee2e2', color: '#991b1b' };
   return { backgroundColor: '#e0f2fe', color: '#0369a1' };
 }
+
+const Icons = {
+  Building: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>,
+};
 
 const styles = {
   container: { padding: '40px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },

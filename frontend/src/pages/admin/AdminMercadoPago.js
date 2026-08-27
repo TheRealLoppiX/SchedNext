@@ -92,7 +92,7 @@ function AdminMercadoPago() {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>💳 Mercado Pago</h2>
+      <h2 style={styles.title}><Icons.CreditCard color="#111827" /> Mercado Pago</h2>
       <p style={styles.subtitle}>Conecte sua conta Mercado Pago para cobrar Pix direto no agendamento do cliente e no fechamento de caixa.</p>
 
       {!configurado ? (
@@ -128,6 +128,10 @@ function AdminMercadoPago() {
     </div>
   );
 }
+
+const Icons = {
+  CreditCard: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>,
+};
 
 const styles = {
   container: { padding: '40px', maxWidth: '800px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },

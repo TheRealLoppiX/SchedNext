@@ -89,7 +89,7 @@ function AdminApiKeys({ empresaId }) {
   if (!permitido) {
     return (
       <div style={styles.container}>
-        <h2 style={styles.title}>🔌 API pública</h2>
+        <h2 style={styles.title}><Icons.Plug color="#111827" /> API pública</h2>
         <div style={styles.upsell}>
           <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
             Integrar seus próprios sistemas com o SchedNext via API é um recurso exclusivo do <strong>plano Enterprise</strong>.
@@ -102,7 +102,7 @@ function AdminApiKeys({ empresaId }) {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>🔌 API pública</h2>
+      <h2 style={styles.title}><Icons.Plug color="#111827" /> API pública</h2>
       <p style={styles.subtitle}>Gere chaves para integrar seus próprios sistemas ao SchedNext.</p>
 
       {chaveGerada && (
@@ -150,6 +150,10 @@ function AdminApiKeys({ empresaId }) {
     </div>
   );
 }
+
+const Icons = {
+  Plug: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><path d="M12 22v-5"></path><path d="M9 8V2"></path><path d="M15 8V2"></path><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"></path></svg>,
+};
 
 const styles = {
   container: { padding: '40px', maxWidth: '900px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },

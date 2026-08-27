@@ -197,7 +197,7 @@ function AdminRelatorios({ empresaId }) {
 
   return (
     <div className="admin-page-container" style={styles.container}>
-      <h2 style={styles.title}>📊 Relatórios e financeiro</h2>
+      <h2 style={styles.title}><Icons.BarChart color="#111827" /> Relatórios e financeiro</h2>
       <p style={styles.subtitle}>Faturamento, taxas de maquineta, comissionamento e desempenho da equipe.</p>
 
       <div style={styles.filtros}>
@@ -399,6 +399,10 @@ function AdminRelatorios({ empresaId }) {
     </div>
   );
 }
+
+const Icons = {
+  BarChart: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>,
+};
 
 const styles = {
   container: { padding: '40px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },

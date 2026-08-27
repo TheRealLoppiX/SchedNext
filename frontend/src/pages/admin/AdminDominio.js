@@ -119,7 +119,7 @@ function AdminDominio({ empresaId }) {
   if (!permitido) {
     return (
       <div style={styles.container}>
-        <h2 style={styles.title}>🌐 Domínio próprio</h2>
+        <h2 style={styles.title}><Icons.Globe color="#111827" /> Domínio próprio</h2>
         <div style={styles.upsell}>
           <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
             Usar seu próprio domínio (ex: agenda.suaempresa.com.br) em vez do subdomínio da SchedNext é um recurso exclusivo do <strong>plano Enterprise</strong>.
@@ -132,7 +132,7 @@ function AdminDominio({ empresaId }) {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>🌐 Domínio próprio</h2>
+      <h2 style={styles.title}><Icons.Globe color="#111827" /> Domínio próprio</h2>
       <p style={styles.subtitle}>Use um domínio ou subdomínio seu para os clientes acessarem sua agenda.</p>
 
       {dominioAtual ? (
@@ -191,6 +191,10 @@ function AdminDominio({ empresaId }) {
     </div>
   );
 }
+
+const Icons = {
+  Globe: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>,
+};
 
 const styles = {
   container: { padding: '40px', maxWidth: '800px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },

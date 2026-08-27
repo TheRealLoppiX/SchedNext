@@ -154,7 +154,7 @@ function AdminWhatsapp() {
   if (!permitido) {
     return (
       <div style={styles.container}>
-        <h2 style={styles.title}>💬 WhatsApp</h2>
+        <h2 style={styles.title}><Icons.MessageCircle color="#111827" /> WhatsApp</h2>
         <div style={styles.upsell}>
           <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
             Deixar clientes marcarem horário direto pelo WhatsApp é um recurso exclusivo dos planos <strong>Profissional</strong> e <strong>Enterprise</strong>.
@@ -167,7 +167,7 @@ function AdminWhatsapp() {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>💬 WhatsApp</h2>
+      <h2 style={styles.title}><Icons.MessageCircle color="#111827" /> WhatsApp</h2>
       <p style={styles.subtitle}>Conecte um número de WhatsApp para seus clientes agendarem horário direto por lá.</p>
 
       {conectado ? (
@@ -224,6 +224,10 @@ function AdminWhatsapp() {
     </div>
   );
 }
+
+const Icons = {
+  MessageCircle: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>,
+};
 
 const styles = {
   container: { padding: '40px', maxWidth: '800px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },
