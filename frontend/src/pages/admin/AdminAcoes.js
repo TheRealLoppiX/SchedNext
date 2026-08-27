@@ -153,23 +153,23 @@ function AdminAcoes() {
                         <label style={s.label}>Nome da Ação (Ex: Mês do Cliente)</label>
                         <input style={s.input} required value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} />
                     </div>
-                    <div style={{ display: 'flex', gap: '15px' }}>
-                        <div style={{...s.inputGroup, flex: 1}}>
+                    <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                        <div style={{...s.inputGroup, flex: '1 1 140px', minWidth: 0}}>
                             <label style={s.label}>Data Início</label>
                             <input type="date" style={s.input} required value={form.data_inicio} onChange={e => setForm({...form, data_inicio: e.target.value})} />
                         </div>
-                        <div style={{...s.inputGroup, flex: 1}}>
+                        <div style={{...s.inputGroup, flex: '1 1 140px', minWidth: 0}}>
                             <label style={s.label}>Data Fim</label>
                             <input type="date" style={s.input} required value={form.data_fim} onChange={e => setForm({...form, data_fim: e.target.value})} />
                         </div>
                     </div>
-                    
-                    <div style={{ display: 'flex', gap: '15px' }}>
-                        <div style={{...s.inputGroup, flex: 1}}>
+
+                    <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                        <div style={{...s.inputGroup, flex: '1 1 140px', minWidth: 0}}>
                             <label style={s.label}>Meta (Qtd. Cortes)</label>
                             <input type="number" min="1" style={s.input} required value={form.cortes_necessarios} onChange={e => setForm({...form, cortes_necessarios: e.target.value})} />
                         </div>
-                        <div style={{...s.inputGroup, flex: 1}}>
+                        <div style={{...s.inputGroup, flex: '1 1 140px', minWidth: 0}}>
                             <label style={s.label}>Valor Mínimo (R$)</label>
                             <input type="number" step="0.01" style={s.input} value={form.valor_minimo} onChange={e => setForm({...form, valor_minimo: e.target.value})} title="Deixe 0 se qualquer valor for válido" />
                         </div>
@@ -308,7 +308,7 @@ const s = {
     formGrid: { display: 'flex', flexDirection: 'column', gap: '15px' },
     inputGroup: { display: 'flex', flexDirection: 'column', gap: '5px' },
     label: { fontSize: '12px', fontWeight: 'bold', color: '#4b5563', textTransform: 'uppercase' },
-    input: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' },
+    input: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', width: '100%', boxSizing: 'border-box' },
     btnPrincipal: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', padding: '15px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' },
     table: { width: '100%', borderCollapse: 'collapse' },
     th: { padding: '15px', textAlign: 'left', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontSize: '12px', textTransform: 'uppercase' },

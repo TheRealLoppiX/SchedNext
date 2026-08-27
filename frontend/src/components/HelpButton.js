@@ -40,7 +40,10 @@ function HelpButton() {
   return (
     <>
       <button className="bb-help-fab" onClick={() => setAberto(true)} aria-label="Ajuda" title="Ajuda">
-        ?
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9.5 9a2.5 2.5 0 0 1 4.9.8c0 1.7-2.4 2-2.4 3.7" />
+          <circle cx="12" cy="17.5" r="0.35" fill="#fff" stroke="none" />
+        </svg>
       </button>
       {aberto && (
         <div className="bb-modal-overlay" onClick={() => setAberto(false)}>

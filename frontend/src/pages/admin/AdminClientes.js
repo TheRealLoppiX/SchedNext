@@ -353,7 +353,7 @@ function AdminClientes({ empresaId }) {
                     <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>
                         {selecionados.length} selecionado(s)
                     </span>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <LoadingButton loading={processandoLote} onClick={enviarFollowUpEmLote} style={s.btnLote}>
                             <Icons.Mail color="#1d4ed8" /> Enviar "sentimos sua falta"
                         </LoadingButton>

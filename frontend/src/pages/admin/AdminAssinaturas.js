@@ -249,7 +249,7 @@ function AdminAssinaturas({ empresaId }) {
                             required
                         />
                     </div>
-                    <div style={{ ...s.inputGroup, gridColumn: 'span 2' }}>
+                    <div style={{ ...s.inputGroup, gridColumn: '1 / -1' }}>
                         <label style={s.label}>Descrição (opcional)</label>
                         <input
                             style={s.input}

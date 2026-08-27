@@ -278,16 +278,18 @@ function GestaoServicos({ empresaId }) {
                         {isAtivo ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
-                  <td style={{...styles.td, width: '20%', textAlign: 'right'}}>
-                    <button onClick={() => alternarStatus(s.id, s.ativo, s.nome)} style={styles.btnIconPower} title={isAtivo ? "Inativar" : "Ativar"}>
-                      <Icons.Power color={isAtivo ? "#10b981" : "#9ca3af"} />
-                    </button>
-                    <button onClick={() => prepararEdicao(s)} style={styles.btnIconEdit} title="Editar">
-                      <Icons.Edit color="#4b5563" />
-                    </button>
-                    <button onClick={() => deletar(s.id)} style={styles.btnIconDelete} title="Excluir">
-                      <Icons.Trash color="#ef4444" />
-                    </button>
+                  <td style={{...styles.td, width: '20%', textAlign: 'right', padding: '18px 10px'}}>
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                      <button onClick={() => alternarStatus(s.id, s.ativo, s.nome)} style={styles.btnIconPower} title={isAtivo ? "Inativar" : "Ativar"}>
+                        <Icons.Power color={isAtivo ? "#10b981" : "#9ca3af"} />
+                      </button>
+                      <button onClick={() => prepararEdicao(s)} style={styles.btnIconEdit} title="Editar">
+                        <Icons.Edit color="#4b5563" />
+                      </button>
+                      <button onClick={() => deletar(s.id)} style={styles.btnIconDelete} title="Excluir">
+                        <Icons.Trash color="#ef4444" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )
@@ -341,9 +343,9 @@ const styles = {
   td: { padding: '18px 20px', fontSize: '14px', verticalAlign: 'middle', color: '#4b5563' },
   badgeDuracao: { background: '#eef2ff', color: '#4f46e5', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' },
   textoPreco: { fontWeight: '700', color: '#059669', whiteSpace: 'nowrap' },
-  btnIconEdit: { background: '#f3f4f6', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer', marginRight: '5px', display: 'inline-flex', alignItems: 'center', transition: '0.2s' },
-  btnIconDelete: { background: '#fef2f2', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', transition: '0.2s' },
-  btnIconPower: { background: '#f9fafb', border: '1px solid #e5e7eb', padding: '7px', borderRadius: '6px', cursor: 'pointer', marginRight: '5px', display: 'inline-flex', alignItems: 'center', transition: '0.2s' }
+  btnIconEdit: { background: '#f3f4f6', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', flexShrink: 0, transition: '0.2s' },
+  btnIconDelete: { background: '#fef2f2', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', flexShrink: 0, transition: '0.2s' },
+  btnIconPower: { background: '#f9fafb', border: '1px solid #e5e7eb', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', flexShrink: 0, transition: '0.2s' }
 };
 
 export default GestaoServicos;
