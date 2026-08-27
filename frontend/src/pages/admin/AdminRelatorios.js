@@ -201,19 +201,19 @@ function AdminRelatorios({ empresaId }) {
       <p style={styles.subtitle}>Faturamento, taxas de maquineta, comissionamento e desempenho da equipe.</p>
 
       <div style={styles.filtros}>
-        <div style={{ flex: '1 1 150px', minWidth: '150px' }}>
+        <div style={{ flex: '1 1 200px', minWidth: '200px' }}>
           <label style={styles.label}>De</label>
           <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} style={styles.input} />
         </div>
-        <div style={{ flex: '1 1 150px', minWidth: '150px' }}>
+        <div style={{ flex: '1 1 200px', minWidth: '200px' }}>
           <label style={styles.label}>Até</label>
           <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} style={styles.input} />
         </div>
-        <button onClick={() => { carregarComissionamento(); gerarRelatorio(); }} disabled={gerando} style={{ ...styles.btnGerar, flex: '1 1 auto' }}>
+        <button onClick={() => { carregarComissionamento(); gerarRelatorio(); }} disabled={gerando} style={{ ...styles.btnGerar, flex: '1 1 200px', minWidth: '200px' }}>
           {gerando ? 'Gerando...' : 'Aplicar'}
         </button>
         {relatorio && (
-          <button onClick={exportarCsv} style={{ ...styles.btnExportar, flex: '1 1 auto' }}>⬇ Exportar CSV</button>
+          <button onClick={exportarCsv} style={{ ...styles.btnExportar, flex: '1 1 200px', minWidth: '200px' }}>⬇ Exportar CSV</button>
         )}
       </div>
 
