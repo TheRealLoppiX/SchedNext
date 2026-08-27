@@ -92,7 +92,7 @@ function AdminAgendamentos({ empresaId }) {
     <div className="admin-page-container" style={styles.container}>
       <header style={styles.header}>
         <div>
-          <h2 style={styles.title}>🗓️ Gestão de Agendamentos</h2>
+          <h2 style={styles.title}><Icons.Calendar color="#1a1a1a" /> Gestão de Agendamentos</h2>
           <p style={styles.subtitle}>Acompanhe e filtre todos os agendamentos da recepção.</p>
         </div>
       </header>
@@ -230,6 +230,10 @@ function AdminAgendamentos({ empresaId }) {
     </div>
   );
 }
+
+const Icons = {
+  Calendar: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
+};
 
 const styles = {
   container: { padding: '40px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Inter', sans-serif" },
