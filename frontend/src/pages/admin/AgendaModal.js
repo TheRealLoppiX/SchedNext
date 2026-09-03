@@ -32,7 +32,9 @@ function AgendaModal({ barbeiro, empresaId, dataSelecionada, horaPreSelecionada,
     const [estoque, setEstoque] = useState([]);
     const [extrasSelecionados, setExtrasSelecionados] = useState([]);
     const [assinaturaCheckout, setAssinaturaCheckout] = useState({ assinante: false, servicos_ids: [], servicos_agendados_ids: [], restantes: {} });
-    const [formaPagamento, setFormaPagamento] = useState(null);
+    // Pagamento dividido: 1 linha = fluxo simples de sempre (escolhe a forma, cobra o total).
+    // 2+ linhas = cada uma com sua forma e seu valor, precisam somar o total do atendimento.
+    const [pagamentos, setPagamentos] = useState([{ forma_pagamento: null, valor: '' }]);
     const [mpConectado, setMpConectado] = useState(false);
     const [pixInfo, setPixInfo] = useState(null);
     const [gerandoPix, setGerandoPix] = useState(false);
@@ -247,11 +249,23 @@ const toggleServico = (servico) => {
         btnQtd: { width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px', transition: '0.2s', padding: 0, lineHeight: 0 },
     };
 
+    const totalPago = () => pagamentos.reduce((acc, p) => acc + (parseFloat(String(p.valor).replace(',', '.')) || 0), 0);
+    const linhaPix = () => pagamentos.find(p => p.forma_pagamento === 'pix');
+
     const handleFinalizarAtendimento = async () => {
+        const total = getValorBaseSeguro() + getValorAdicionais();
         // Meio de pagamento só é exigido quando sobra algo pra cobrar (produto/serviço fora do
         // plano) — um atendimento 100% coberto pela assinatura não precisa vincular nada.
-        if (getValorBaseSeguro() + getValorAdicionais() > 0 && !formaPagamento) {
-            return toast.error('Selecione a forma de pagamento.');
+        if (total > 0) {
+            if (pagamentos.some(p => !p.forma_pagamento)) {
+                return toast.error('Selecione a forma de pagamento de cada linha.');
+            }
+            if (pagamentos.length > 1 && Math.abs(totalPago() - total) > 0.01) {
+                return toast.error(`A soma das formas de pagamento (R$ ${totalPago().toFixed(2)}) precisa bater com o total (R$ ${total.toFixed(2)}).`);
+            }
+            if (linhaPix() && !pixInfo?.pago) {
+                return toast.error('Gere o Pix dessa linha e aguarde a confirmação antes de finalizar.');
+            }
         }
         setFinalizando(true);
         try {
@@ -265,7 +279,10 @@ const toggleServico = (servico) => {
                     agendamento_id: modalFinalizar.id,
                     produtos_vendidos: produtosVendidos,
                     servicos_adicionais: servicosAdd,
-                    forma_pagamento: formaPagamento
+                    formas_pagamento: total > 0 ? pagamentos.map(p => ({
+                        forma_pagamento: p.forma_pagamento,
+                        valor: pagamentos.length > 1 ? (parseFloat(String(p.valor).replace(',', '.')) || 0) : total
+                    })) : undefined
                 })
             });
 
@@ -296,7 +313,7 @@ const toggleServico = (servico) => {
 
     // VALOR BASE AGORA LÊ CORRETAMENTE
     useEffect(() => {
-        setFormaPagamento(null);
+        setPagamentos([{ forma_pagamento: null, valor: '' }]);
         setPixInfo(null);
         if (pixPollRef.current) { clearInterval(pixPollRef.current); pixPollRef.current = null; }
         if (!modalFinalizar?.id) { setAssinaturaCheckout({ assinante: false, servicos_ids: [], servicos_agendados_ids: [], restantes: {} }); return; }
@@ -319,16 +336,54 @@ const toggleServico = (servico) => {
     // Pra parar o polling se o modal fechar/desmontar com um Pix ainda pendente.
     useEffect(() => () => { if (pixPollRef.current) clearInterval(pixPollRef.current); }, []);
 
+    // Muda a forma ou o valor de qualquer linha invalida o Pix já gerado (se a linha do Pix
+    // mudou de valor, o QR antigo cobra o valor errado) — força gerar de novo.
+    const limparPixDaLinha = () => {
+        setPixInfo(null);
+        if (pixPollRef.current) { clearInterval(pixPollRef.current); pixPollRef.current = null; }
+    };
+    const setFormaLinha = (i, forma) => {
+        limparPixDaLinha();
+        setPagamentos(pagamentos.map((p, idx) => idx === i ? { ...p, forma_pagamento: forma } : p));
+    };
+    const setValorLinha = (i, valor) => {
+        limparPixDaLinha();
+        setPagamentos(pagamentos.map((p, idx) => idx === i ? { ...p, valor } : p));
+    };
+    const adicionarLinhaPagamento = () => {
+        limparPixDaLinha();
+        if (pagamentos.length === 1) {
+            const total = getValorBaseSeguro() + getValorAdicionais();
+            setPagamentos([{ ...pagamentos[0], valor: total }, { forma_pagamento: null, valor: '' }]);
+        } else if (pagamentos.length < 4) {
+            setPagamentos([...pagamentos, { forma_pagamento: null, valor: '' }]);
+        }
+    };
+    const removerLinhaPagamento = (i) => {
+        limparPixDaLinha();
+        if (pagamentos.length <= 2) {
+            setPagamentos([{ forma_pagamento: pagamentos[1 - i]?.forma_pagamento || null, valor: '' }]);
+        } else {
+            setPagamentos(pagamentos.filter((_, idx) => idx !== i));
+        }
+    };
+
     const gerarPix = async () => {
         setGerandoPix(true);
         try {
             const produtosVendidos = extrasSelecionados.filter(e => e.tipo === 'produto');
             const servicosAdd = extrasSelecionados.filter(e => e.tipo === 'servico');
+            const linha = linhaPix();
+            const valorLinhaPix = pagamentos.length > 1 ? (parseFloat(String(linha?.valor).replace(',', '.')) || 0) : null;
 
             const res = await fetch(`${API_URL}/admin/mercadopago/pix/${modalFinalizar.id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ produtos_vendidos: produtosVendidos, servicos_adicionais: servicosAdd })
+                body: JSON.stringify({
+                    produtos_vendidos: produtosVendidos,
+                    servicos_adicionais: servicosAdd,
+                    ...(valorLinhaPix ? { valor: valorLinhaPix } : {})
+                })
             });
             const dados = await res.json();
             if (!res.ok) { toast.error(dados.error || 'Não foi possível gerar o Pix.'); return; }
@@ -716,32 +771,63 @@ const toggleServico = (servico) => {
                         {modalFinalizar.status !== 'concluido' && (getValorBaseSeguro() + getValorAdicionais() > 0) && (
                             <div style={{ marginBottom: '15px' }}>
                                 <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#666', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Forma de pagamento</span>
-                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                    {[
-                                        { valor: 'dinheiro', rotulo: 'Dinheiro' },
-                                        { valor: 'credito', rotulo: 'Crédito' },
-                                        { valor: 'debito', rotulo: 'Débito' },
-                                        { valor: 'pix', rotulo: 'Pix' }
-                                    ].map((opcao) => (
-                                        <button
-                                            key={opcao.valor}
-                                            type="button"
-                                            onClick={() => setFormaPagamento(formaPagamento === opcao.valor ? null : opcao.valor)}
-                                            style={{
-                                                padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', cursor: 'pointer',
-                                                border: formaPagamento === opcao.valor ? '1px solid #111827' : '1px solid #d1d5db',
-                                                background: formaPagamento === opcao.valor ? '#111827' : '#fff',
-                                                color: formaPagamento === opcao.valor ? '#fff' : '#374151'
-                                            }}
-                                        >
-                                            {opcao.rotulo}
-                                        </button>
-                                    ))}
-                                </div>
+                                {pagamentos.map((p, i) => (
+                                    <div key={i} style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                            {[
+                                                { valor: 'dinheiro', rotulo: 'Dinheiro' },
+                                                { valor: 'credito', rotulo: 'Crédito' },
+                                                { valor: 'debito', rotulo: 'Débito' },
+                                                { valor: 'pix', rotulo: 'Pix' }
+                                            ].map((opcao) => (
+                                                <button
+                                                    key={opcao.valor}
+                                                    type="button"
+                                                    onClick={() => setFormaLinha(i, p.forma_pagamento === opcao.valor ? null : opcao.valor)}
+                                                    style={{
+                                                        padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+                                                        border: p.forma_pagamento === opcao.valor ? '1px solid #111827' : '1px solid #d1d5db',
+                                                        background: p.forma_pagamento === opcao.valor ? '#111827' : '#fff',
+                                                        color: p.forma_pagamento === opcao.valor ? '#fff' : '#374151'
+                                                    }}
+                                                >
+                                                    {opcao.rotulo}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {pagamentos.length > 1 && (
+                                            <>
+                                                <input
+                                                    type="number" min="0" step="0.01" placeholder="0,00"
+                                                    value={p.valor}
+                                                    onChange={(e) => setValorLinha(i, e.target.value)}
+                                                    style={{ width: '80px', padding: '6px 8px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '13px' }}
+                                                />
+                                                <button type="button" onClick={() => removerLinhaPagamento(i)} title="Remover linha" style={{ border: 'none', background: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '18px', padding: '0 4px', lineHeight: 1 }}>×</button>
+                                            </>
+                                        )}
+                                    </div>
+                                ))}
+                                {pagamentos.length === 1 ? (
+                                    <button type="button" onClick={adicionarLinhaPagamento} style={{ border: 'none', background: 'none', color: '#2554eb', cursor: 'pointer', fontSize: '12px', fontWeight: '600', padding: 0, marginTop: '2px' }}>
+                                        + Dividir em mais de uma forma de pagamento
+                                    </button>
+                                ) : (
+                                    <>
+                                        <p style={{ margin: '4px 0 0', fontSize: '12px', fontWeight: '600', color: Math.abs(totalPago() - (getValorBaseSeguro() + getValorAdicionais())) > 0.01 ? '#dc2626' : '#059669' }}>
+                                            Somado: R$ {totalPago().toFixed(2)} de R$ {(getValorBaseSeguro() + getValorAdicionais()).toFixed(2)}
+                                        </p>
+                                        {pagamentos.length < 4 && (
+                                            <button type="button" onClick={adicionarLinhaPagamento} style={{ border: 'none', background: 'none', color: '#2554eb', cursor: 'pointer', fontSize: '12px', fontWeight: '600', padding: 0, marginTop: '4px' }}>
+                                                + Adicionar outra forma
+                                            </button>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         )}
 
-                        {modalFinalizar.status !== 'concluido' && formaPagamento === 'pix' && mpConectado && (
+                        {modalFinalizar.status !== 'concluido' && linhaPix() && mpConectado && (
                             <div style={{ marginBottom: '15px', padding: '14px', borderRadius: '10px', border: '1px solid #e5e7eb', background: '#f9fafb' }}>
                                 {!pixInfo ? (
                                     <LoadingButton

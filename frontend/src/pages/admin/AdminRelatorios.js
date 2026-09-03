@@ -16,8 +16,17 @@ function formatarMoeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+// data_hora vem do banco "ingênuo": os números representam o horário de parede pretendido (ex:
+// 08:00), só que salvos com rótulo UTC (+00), sem conversão real de fuso — mesma pegadinha
+// documentada em Dashboard.js. toLocaleString faria uma conversão de fuso de verdade e mostraria
+// 3h a menos; usamos os getters UTC pra pegar exatamente os números gravados.
 function formatarDataHora(iso) {
-  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const d = new Date(iso);
+  const dia = String(d.getUTCDate()).padStart(2, '0');
+  const mes = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const hora = String(d.getUTCHours()).padStart(2, '0');
+  const minuto = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${dia}/${mes} ${hora}:${minuto}`;
 }
 
 function AdminRelatorios({ empresaId }) {
@@ -267,7 +276,7 @@ function AdminRelatorios({ empresaId }) {
     const detalhamentoLinhas = comissionamento
       ? comissionamento.profissionais.flatMap((p) => (p.itens || []).map((item) => [
         p.nome,
-        new Date(item.data).toLocaleDateString('pt-BR'),
+        formatarDataHora(item.data),
         item.cliente,
         item.servicos.length ? item.servicos.join(', ') : '-',
         item.tipo === 'assinante' ? `Assinante (${item.visitas_no_mes}x/mês)` : 'Avulso',
@@ -451,6 +460,11 @@ function AdminRelatorios({ empresaId }) {
                                           </span>
                                         ) : (
                                           <span style={styles.tagAvulso}>Avulso</span>
+                                        )}
+                                        {item.formas_pagamento && item.formas_pagamento.length > 0 && (
+                                          <div style={{ marginTop: '3px', fontSize: '11px', color: '#9ca3af' }}>
+                                            {item.formas_pagamento.map((f) => `${f.forma_pagamento} ${formatarMoeda(f.valor)}`).join(' + ')}
+                                          </div>
                                         )}
                                       </td>
                                       <td style={styles.tdDetalhe}>{formatarMoeda(item.receita_liquida)}</td>
