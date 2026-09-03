@@ -16,6 +16,10 @@ function formatarMoeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function formatarDataHora(iso) {
+  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
 function AdminRelatorios({ empresaId }) {
   const toast = useToast();
   const [carregando, setCarregando] = useState(true);
@@ -32,6 +36,7 @@ function AdminRelatorios({ empresaId }) {
   const [salvandoTaxas, setSalvandoTaxas] = useState(false);
   const [comissionamento, setComissionamento] = useState(null);
   const [carregandoComissao, setCarregandoComissao] = useState(true);
+  const [profissionalExpandido, setProfissionalExpandido] = useState(null);
 
   const idEfetivo = empresaId || localStorage.getItem('empresaId');
 
@@ -177,6 +182,16 @@ function AdminRelatorios({ empresaId }) {
       linhas.push('Comissionamento por profissional');
       linhas.push('Profissional,% comissão,Atendimentos,Receita bruta,Receita líquida,Comissão');
       comissionamento.profissionais.forEach((p) => linhas.push(`${p.nome},${p.percentual_comissao},${p.quantidade},${p.receita_bruta},${p.receita_liquida},${p.comissao}`));
+      linhas.push('');
+      linhas.push('Detalhamento por atendimento');
+      linhas.push('Profissional,Data,Cliente,Serviço(s),Origem,Receita líquida,Comissão');
+      comissionamento.profissionais.forEach((p) => {
+        (p.itens || []).forEach((item) => {
+          const origem = item.tipo === 'assinante' ? `Assinante (rateio ${item.visitas_no_mes}x)` : 'Avulso';
+          const servicos = item.servicos.length ? item.servicos.join(' | ') : '-';
+          linhas.push(`${p.nome},${item.data},${item.cliente},${servicos},${origem},${item.receita_liquida},${item.comissao}`);
+        });
+      });
     }
 
     const blob = new Blob([linhas.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -249,6 +264,23 @@ function AdminRelatorios({ empresaId }) {
       comissionamento.profissionais.map((p) => [p.nome, `${p.percentual_comissao}%`, p.quantidade, formatarMoeda(p.receita_bruta), formatarMoeda(p.receita_liquida), formatarMoeda(p.comissao)])
     ) : '';
 
+    const detalhamentoLinhas = comissionamento
+      ? comissionamento.profissionais.flatMap((p) => (p.itens || []).map((item) => [
+        p.nome,
+        new Date(item.data).toLocaleDateString('pt-BR'),
+        item.cliente,
+        item.servicos.length ? item.servicos.join(', ') : '-',
+        item.tipo === 'assinante' ? `Assinante (${item.visitas_no_mes}x/mês)` : 'Avulso',
+        formatarMoeda(item.receita_liquida),
+        formatarMoeda(item.comissao)
+      ]))
+      : [];
+    const detalhamentoHtml = tabela(
+      'Detalhamento por atendimento',
+      ['Profissional', 'Data', 'Cliente', 'Serviço(s)', 'Origem', 'Receita líquida', 'Comissão'],
+      detalhamentoLinhas
+    );
+
     janela.document.write(`<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Relatório - ${escaparHtml(periodo)}</title><style>
       *{margin:0;padding:0;box-sizing:border-box}
       body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#111827}
@@ -276,6 +308,7 @@ function AdminRelatorios({ empresaId }) {
       ${topServicosHtml}
       ${topProfissionaisHtml}
       ${comissionamentoHtml}
+      ${detalhamentoHtml}
       <div class='footer'>Gerado em ${new Date().toLocaleString('pt-BR')}</div>
     </body></html>`);
     janela.document.close();
@@ -363,6 +396,7 @@ function AdminRelatorios({ empresaId }) {
             <table style={styles.tabela}>
               <thead>
                 <tr>
+                  <th style={styles.th}></th>
                   <th style={styles.th}>Profissional</th>
                   <th style={styles.th}>Comissão</th>
                   <th style={styles.th}>Atendimentos</th>
@@ -372,21 +406,71 @@ function AdminRelatorios({ empresaId }) {
                 </tr>
               </thead>
               <tbody>
-                {comissionamento.profissionais.map((p) => (
-                  <tr key={p.nome}>
-                    <td style={styles.td}>{p.nome}</td>
-                    <td style={styles.td}>{p.percentual_comissao}%</td>
-                    <td style={styles.td}>{p.quantidade}</td>
-                    <td style={styles.td}>{formatarMoeda(p.receita_bruta)}</td>
-                    <td style={styles.td}>{formatarMoeda(p.receita_liquida)}</td>
-                    <td style={{ ...styles.td, fontWeight: '700', color: '#059669' }}>{formatarMoeda(p.comissao)}</td>
-                  </tr>
-                ))}
+                {comissionamento.profissionais.map((p) => {
+                  const chave = p.id ?? p.nome;
+                  const expandido = profissionalExpandido === chave;
+                  return (
+                    <React.Fragment key={chave}>
+                      <tr
+                        onClick={() => setProfissionalExpandido(expandido ? null : chave)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <td style={{ ...styles.td, color: '#9ca3af', width: '20px' }}>{expandido ? '▾' : '▸'}</td>
+                        <td style={styles.td}>{p.nome}</td>
+                        <td style={styles.td}>{p.percentual_comissao}%</td>
+                        <td style={styles.td}>{p.quantidade}</td>
+                        <td style={styles.td}>{formatarMoeda(p.receita_bruta)}</td>
+                        <td style={styles.td}>{formatarMoeda(p.receita_liquida)}</td>
+                        <td style={{ ...styles.td, fontWeight: '700', color: '#059669' }}>{formatarMoeda(p.comissao)}</td>
+                      </tr>
+                      {expandido && (
+                        <tr>
+                          <td colSpan={7} style={{ padding: '0 8px 14px', borderBottom: '1px solid #f3f4f6' }}>
+                            <div style={{ overflowX: 'auto' }}>
+                              <table style={{ ...styles.tabela, minWidth: '520px' }}>
+                                <thead>
+                                  <tr>
+                                    <th style={styles.thDetalhe}>Data</th>
+                                    <th style={styles.thDetalhe}>Cliente</th>
+                                    <th style={styles.thDetalhe}>Serviço(s)</th>
+                                    <th style={styles.thDetalhe}>Origem</th>
+                                    <th style={styles.thDetalhe}>Receita líquida</th>
+                                    <th style={styles.thDetalhe}>Comissão</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {(p.itens || []).map((item, idx) => (
+                                    <tr key={idx}>
+                                      <td style={styles.tdDetalhe}>{formatarDataHora(item.data)}</td>
+                                      <td style={styles.tdDetalhe}>{item.cliente}</td>
+                                      <td style={styles.tdDetalhe}>{item.servicos.length ? item.servicos.join(', ') : '—'}</td>
+                                      <td style={styles.tdDetalhe}>
+                                        {item.tipo === 'assinante' ? (
+                                          <span style={styles.tagAssinante} title={`Mensalidade rateada por ${item.visitas_no_mes} visita(s) no mês`}>
+                                            Assinante · rateio {item.visitas_no_mes}x
+                                          </span>
+                                        ) : (
+                                          <span style={styles.tagAvulso}>Avulso</span>
+                                        )}
+                                      </td>
+                                      <td style={styles.tdDetalhe}>{formatarMoeda(item.receita_liquida)}</td>
+                                      <td style={{ ...styles.tdDetalhe, fontWeight: '700', color: '#059669' }}>{formatarMoeda(item.comissao)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
-        <p style={{ ...styles.vazio, marginTop: '12px' }}>Atendimentos de clientes assinantes entram pela fatia proporcional da mensalidade (valor do plano ÷ visitas no mês), já que o serviço em si sai de graça pro cliente.</p>
+        <p style={{ ...styles.vazio, marginTop: '12px' }}>Clique num profissional pra ver o detalhamento por atendimento. Atendimentos de clientes assinantes entram pela fatia proporcional da mensalidade (valor do plano ÷ visitas no mês), já que o serviço em si sai de graça pro cliente.</p>
       </div>
 
       {erro && <p style={{ color: '#dc2626', fontSize: '14px' }}>{erro}</p>}
@@ -550,7 +634,11 @@ const styles = {
   barraPreenchida: { height: '100%', borderRadius: '4px', background: 'linear-gradient(90deg, #4c74f0, #2554eb)' },
   tabela: { width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '600px' },
   th: { textAlign: 'left', padding: '8px', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontWeight: '600' },
-  td: { padding: '8px', borderBottom: '1px solid #f3f4f6', color: '#111827' }
+  td: { padding: '8px', borderBottom: '1px solid #f3f4f6', color: '#111827' },
+  thDetalhe: { textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e5e7eb', color: '#9ca3af', fontWeight: '600', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.3px' },
+  tdDetalhe: { padding: '7px 8px', borderBottom: '1px solid #f3f4f6', color: '#374151', fontSize: '12px' },
+  tagAssinante: { display: 'inline-block', padding: '2px 8px', borderRadius: '999px', background: '#ede9fe', color: '#6d28d9', fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap' },
+  tagAvulso: { display: 'inline-block', padding: '2px 8px', borderRadius: '999px', background: '#f3f4f6', color: '#6b7280', fontSize: '11px', fontWeight: '600' }
 };
 
 export default AdminRelatorios;
