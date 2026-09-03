@@ -835,7 +835,7 @@ const toggleServico = (servico) => {
                                         onClick={gerarPix}
                                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', background: '#111827', color: '#fff', fontWeight: '600', cursor: 'pointer' }}
                                     >
-                                        Gerar Pix
+                                        {pagamentos.length > 1 ? `Gerar Pix (R$ ${(parseFloat(String(linhaPix()?.valor).replace(',', '.')) || 0).toFixed(2)})` : 'Gerar Pix'}
                                     </LoadingButton>
                                 ) : pixInfo.pago ? (
                                     <p style={{ margin: 0, textAlign: 'center', color: '#059669', fontWeight: '700', fontSize: '14px' }}>✅ Pix recebido!</p>
