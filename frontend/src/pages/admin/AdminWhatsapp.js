@@ -23,9 +23,17 @@ function AdminWhatsapp() {
   const [desconectando, setDesconectando] = useState(false);
   const [telefoneTeste, setTelefoneTeste] = useState('');
   const [testando, setTestando] = useState(false);
+
+  const [botConfig, setBotConfig] = useState({ permiteIa: false, modo: 'guiado', nome: '', personalidade: '', boasVindas: '', temperatura: 0.6 });
+  const [salvandoBot, setSalvandoBot] = useState(false);
+
   const pollRef = useRef(null);
   const pollLentoRef = useRef(null);
   const conectadoRef = useRef(false);
+  // Essa tela faz poll a cada 5-45s (ver INTERVALO_POLL_*) pra status de conexão — sem essa trava,
+  // um ciclo de poll durante a edição da personalidade sobrescrevia o rascunho do admin no meio da
+  // digitação com o valor ainda salvo no banco.
+  const botConfigCarregadoRef = useRef(false);
 
   const pararPoll = () => {
     if (pollRef.current) clearInterval(pollRef.current);
@@ -39,6 +47,10 @@ function AdminWhatsapp() {
       setPermitido(!!dados.permitido);
       setConectado(!!dados.conectado);
       setInstancia(dados.instancia || null);
+      if (dados.botConfig && !botConfigCarregadoRef.current) {
+        setBotConfig(dados.botConfig);
+        botConfigCarregadoRef.current = true;
+      }
       if (dados.conectado) {
         setQrcode(null);
         pararPoll();
@@ -149,6 +161,30 @@ function AdminWhatsapp() {
     }
   };
 
+  const salvarBotConfig = async () => {
+    setSalvandoBot(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/whatsapp/bot-config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modo: botConfig.modo,
+          nome: botConfig.nome,
+          personalidade: botConfig.personalidade,
+          boas_vindas: botConfig.boasVindas,
+          temperatura: botConfig.temperatura
+        })
+      });
+      const dados = await res.json();
+      if (res.ok) toast.success('Configuração do bot salva.');
+      else toast.error(dados.error || 'Não foi possível salvar.');
+    } catch (err) {
+      toast.error('Erro de conexão. Tente novamente.');
+    } finally {
+      setSalvandoBot(false);
+    }
+  };
+
   if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Carregando...</p>;
 
   if (!permitido) {
@@ -221,6 +257,95 @@ function AdminWhatsapp() {
           <LoadingButton loading={conectando} onClick={conectar} style={styles.btnCadastrar}>Conectar WhatsApp</LoadingButton>
         </div>
       )}
+
+      <div style={{ ...styles.cardForm, marginTop: '20px' }}>
+        <h3 style={styles.tituloSecao}>Personalidade do assistente</h3>
+        <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#6b7280' }}>
+          Personalize como o bot fala com seus clientes.
+        </p>
+
+        <label style={styles.label}>Mensagem de boas-vindas</label>
+        <input
+          type="text"
+          placeholder='Ex: "Olá! Bem-vindo à Barbearia do João 💈"'
+          value={botConfig.boasVindas}
+          maxLength={300}
+          onChange={(e) => setBotConfig((c) => ({ ...c, boasVindas: e.target.value }))}
+          style={styles.inputTexto}
+        />
+
+        {!botConfig.permiteIa ? (
+          <div style={{ ...styles.upsell, marginTop: '16px' }}>
+            <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>
+              Modo de conversa, nome, personalidade e criatividade do assistente são recursos de IA, exclusivos dos planos <strong>Profissional</strong> e <strong>Enterprise</strong>.
+            </p>
+          </div>
+        ) : (
+          <>
+            <label style={{ ...styles.label, marginTop: '16px' }}>Modo de conversa</label>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setBotConfig((c) => ({ ...c, modo: 'guiado' }))}
+                style={botConfig.modo === 'guiado' ? styles.modoBtnAtivo : styles.modoBtn}
+              >
+                Guiado (menu fixo)
+              </button>
+              <button
+                type="button"
+                onClick={() => setBotConfig((c) => ({ ...c, modo: 'livre' }))}
+                style={botConfig.modo === 'livre' ? styles.modoBtnAtivo : styles.modoBtn}
+              >
+                Livre (IA conduz a conversa)
+              </button>
+            </div>
+            <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#9ca3af' }}>
+              {botConfig.modo === 'livre'
+                ? 'A IA conversa livremente com o cliente, decidindo quando checar horários, cadastrar e agendar.'
+                : 'O bot segue um menu numerado fixo, entendendo texto livre só pra identificar a intenção inicial.'}
+            </p>
+
+            <label style={{ ...styles.label, marginTop: '16px' }}>Nome do assistente</label>
+            <input
+              type="text"
+              placeholder="Ex: Bia"
+              value={botConfig.nome}
+              maxLength={40}
+              onChange={(e) => setBotConfig((c) => ({ ...c, nome: e.target.value }))}
+              style={styles.inputTexto}
+            />
+
+            <label style={{ ...styles.label, marginTop: '16px' }}>Personalidade</label>
+            <textarea
+              placeholder="Ex: descontraída, usa gírias e emojis, trata o cliente com intimidade"
+              value={botConfig.personalidade}
+              maxLength={1000}
+              onChange={(e) => setBotConfig((c) => ({ ...c, personalidade: e.target.value }))}
+              style={styles.textarea}
+            />
+
+            <label style={{ ...styles.label, marginTop: '16px' }}>
+              Criatividade das respostas: {Number(botConfig.temperatura).toFixed(1)}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={botConfig.temperatura}
+              onChange={(e) => setBotConfig((c) => ({ ...c, temperatura: Number(e.target.value) }))}
+              style={{ width: '100%' }}
+            />
+            <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#9ca3af' }}>
+              Mais baixo = respostas mais previsíveis e diretas. Mais alto = respostas mais variadas e criativas.
+            </p>
+          </>
+        )}
+
+        <div style={{ marginTop: '20px' }}>
+          <LoadingButton loading={salvandoBot} onClick={salvarBotConfig} style={styles.btnCadastrar}>Salvar</LoadingButton>
+        </div>
+      </div>
     </div>
   );
 }
@@ -243,7 +368,13 @@ const styles = {
   btnExcluir: { padding: '8px 14px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontSize: '13px' },
   qrImg: { width: '220px', maxWidth: '100%', height: 'auto', aspectRatio: '1', border: '1px solid #f3f4f6', borderRadius: '8px', padding: '8px' },
   blocoTeste: { marginTop: '18px', paddingTop: '16px', borderTop: '1px solid #f3f4f6' },
-  inputTeste: { flex: '1 1 200px', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px' }
+  inputTeste: { flex: '1 1 200px', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px' },
+  tituloSecao: { fontSize: '17px', color: '#111827', fontWeight: '700', margin: '0 0 4px' },
+  label: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' },
+  inputTexto: { width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px', boxSizing: 'border-box' },
+  textarea: { width: '100%', minHeight: '80px', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' },
+  modoBtn: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', color: '#374151', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+  modoBtnAtivo: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #2554eb', background: '#eef2ff', color: '#2554eb', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }
 };
 
 export default AdminWhatsapp;
