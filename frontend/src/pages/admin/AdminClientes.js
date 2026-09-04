@@ -30,6 +30,9 @@ function AdminClientes({ empresaId }) {
     const [salvandoEdicao, setSalvandoEdicao] = useState(false);
     const [riscoFaltas, setRiscoFaltas] = useState(null);
     const [gerandoSugestao, setGerandoSugestao] = useState(false);
+    const [mostrarBaixaManual, setMostrarBaixaManual] = useState(false);
+    const [baixaFormaPagamento, setBaixaFormaPagamento] = useState('dinheiro');
+    const [baixaObservacoes, setBaixaObservacoes] = useState('');
 
     useEffect(() => {
         if (!idEfetivo) return;
@@ -148,6 +151,55 @@ function AdminClientes({ empresaId }) {
                 }
             }
         } catch (err) { mostrarFeedback('Erro de conexao.', 'erro'); }
+    };
+
+    // Baixa manual da mensalidade do ciclo atual — cliente pagou por fora (chave Pix da própria
+    // barbearia, dinheiro no balcão) ou presencialmente atrasado. Fazer isso ANTES de finalizar
+    // o checkout do atendimento do dia já libera o preço de assinante nesse mesmo atendimento
+    // (o backend lê status_assinatura direto do banco no fechamento de caixa).
+    const darBaixaManual = async (cliente) => {
+        setLoadingId(cliente.id + 'baixa');
+        try {
+            const res = await fetch(`${API_URL}/admin/clientes/${cliente.id}/assinatura/baixa-manual`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ forma_pagamento: baixaFormaPagamento, observacoes: baixaObservacoes || null })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                mostrarFeedback(`Mensalidade de ${cliente.nome_completo} dada como paga.`);
+                setMostrarBaixaManual(false);
+                setBaixaObservacoes('');
+                carregarClientes();
+                if (clienteSelecionado?.id === cliente.id) {
+                    setClienteSelecionado(prev => ({ ...prev, status_assinatura: 'em_dia' }));
+                }
+            } else {
+                mostrarFeedback(data.error || 'Erro ao registrar a baixa.', 'erro');
+            }
+        } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
+        setLoadingId(null);
+    };
+
+    // Cobrança/lembrete sob demanda — Pix gera um QR novo (mostrado aqui mesmo pro admin
+    // repassar ou o cliente escanear na hora), cartão só reenvia lembrete (Mercado Pago não
+    // aceita cobrança avulsa de preapproval fora do ciclo).
+    const cobrarAgora = async (cliente) => {
+        setLoadingId(cliente.id + 'cobrar');
+        try {
+            const res = await fetch(`${API_URL}/admin/clientes/${cliente.id}/assinatura/cobrar-agora`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                if (data.forma_pagamento === 'pix') {
+                    mostrarFeedback(`Pix gerado e enviado por e-mail/WhatsApp para ${cliente.nome_completo}.`);
+                } else {
+                    mostrarFeedback(`Lembrete de mensalidade enviado para ${cliente.nome_completo}.`);
+                }
+            } else {
+                mostrarFeedback(data.error || 'Erro ao cobrar agora.', 'erro');
+            }
+        } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
+        setLoadingId(null);
     };
 
     const salvarEdicao = async () => {
@@ -450,7 +502,7 @@ function AdminClientes({ empresaId }) {
                                     </td>
                                     <td style={{ ...s.td, textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                            <button onClick={() => { setClienteSelecionado({ ...c, telefone: formatarTelefone(c.telefone || '') }); setSugestaoIA(''); }} style={s.btnIcone} title="Editar">
+                                            <button onClick={() => { setClienteSelecionado({ ...c, telefone: formatarTelefone(c.telefone || '') }); setSugestaoIA(''); setMostrarBaixaManual(false); setBaixaObservacoes(''); }} style={s.btnIcone} title="Editar">
                                                 <Icons.Edit color="#4b5563" />
                                             </button>
                                             <button
@@ -631,6 +683,65 @@ function AdminClientes({ empresaId }) {
                                             <option key={p.id} value={p.id}>{p.nome} · R$ {parseFloat(p.preco).toFixed(2).replace('.', ',')}/mês</option>
                                         ))}
                                     </select>
+                                </div>
+                            )}
+
+                            {!!clienteSelecionado.assinante && !!clienteSelecionado.plano_id && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                        <span style={{
+                                            fontSize: '11px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px',
+                                            backgroundColor: clienteSelecionado.status_assinatura === 'inadimplente' ? '#fee2e2' : '#d1fae5',
+                                            color: clienteSelecionado.status_assinatura === 'inadimplente' ? '#991b1b' : '#065f46'
+                                        }}>
+                                            {clienteSelecionado.status_assinatura === 'inadimplente' ? 'Mensalidade em atraso' : 'Mensalidade em dia'}
+                                        </span>
+                                        <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                            Cobrança automática: {clienteSelecionado.assinatura_forma_pagamento === 'pix' ? 'Pix' : clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? 'Cartão' : 'não configurada (presencial)'}
+                                        </span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                        <button
+                                            onClick={() => setMostrarBaixaManual(v => !v)}
+                                            style={{ ...s.btnFollowUp, backgroundColor: '#eff6ff', color: '#1d4ed8' }}
+                                        >
+                                            Dar baixa manual
+                                        </button>
+                                        <LoadingButton
+                                            loading={loadingId === clienteSelecionado.id + 'cobrar'}
+                                            onClick={() => cobrarAgora(clienteSelecionado)}
+                                            style={{ ...s.btnFollowUp, backgroundColor: '#fff7ed', color: '#c2410c', border: 'none' }}
+                                        >
+                                            Cobrar agora
+                                        </LoadingButton>
+                                    </div>
+
+                                    {mostrarBaixaManual && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px' }}>
+                                            <label style={s.label}>Forma de pagamento</label>
+                                            <select style={{ ...s.inputModal, cursor: 'pointer' }} value={baixaFormaPagamento} onChange={e => setBaixaFormaPagamento(e.target.value)}>
+                                                <option value='dinheiro'>Dinheiro</option>
+                                                <option value='pix'>Pix (chave da barbearia)</option>
+                                                <option value='cartao'>Cartão (fora do Mercado Pago)</option>
+                                                <option value='outro'>Outro</option>
+                                            </select>
+                                            <label style={s.label}>Observações (opcional)</label>
+                                            <textarea
+                                                style={{ ...s.inputModal, minHeight: '50px', resize: 'vertical' }}
+                                                value={baixaObservacoes}
+                                                onChange={e => setBaixaObservacoes(e.target.value)}
+                                                placeholder="Ex: pago no balcão junto com o corte de hoje"
+                                            />
+                                            <LoadingButton
+                                                loading={loadingId === clienteSelecionado.id + 'baixa'}
+                                                onClick={() => darBaixaManual(clienteSelecionado)}
+                                                style={s.btnSalvarModal}
+                                            >
+                                                Confirmar baixa
+                                            </LoadingButton>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

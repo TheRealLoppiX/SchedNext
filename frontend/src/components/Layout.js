@@ -16,7 +16,7 @@ function Layout({ setEmpresaId }) {
   const location = useLocation();
 
   const [etapaPrivacidade, setEtapaPrivacidade] = useState(1);
-  const [dadosAssinante, setDadosAssinante] = useState({ assinante: false, plano_nome: '' });
+  const [dadosAssinante, setDadosAssinante] = useState({ assinante: false, plano_nome: '', inadimplente: false });
   const [empresaTenant, setEmpresaTenant] = useState(null);
   // Controla se o slug da URL já foi confirmado como uma empresa de verdade — sem isso, um
   // navegador com sessão de cliente salva de OUTRA empresa conseguia abrir /:slug/barbeiros de
@@ -108,9 +108,13 @@ function Layout({ setEmpresaId }) {
                 if (assData.assinante && assData.plano_id) {
                   const resPlano = await fetch(`${API_URL}/assinaturas/plano/${assData.plano_id}`);
                   const planoData = await resPlano.json();
-                  setDadosAssinante({ assinante: true, plano_nome: planoData.nome || 'Assinante' });
+                  setDadosAssinante({
+                    assinante: true,
+                    plano_nome: planoData.nome || 'Assinante',
+                    inadimplente: assData.status_assinatura === 'inadimplente'
+                  });
                 } else {
-                  setDadosAssinante({ assinante: false, plano_nome: '' });
+                  setDadosAssinante({ assinante: false, plano_nome: '', inadimplente: false });
                 }
               } catch(e) {}
             }
@@ -263,8 +267,10 @@ function Layout({ setEmpresaId }) {
              <p style={s.nomeTexto}>{dados?.nome_completo || 'Carregando...'}</p>
              {!isAdminPath && dadosAssinante.assinante && (
                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', marginTop: '-8px', marginBottom: '8px' }}>
-                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"></path><path d="M11 3L8 9l4 13 4-13-3-6"></path><line x1="2" y1="9" x2="22" y2="9"></line></svg>
-                 <span style={{ fontSize: '11px', fontWeight: '700', color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{dadosAssinante.plano_nome}</span>
+                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={dadosAssinante.inadimplente ? '#dc2626' : '#6d28d9'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"></path><path d="M11 3L8 9l4 13 4-13-3-6"></path><line x1="2" y1="9" x2="22" y2="9"></line></svg>
+                 <span style={{ fontSize: '11px', fontWeight: '700', color: dadosAssinante.inadimplente ? '#dc2626' : '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                   {dadosAssinante.inadimplente ? 'Mensalidade em atraso' : dadosAssinante.plano_nome}
+                 </span>
                </div>
              )}
              <nav style={s.nav}>
