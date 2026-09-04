@@ -33,6 +33,7 @@ function AdminClientes({ empresaId }) {
     const [mostrarBaixaManual, setMostrarBaixaManual] = useState(false);
     const [baixaFormaPagamento, setBaixaFormaPagamento] = useState('dinheiro');
     const [baixaObservacoes, setBaixaObservacoes] = useState('');
+    const [pixAssinaturaInfo, setPixAssinaturaInfo] = useState(null);
 
     useEffect(() => {
         if (!idEfetivo) return;
@@ -183,15 +184,26 @@ function AdminClientes({ empresaId }) {
 
     // Cobrança/lembrete sob demanda — Pix gera um QR novo (mostrado aqui mesmo pro admin
     // repassar ou o cliente escanear na hora), cartão só reenvia lembrete (Mercado Pago não
-    // aceita cobrança avulsa de preapproval fora do ciclo).
-    const cobrarAgora = async (cliente) => {
+    // aceita cobrança avulsa de preapproval fora do ciclo). formaPagamento='pix' também serve
+    // pra CONFIGURAR a cobrança automática de Pix pela primeira vez (cliente ainda sem nenhuma
+    // forma configurada) — cartão só o próprio cliente configura, pelo perfil dele.
+    const cobrarAgora = async (cliente, formaPagamento) => {
         setLoadingId(cliente.id + 'cobrar');
+        setPixAssinaturaInfo(null);
         try {
-            const res = await fetch(`${API_URL}/admin/clientes/${cliente.id}/assinatura/cobrar-agora`, { method: 'POST' });
+            const res = await fetch(`${API_URL}/admin/clientes/${cliente.id}/assinatura/cobrar-agora`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formaPagamento ? { forma_pagamento: formaPagamento } : {})
+            });
             const data = await res.json();
             if (res.ok) {
                 if (data.forma_pagamento === 'pix') {
+                    setPixAssinaturaInfo({ qr_code: data.qr_code, qr_code_base64: data.qr_code_base64 });
                     mostrarFeedback(`Pix gerado e enviado por e-mail/WhatsApp para ${cliente.nome_completo}.`);
+                    if (clienteSelecionado?.id === cliente.id) {
+                        setClienteSelecionado(prev => ({ ...prev, assinatura_forma_pagamento: 'pix' }));
+                    }
                 } else {
                     mostrarFeedback(`Lembrete de mensalidade enviado para ${cliente.nome_completo}.`);
                 }
@@ -200,6 +212,11 @@ function AdminClientes({ empresaId }) {
             }
         } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
         setLoadingId(null);
+    };
+
+    const copiarCodigoPixAssinatura = () => {
+        if (!pixAssinaturaInfo?.qr_code) return;
+        navigator.clipboard.writeText(pixAssinaturaInfo.qr_code).catch(() => {});
     };
 
     const salvarEdicao = async () => {
@@ -502,7 +519,7 @@ function AdminClientes({ empresaId }) {
                                     </td>
                                     <td style={{ ...s.td, textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                            <button onClick={() => { setClienteSelecionado({ ...c, telefone: formatarTelefone(c.telefone || '') }); setSugestaoIA(''); setMostrarBaixaManual(false); setBaixaObservacoes(''); }} style={s.btnIcone} title="Editar">
+                                            <button onClick={() => { setClienteSelecionado({ ...c, telefone: formatarTelefone(c.telefone || '') }); setSugestaoIA(''); setMostrarBaixaManual(false); setBaixaObservacoes(''); setPixAssinaturaInfo(null); }} style={s.btnIcone} title="Editar">
                                                 <Icons.Edit color="#4b5563" />
                                             </button>
                                             <button
@@ -697,7 +714,7 @@ function AdminClientes({ empresaId }) {
                                             {clienteSelecionado.status_assinatura === 'inadimplente' ? 'Mensalidade em atraso' : 'Mensalidade em dia'}
                                         </span>
                                         <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                                            Cobrança automática: {clienteSelecionado.assinatura_forma_pagamento === 'pix' ? 'Pix' : clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? 'Cartão' : 'não configurada (presencial)'}
+                                            Cobrança automática: {clienteSelecionado.assinatura_forma_pagamento === 'pix' ? 'Pix' : clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? 'Cartão' : 'não configurada (cliente configura pelo próprio perfil, ou gere um Pix abaixo)'}
                                         </span>
                                     </div>
 
@@ -708,14 +725,40 @@ function AdminClientes({ empresaId }) {
                                         >
                                             Dar baixa manual
                                         </button>
-                                        <LoadingButton
-                                            loading={loadingId === clienteSelecionado.id + 'cobrar'}
-                                            onClick={() => cobrarAgora(clienteSelecionado)}
-                                            style={{ ...s.btnFollowUp, backgroundColor: '#fff7ed', color: '#c2410c', border: 'none' }}
-                                        >
-                                            Cobrar agora
-                                        </LoadingButton>
+                                        {clienteSelecionado.assinatura_forma_pagamento ? (
+                                            <LoadingButton
+                                                loading={loadingId === clienteSelecionado.id + 'cobrar'}
+                                                onClick={() => cobrarAgora(clienteSelecionado)}
+                                                style={{ ...s.btnFollowUp, backgroundColor: '#fff7ed', color: '#c2410c', border: 'none' }}
+                                            >
+                                                Cobrar agora
+                                            </LoadingButton>
+                                        ) : (
+                                            <LoadingButton
+                                                loading={loadingId === clienteSelecionado.id + 'cobrar'}
+                                                onClick={() => cobrarAgora(clienteSelecionado, 'pix')}
+                                                style={{ ...s.btnFollowUp, backgroundColor: '#ecfdf5', color: '#059669', border: 'none' }}
+                                            >
+                                                Gerar Pix e configurar cobrança automática
+                                            </LoadingButton>
+                                        )}
                                     </div>
+
+                                    {pixAssinaturaInfo && (
+                                        <div style={{ textAlign: 'center', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px' }}>
+                                            {pixAssinaturaInfo.qr_code_base64 && (
+                                                <img
+                                                    src={`data:image/png;base64,${pixAssinaturaInfo.qr_code_base64}`}
+                                                    alt="QR Code do Pix da assinatura"
+                                                    style={{ width: '160px', maxWidth: '100%', height: 'auto', border: '1px solid #eee', borderRadius: '8px', padding: '6px', background: '#fff' }}
+                                                />
+                                            )}
+                                            <div style={{ marginTop: '8px' }}>
+                                                <button type="button" onClick={copiarCodigoPixAssinatura} style={{ ...s.btnFollowUp, backgroundColor: '#fff' }}>Copiar código Pix</button>
+                                            </div>
+                                            <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#9ca3af' }}>Já enviado por e-mail/WhatsApp pro cliente — dá baixa automaticamente quando for pago.</p>
+                                        </div>
+                                    )}
 
                                     {mostrarBaixaManual && (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px' }}>
@@ -723,8 +766,8 @@ function AdminClientes({ empresaId }) {
                                             <select style={{ ...s.inputModal, cursor: 'pointer' }} value={baixaFormaPagamento} onChange={e => setBaixaFormaPagamento(e.target.value)}>
                                                 <option value='dinheiro'>Dinheiro</option>
                                                 <option value='pix'>Pix (chave da barbearia)</option>
-                                                <option value='cartao'>Cartão (fora do Mercado Pago)</option>
-                                                <option value='outro'>Outro</option>
+                                                <option value='credito'>Cartão de crédito (fora do Mercado Pago)</option>
+                                                <option value='debito'>Cartão de débito (fora do Mercado Pago)</option>
                                             </select>
                                             <label style={s.label}>Observações (opcional)</label>
                                             <textarea
