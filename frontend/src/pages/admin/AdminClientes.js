@@ -17,6 +17,11 @@ function AdminClientes({ empresaId }) {
     const buscaDebounced = useDebouncedValue(busca, 300);
     const [filtro, setFiltro] = useState('todos');
     const [clienteSelecionado, setClienteSelecionado] = useState(null);
+    // Snapshot do que está de fato salvo no banco (plano_id/assinante) — clienteSelecionado é
+    // editado localmente antes de "Salvar Alterações", então usar ele sozinho pra liberar as
+    // ações de cobrança deixava o admin clicar em "Gerar Pix" com um plano só marcado na tela,
+    // ainda não persistido, e o backend recusava com "cliente não tem plano vinculado".
+    const [clienteOriginal, setClienteOriginal] = useState(null);
     useEscToClose(!!clienteSelecionado, () => setClienteSelecionado(null));
     const [loadingId, setLoadingId] = useState(null);
     const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
@@ -187,28 +192,55 @@ function AdminClientes({ empresaId }) {
     // aceita cobrança avulsa de preapproval fora do ciclo). formaPagamento='pix' também serve
     // pra CONFIGURAR a cobrança automática de Pix pela primeira vez (cliente ainda sem nenhuma
     // forma configurada) — cartão só o próprio cliente configura, pelo perfil dele.
-    const cobrarAgora = async (cliente, formaPagamento) => {
-        setLoadingId(cliente.id + 'cobrar');
+    // Gera (ou regenera) uma cobrança Pix real no Mercado Pago pro ciclo atual e mostra o QR
+    // aqui mesmo — ação isolada de "ativar cobrança automática" abaixo de propósito: uma cobra
+    // o ciclo de agora, a outra só decide se os PRÓXIMOS meses vão gerar cobrança sozinhos.
+    const gerarPixAgora = async (cliente) => {
+        setLoadingId(cliente.id + 'pix');
         setPixAssinaturaInfo(null);
         try {
-            const res = await fetch(`${API_URL}/admin/clientes/${cliente.id}/assinatura/cobrar-agora`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formaPagamento ? { forma_pagamento: formaPagamento } : {})
-            });
+            const res = await fetch(`${API_URL}/admin/clientes/${cliente.id}/assinatura/gerar-pix`, { method: 'POST' });
             const data = await res.json();
             if (res.ok) {
-                if (data.forma_pagamento === 'pix') {
-                    setPixAssinaturaInfo({ qr_code: data.qr_code, qr_code_base64: data.qr_code_base64 });
-                    mostrarFeedback(`Pix gerado e enviado por e-mail/WhatsApp para ${cliente.nome_completo}.`);
-                    if (clienteSelecionado?.id === cliente.id) {
-                        setClienteSelecionado(prev => ({ ...prev, assinatura_forma_pagamento: 'pix' }));
-                    }
-                } else {
-                    mostrarFeedback(`Lembrete de mensalidade enviado para ${cliente.nome_completo}.`);
-                }
+                setPixAssinaturaInfo({ qr_code: data.qr_code, qr_code_base64: data.qr_code_base64 });
+                mostrarFeedback(`Pix gerado e enviado por e-mail/WhatsApp para ${cliente.nome_completo}.`);
             } else {
-                mostrarFeedback(data.error || 'Erro ao cobrar agora.', 'erro');
+                mostrarFeedback(data.error || 'Erro ao gerar o Pix.', 'erro');
+            }
+        } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
+        setLoadingId(null);
+    };
+
+    // Só liga a cobrança automática dos próximos ciclos (cron) — não gera cobrança nenhuma
+    // agora. Só Pix pode ser ativado pelo admin; cartão exige o próprio cliente autorizando no
+    // Mercado Pago, pelo perfil dele.
+    const ativarRecorrente = async (cliente) => {
+        setLoadingId(cliente.id + 'ativar');
+        try {
+            const res = await fetch(`${API_URL}/admin/clientes/${cliente.id}/assinatura/ativar-recorrente`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                mostrarFeedback(`Cobrança automática por Pix ativada para ${cliente.nome_completo}.`);
+                setClienteSelecionado(prev => (prev?.id === cliente.id ? { ...prev, assinatura_forma_pagamento: 'pix' } : prev));
+                carregarClientes();
+            } else {
+                mostrarFeedback(data.error || 'Erro ao ativar cobrança automática.', 'erro');
+            }
+        } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
+        setLoadingId(null);
+    };
+
+    // Cobrança de cartão já configurada não aceita reforço avulso (limitação do preapproval do
+    // Mercado Pago) — só reenvia um lembrete por e-mail/WhatsApp.
+    const enviarLembreteCartao = async (cliente) => {
+        setLoadingId(cliente.id + 'lembrete');
+        try {
+            const res = await fetch(`${API_URL}/admin/clientes/${cliente.id}/assinatura/cobrar-agora`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                mostrarFeedback(`Lembrete de mensalidade enviado para ${cliente.nome_completo}.`);
+            } else {
+                mostrarFeedback(data.error || 'Erro ao enviar lembrete.', 'erro');
             }
         } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
         setLoadingId(null);
@@ -519,7 +551,7 @@ function AdminClientes({ empresaId }) {
                                     </td>
                                     <td style={{ ...s.td, textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                            <button onClick={() => { setClienteSelecionado({ ...c, telefone: formatarTelefone(c.telefone || '') }); setSugestaoIA(''); setMostrarBaixaManual(false); setBaixaObservacoes(''); setPixAssinaturaInfo(null); }} style={s.btnIcone} title="Editar">
+                                            <button onClick={() => { setClienteSelecionado({ ...c, telefone: formatarTelefone(c.telefone || '') }); setClienteOriginal(c); setSugestaoIA(''); setMostrarBaixaManual(false); setBaixaObservacoes(''); setPixAssinaturaInfo(null); }} style={s.btnIcone} title="Editar">
                                                 <Icons.Edit color="#4b5563" />
                                             </button>
                                             <button
@@ -705,85 +737,112 @@ function AdminClientes({ empresaId }) {
 
                             {!!clienteSelecionado.assinante && !!clienteSelecionado.plano_id && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                        <span style={{
-                                            fontSize: '11px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px',
-                                            backgroundColor: clienteSelecionado.status_assinatura === 'inadimplente' ? '#fee2e2' : '#d1fae5',
-                                            color: clienteSelecionado.status_assinatura === 'inadimplente' ? '#991b1b' : '#065f46'
-                                        }}>
-                                            {clienteSelecionado.status_assinatura === 'inadimplente' ? 'Mensalidade em atraso' : 'Mensalidade em dia'}
-                                        </span>
-                                        <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                                            Cobrança automática: {clienteSelecionado.assinatura_forma_pagamento === 'pix' ? 'Pix' : clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? 'Cartão' : 'não configurada (cliente configura pelo próprio perfil, ou gere um Pix abaixo)'}
-                                        </span>
-                                    </div>
-
-                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                        <button
-                                            onClick={() => setMostrarBaixaManual(v => !v)}
-                                            style={{ ...s.btnFollowUp, backgroundColor: '#eff6ff', color: '#1d4ed8' }}
-                                        >
-                                            Dar baixa manual
-                                        </button>
-                                        {clienteSelecionado.assinatura_forma_pagamento ? (
-                                            <LoadingButton
-                                                loading={loadingId === clienteSelecionado.id + 'cobrar'}
-                                                onClick={() => cobrarAgora(clienteSelecionado)}
-                                                style={{ ...s.btnFollowUp, backgroundColor: '#fff7ed', color: '#c2410c', border: 'none' }}
-                                            >
-                                                Cobrar agora
-                                            </LoadingButton>
-                                        ) : (
-                                            <LoadingButton
-                                                loading={loadingId === clienteSelecionado.id + 'cobrar'}
-                                                onClick={() => cobrarAgora(clienteSelecionado, 'pix')}
-                                                style={{ ...s.btnFollowUp, backgroundColor: '#ecfdf5', color: '#059669', border: 'none' }}
-                                            >
-                                                Gerar Pix e configurar cobrança automática
-                                            </LoadingButton>
-                                        )}
-                                    </div>
-
-                                    {pixAssinaturaInfo && (
-                                        <div style={{ textAlign: 'center', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px' }}>
-                                            {pixAssinaturaInfo.qr_code_base64 && (
-                                                <img
-                                                    src={`data:image/png;base64,${pixAssinaturaInfo.qr_code_base64}`}
-                                                    alt="QR Code do Pix da assinatura"
-                                                    style={{ width: '160px', maxWidth: '100%', height: 'auto', border: '1px solid #eee', borderRadius: '8px', padding: '6px', background: '#fff' }}
-                                                />
-                                            )}
-                                            <div style={{ marginTop: '8px' }}>
-                                                <button type="button" onClick={copiarCodigoPixAssinatura} style={{ ...s.btnFollowUp, backgroundColor: '#fff' }}>Copiar código Pix</button>
+                                    {!(clienteOriginal?.assinante && clienteOriginal?.plano_id === clienteSelecionado.plano_id) ? (
+                                        <p style={{ margin: 0, fontSize: '12px', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px' }}>
+                                            Clique em "Salvar Alterações" antes de dar baixa ou gerar cobrança — essas ações usam o plano já salvo no cadastro do cliente.
+                                        </p>
+                                    ) : (
+                                        <>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                <span style={{
+                                                    fontSize: '11px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px',
+                                                    backgroundColor: clienteSelecionado.status_assinatura === 'inadimplente' ? '#fee2e2' : '#d1fae5',
+                                                    color: clienteSelecionado.status_assinatura === 'inadimplente' ? '#991b1b' : '#065f46'
+                                                }}>
+                                                    {clienteSelecionado.status_assinatura === 'inadimplente' ? 'Mensalidade em atraso' : 'Mensalidade em dia'}
+                                                </span>
+                                                <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                                    Cobrança automática: {clienteSelecionado.assinatura_forma_pagamento === 'pix' ? 'Pix' : clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? 'Cartão (configurada pelo cliente)' : 'não configurada'}
+                                                </span>
                                             </div>
-                                            <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#9ca3af' }}>Já enviado por e-mail/WhatsApp pro cliente — dá baixa automaticamente quando for pago.</p>
-                                        </div>
-                                    )}
 
-                                    {mostrarBaixaManual && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px' }}>
-                                            <label style={s.label}>Forma de pagamento</label>
-                                            <select style={{ ...s.inputModal, cursor: 'pointer' }} value={baixaFormaPagamento} onChange={e => setBaixaFormaPagamento(e.target.value)}>
-                                                <option value='dinheiro'>Dinheiro</option>
-                                                <option value='pix'>Pix (chave da barbearia)</option>
-                                                <option value='credito'>Cartão de crédito (fora do Mercado Pago)</option>
-                                                <option value='debito'>Cartão de débito (fora do Mercado Pago)</option>
-                                            </select>
-                                            <label style={s.label}>Observações (opcional)</label>
-                                            <textarea
-                                                style={{ ...s.inputModal, minHeight: '50px', resize: 'vertical' }}
-                                                value={baixaObservacoes}
-                                                onChange={e => setBaixaObservacoes(e.target.value)}
-                                                placeholder="Ex: pago no balcão junto com o corte de hoje"
-                                            />
-                                            <LoadingButton
-                                                loading={loadingId === clienteSelecionado.id + 'baixa'}
-                                                onClick={() => darBaixaManual(clienteSelecionado)}
-                                                style={s.btnSalvarModal}
-                                            >
-                                                Confirmar baixa
-                                            </LoadingButton>
-                                        </div>
+                                            {/* Pagamento avulso — cliente já pagou (por fora) ou vai pagar agora via Pix real do
+                                                Mercado Pago. Duas ações distintas de propósito: uma registra o que já aconteceu, a
+                                                outra cobra de verdade. */}
+                                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                                <button
+                                                    onClick={() => setMostrarBaixaManual(v => !v)}
+                                                    style={{ ...s.btnFollowUp, backgroundColor: '#eff6ff', color: '#1d4ed8' }}
+                                                >
+                                                    Dar baixa manual (pagamento por fora)
+                                                </button>
+                                                <LoadingButton
+                                                    loading={loadingId === clienteSelecionado.id + 'pix'}
+                                                    onClick={() => gerarPixAgora(clienteSelecionado)}
+                                                    style={{ ...s.btnFollowUp, backgroundColor: '#ecfdf5', color: '#059669', border: 'none' }}
+                                                >
+                                                    Gerar Pix agora (Mercado Pago)
+                                                </LoadingButton>
+                                            </div>
+
+                                            {/* Cobrança automática dos PRÓXIMOS ciclos — configuração separada de gerar/cobrar uma
+                                                cobrança pontual acima. */}
+                                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                                {!clienteSelecionado.assinatura_forma_pagamento && (
+                                                    <LoadingButton
+                                                        loading={loadingId === clienteSelecionado.id + 'ativar'}
+                                                        onClick={() => ativarRecorrente(clienteSelecionado)}
+                                                        style={{ ...s.btnFollowUp, backgroundColor: '#eef2ff', color: '#4338ca', border: 'none' }}
+                                                    >
+                                                        Ativar cobrança automática por Pix
+                                                    </LoadingButton>
+                                                )}
+                                                {clienteSelecionado.assinatura_forma_pagamento === 'cartao' && (
+                                                    <LoadingButton
+                                                        loading={loadingId === clienteSelecionado.id + 'lembrete'}
+                                                        onClick={() => enviarLembreteCartao(clienteSelecionado)}
+                                                        style={{ ...s.btnFollowUp, backgroundColor: '#fff7ed', color: '#c2410c', border: 'none' }}
+                                                    >
+                                                        Enviar lembrete de cobrança
+                                                    </LoadingButton>
+                                                )}
+                                                {!clienteSelecionado.assinatura_forma_pagamento && (
+                                                    <span style={{ fontSize: '11px', color: '#9ca3af' }}>Cartão automático só o próprio cliente configura, pelo perfil dele.</span>
+                                                )}
+                                            </div>
+
+                                            {pixAssinaturaInfo && (
+                                                <div style={{ textAlign: 'center', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px' }}>
+                                                    {pixAssinaturaInfo.qr_code_base64 && (
+                                                        <img
+                                                            src={`data:image/png;base64,${pixAssinaturaInfo.qr_code_base64}`}
+                                                            alt="QR Code do Pix da assinatura"
+                                                            style={{ width: '160px', maxWidth: '100%', height: 'auto', border: '1px solid #eee', borderRadius: '8px', padding: '6px', background: '#fff' }}
+                                                        />
+                                                    )}
+                                                    <div style={{ marginTop: '8px' }}>
+                                                        <button type="button" onClick={copiarCodigoPixAssinatura} style={{ ...s.btnFollowUp, backgroundColor: '#fff' }}>Copiar código Pix</button>
+                                                    </div>
+                                                    <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#9ca3af' }}>Já enviado por e-mail/WhatsApp pro cliente — dá baixa automaticamente quando for pago.</p>
+                                                </div>
+                                            )}
+
+                                            {mostrarBaixaManual && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px' }}>
+                                                    <label style={s.label}>Forma de pagamento</label>
+                                                    <select style={{ ...s.inputModal, cursor: 'pointer' }} value={baixaFormaPagamento} onChange={e => setBaixaFormaPagamento(e.target.value)}>
+                                                        <option value='dinheiro'>Dinheiro</option>
+                                                        <option value='pix'>Pix (chave da barbearia)</option>
+                                                        <option value='credito'>Cartão de crédito (fora do Mercado Pago)</option>
+                                                        <option value='debito'>Cartão de débito (fora do Mercado Pago)</option>
+                                                    </select>
+                                                    <label style={s.label}>Observações (opcional)</label>
+                                                    <textarea
+                                                        style={{ ...s.inputModal, minHeight: '50px', resize: 'vertical' }}
+                                                        value={baixaObservacoes}
+                                                        onChange={e => setBaixaObservacoes(e.target.value)}
+                                                        placeholder="Ex: pago no balcão junto com o corte de hoje"
+                                                    />
+                                                    <LoadingButton
+                                                        loading={loadingId === clienteSelecionado.id + 'baixa'}
+                                                        onClick={() => darBaixaManual(clienteSelecionado)}
+                                                        style={s.btnSalvarModal}
+                                                    >
+                                                        Confirmar baixa
+                                                    </LoadingButton>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             )}
