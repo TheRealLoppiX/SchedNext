@@ -5,6 +5,7 @@ import { API_URL } from './services/api';
 
 // Importação das Páginas de Cliente
 import Landing from './pages/Landing';
+import Docs from './pages/Docs';
 import CadastroEmpresa from './pages/CadastroEmpresa';
 import Login from './pages/Login';
 import Barbeiros from './pages/Barbeiros';
@@ -79,6 +80,7 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
     <Routes location={{ ...location, pathname: pathnameEfetivo }}>
       {/* ================= ROTAS PÚBLICAS (SEM SIDEBAR) ================= */}
       <Route path="/" element={<Landing />} />
+      <Route path="/docs" element={<Docs />} />
       <Route path="/cadastrar" element={<CadastroEmpresa setEmpresaLogada={setEmpresaId} />} />
 
       {/* As rotas de tenant (/:empresaSlug/...) só existem quando o slug veio de um domínio
