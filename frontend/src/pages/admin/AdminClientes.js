@@ -17,12 +17,8 @@ function AdminClientes({ empresaId }) {
     const buscaDebounced = useDebouncedValue(busca, 300);
     const [filtro, setFiltro] = useState('todos');
     const [clienteSelecionado, setClienteSelecionado] = useState(null);
-    // Snapshot do que está de fato salvo no banco (plano_id/assinante) — clienteSelecionado é
-    // editado localmente antes de "Salvar Alterações", então usar ele sozinho pra liberar as
-    // ações de cobrança deixava o admin clicar em "Gerar Pix" com um plano só marcado na tela,
-    // ainda não persistido, e o backend recusava com "cliente não tem plano vinculado".
-    const [clienteOriginal, setClienteOriginal] = useState(null);
     useEscToClose(!!clienteSelecionado, () => setClienteSelecionado(null));
+    const [aplicandoPlano, setAplicandoPlano] = useState(false);
     const [loadingId, setLoadingId] = useState(null);
     const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
     const [planosDisponiveis, setPlanosDisponiveis] = useState([]);
@@ -104,26 +100,6 @@ function AdminClientes({ empresaId }) {
         setTimeout(() => setMensagem({ texto: '', tipo: '' }), 3500);
     };
 
-    const toggleAssinante = async (cliente) => {
-        setLoadingId(cliente.id);
-        const novoStatus = !cliente.assinante;
-        try {
-            const res = await fetch(`${API_URL}/admin/clientes/${cliente.id}/assinante`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assinante: novoStatus })
-            });
-            if (res.ok) {
-                mostrarFeedback(novoStatus ? `${cliente.nome_completo} ativado como Assinante.` : `${cliente.nome_completo} removido dos assinantes.`);
-                carregarClientes();
-                if (clienteSelecionado?.id === cliente.id) {
-                    setClienteSelecionado(prev => ({ ...prev, assinante: novoStatus ? 1 : 0 }));
-                }
-            }
-        } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
-        setLoadingId(null);
-    };
-
     const enviarFollowUp = async (cliente, tipo, canal = 'email') => {
         setLoadingId(cliente.id + tipo + canal);
         try {
@@ -142,21 +118,47 @@ function AdminClientes({ empresaId }) {
         setLoadingId(null);
     };
 
-    const vincularPlano = async (clienteId, planoId) => {
+    // Vincula/troca/remove o plano do cliente NA HORA (sem esperar "Salvar Alterações") — o
+    // backend deriva assinante_desde e o ciclo de cobrança da presença de plano_id (ver
+    // PUT /admin/clientes/:id/plano em routes/assinaturas.js), então persistir de imediato é o
+    // que libera dar baixa/gerar Pix/ativar recorrência no mesmo momento em que o admin escolhe
+    // o plano, sem o aviso de "salve antes" que existia aqui.
+    const alterarPlano = async (planoId) => {
+        if (!clienteSelecionado) return;
+        setAplicandoPlano(true);
         try {
-            const res = await fetch(`${API_URL}/admin/clientes/${clienteId}/plano`, {
+            const res = await fetch(`${API_URL}/admin/clientes/${clienteSelecionado.id}/plano`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ plano_id: planoId || null })
             });
             if (res.ok) {
-                mostrarFeedback(planoId ? 'Plano vinculado com sucesso.' : 'Assinatura removida.');
-                carregarClientes();
-                if (clienteSelecionado?.id === clienteId) {
-                    setClienteSelecionado(prev => ({ ...prev, plano_id: planoId || null, assinante: planoId ? 1 : 0 }));
-                }
+                mostrarFeedback(planoId ? 'Plano vinculado — assinatura ativa. Já dá pra cobrar.' : 'Assinatura removida.');
+                const resC = await fetch(`${API_URL}/admin/clientes/${idEfetivo}`);
+                const dataC = await resC.json();
+                const listaAtualizada = Array.isArray(dataC) ? dataC : [];
+                setClientes(listaAtualizada);
+                setClienteSelecionado(prev => listaAtualizada.find(c => c.id === prev.id) || prev);
+            } else {
+                const data = await res.json().catch(() => ({}));
+                mostrarFeedback(data.error || 'Erro ao atualizar o plano.', 'erro');
             }
-        } catch (err) { mostrarFeedback('Erro de conexao.', 'erro'); }
+        } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
+        finally { setAplicandoPlano(false); }
+    };
+
+    const enviarLinkCartao = async (cliente) => {
+        setLoadingId(cliente.id + 'linkcartao');
+        try {
+            const res = await fetch(`${API_URL}/admin/clientes/${cliente.id}/assinatura/enviar-link-cartao`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                mostrarFeedback(`Link de cadastro de cartão enviado para ${cliente.nome_completo}.`);
+            } else {
+                mostrarFeedback(data.error || 'Erro ao enviar o link.', 'erro');
+            }
+        } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
+        setLoadingId(null);
     };
 
     // Baixa manual da mensalidade do ciclo atual — cliente pagou por fora (chave Pix da própria
@@ -270,13 +272,6 @@ function AdminClientes({ empresaId }) {
                 })
             });
             if (!res.ok) return mostrarFeedback('Erro ao salvar dados.', 'erro');
-
-            // 2. Salva plano/assinatura (so aplicado ao clicar em Salvar)
-            await fetch(`${API_URL}/admin/clientes/${clienteSelecionado.id}/plano`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plano_id: clienteSelecionado.plano_id || null })
-            });
 
             mostrarFeedback('Cliente atualizado com sucesso.');
             setClienteSelecionado(null);
@@ -548,10 +543,16 @@ function AdminClientes({ empresaId }) {
                                         }}>
                                             {c.assinante ? 'Assinante' : 'Comum'}
                                         </span>
+                                        {c.assinante && (
+                                            <div style={{ marginTop: '5px', fontSize: '11px', fontWeight: '600', color: c.status_assinatura === 'inadimplente' ? '#dc2626' : '#059669' }}>
+                                                {c.status_assinatura === 'inadimplente' ? 'Inadimplente' : 'Em dia'}
+                                                {c.proxima_cobranca && <span style={{ color: '#9ca3af', fontWeight: '500' }}> · próx. {formatarDataSemFuso(c.proxima_cobranca, { somenteDiaMes: true })}</span>}
+                                            </div>
+                                        )}
                                     </td>
                                     <td style={{ ...s.td, textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                            <button onClick={() => { setClienteSelecionado({ ...c, telefone: formatarTelefone(c.telefone || '') }); setClienteOriginal(c); setSugestaoIA(''); setMostrarBaixaManual(false); setBaixaObservacoes(''); setPixAssinaturaInfo(null); }} style={s.btnIcone} title="Editar">
+                                            <button onClick={() => { setClienteSelecionado({ ...c, telefone: formatarTelefone(c.telefone || '') }); setSugestaoIA(''); setMostrarBaixaManual(false); setBaixaObservacoes(''); setPixAssinaturaInfo(null); }} style={s.btnIcone} title="Editar">
                                                 <Icons.Edit color="#4b5563" />
                                             </button>
                                             <button
@@ -688,161 +689,158 @@ function AdminClientes({ empresaId }) {
                             </div>
                         </div>
 
-                        {/* Painel assinatura */}
-                        <div style={{ borderRadius: '10px', padding: '16px', backgroundColor: clienteSelecionado.assinante ? '#faf5ff' : '#f9fafb', border: `1px solid ${clienteSelecionado.assinante ? '#c4b5fd' : '#e5e7eb'}`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <Icons.Diamond color={clienteSelecionado.assinante ? '#6d28d9' : '#9ca3af'} size={18} />
-                                    <div>
-                                        <strong style={{ fontSize: '14px', color: clienteSelecionado.assinante ? '#6d28d9' : '#374151', display: 'block' }}>Plano Assinante</strong>
-                                        <span style={{ fontSize: '12px', color: '#6b7280' }}>{clienteSelecionado.assinante ? 'Ativo' : 'Inativo'}</span>
-                                    </div>
+                        {/* Painel assinatura — escolher um plano abaixo vincula E ativa na hora (persiste
+                            direto no backend); não depende mais de clicar em "Salvar Alterações", então
+                            dar baixa/gerar Pix já funciona no mesmo instante em que o plano é escolhido. */}
+                        <div style={{ borderRadius: '10px', padding: '16px', backgroundColor: clienteSelecionado.plano_id ? '#faf5ff' : '#f9fafb', border: `1px solid ${clienteSelecionado.plano_id ? '#c4b5fd' : '#e5e7eb'}`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Icons.Diamond color={clienteSelecionado.plano_id ? '#6d28d9' : '#9ca3af'} size={18} />
+                                <div>
+                                    <strong style={{ fontSize: '14px', color: clienteSelecionado.plano_id ? '#6d28d9' : '#374151', display: 'block' }}>Plano Assinante</strong>
+                                    <span style={{ fontSize: '12px', color: '#6b7280' }}>{clienteSelecionado.plano_id ? 'Ativo' : 'Inativo'}</span>
                                 </div>
-                                <button
-                                    onClick={() => {
-                                        if (clienteSelecionado.assinante) {
-                                            setClienteSelecionado(prev => ({ ...prev, assinante: 0, plano_id: null }));
-                                            return;
-                                        }
-                                        // O backend deriva "assinante" da presença de plano_id (ver
-                                        // routes/assinaturas.js) — sem um plano escolhido, "Ativar" marcava
-                                        // assinante=1 no state local só pra "Salvar Alterações" enviar
-                                        // plano_id=null, que no servidor não ativa nada: o modal fechava
-                                        // com "Cliente atualizado com sucesso" mas a assinatura nunca saía
-                                        // do papel.
-                                        if (!clienteSelecionado.plano_id) {
-                                            if (planosDisponiveis.length === 0) {
-                                                return mostrarFeedback('Cadastre um plano de assinatura antes de ativar um cliente.', 'erro');
-                                            }
-                                            return mostrarFeedback('Escolha um plano no campo abaixo para ativar a assinatura.', 'erro');
-                                        }
-                                        setClienteSelecionado(prev => ({ ...prev, assinante: 1 }));
-                                    }}
-                                    style={{ padding: '9px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '13px', backgroundColor: clienteSelecionado.assinante ? '#dc2626' : '#6d28d9', color: '#fff' }}
-                                >
-                                    {clienteSelecionado.assinante ? 'Remover' : 'Ativar'}
-                                </button>
                             </div>
-                            {planosDisponiveis.length > 0 && (
+
+                            {planosDisponiveis.length > 0 ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                                     <label style={s.label}>Plano Vinculado</label>
-                                    <select style={{ ...s.inputModal, cursor: 'pointer' }} value={clienteSelecionado.plano_id || ''} onChange={e => setClienteSelecionado(prev => ({ ...prev, plano_id: e.target.value ? Number(e.target.value) : null, assinante: e.target.value ? 1 : 0 }))}>
+                                    <select
+                                        style={{ ...s.inputModal, cursor: 'pointer', opacity: aplicandoPlano ? 0.6 : 1 }}
+                                        value={clienteSelecionado.plano_id || ''}
+                                        disabled={aplicandoPlano}
+                                        onChange={e => alterarPlano(e.target.value ? Number(e.target.value) : null)}
+                                    >
                                         <option value=''>Sem plano (cliente comum)</option>
                                         {planosDisponiveis.map(p => (
                                             <option key={p.id} value={p.id}>{p.nome} · R$ {parseFloat(p.preco).toFixed(2).replace('.', ',')}/mês</option>
                                         ))}
                                     </select>
+                                    <small style={{ fontSize: '11px', color: '#9ca3af' }}>Escolher um plano vincula e ativa a assinatura na hora — já dá pra cobrar em seguida.</small>
                                 </div>
+                            ) : (
+                                <p style={{ margin: 0, fontSize: '12px', color: '#92400e' }}>Cadastre um plano em "Assinaturas" antes de vincular um cliente.</p>
                             )}
 
-                            {!!clienteSelecionado.assinante && !!clienteSelecionado.plano_id && (
+                            {!!clienteSelecionado.plano_id && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
-                                    {!(clienteOriginal?.assinante && clienteOriginal?.plano_id === clienteSelecionado.plano_id) ? (
-                                        <p style={{ margin: 0, fontSize: '12px', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px' }}>
-                                            Clique em "Salvar Alterações" antes de dar baixa ou gerar cobrança — essas ações usam o plano já salvo no cadastro do cliente.
-                                        </p>
-                                    ) : (
-                                        <>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                                <span style={{
-                                                    fontSize: '11px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px',
-                                                    backgroundColor: clienteSelecionado.status_assinatura === 'inadimplente' ? '#fee2e2' : '#d1fae5',
-                                                    color: clienteSelecionado.status_assinatura === 'inadimplente' ? '#991b1b' : '#065f46'
-                                                }}>
-                                                    {clienteSelecionado.status_assinatura === 'inadimplente' ? 'Mensalidade em atraso' : 'Mensalidade em dia'}
-                                                </span>
-                                                <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                                                    Cobrança automática: {clienteSelecionado.assinatura_forma_pagamento === 'pix' ? 'Pix' : clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? 'Cartão (configurada pelo cliente)' : 'não configurada'}
-                                                </span>
-                                            </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                        <span style={{
+                                            fontSize: '11px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px',
+                                            backgroundColor: clienteSelecionado.status_assinatura === 'inadimplente' ? '#fee2e2' : '#d1fae5',
+                                            color: clienteSelecionado.status_assinatura === 'inadimplente' ? '#991b1b' : '#065f46'
+                                        }}>
+                                            {clienteSelecionado.status_assinatura === 'inadimplente' ? 'Mensalidade em atraso' : 'Mensalidade em dia'}
+                                        </span>
+                                        <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                            Cobrança automática: {clienteSelecionado.assinatura_forma_pagamento === 'pix' ? 'Pix' : clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? 'Cartão (configurada pelo cliente)' : 'não configurada'}
+                                        </span>
+                                    </div>
 
-                                            {/* Pagamento avulso — cliente já pagou (por fora) ou vai pagar agora via Pix real do
-                                                Mercado Pago. Duas ações distintas de propósito: uma registra o que já aconteceu, a
-                                                outra cobra de verdade. */}
-                                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                                <button
-                                                    onClick={() => setMostrarBaixaManual(v => !v)}
-                                                    style={{ ...s.btnFollowUp, backgroundColor: '#eff6ff', color: '#1d4ed8' }}
-                                                >
-                                                    Dar baixa manual (pagamento por fora)
-                                                </button>
-                                                <LoadingButton
-                                                    loading={loadingId === clienteSelecionado.id + 'pix'}
-                                                    onClick={() => gerarPixAgora(clienteSelecionado)}
-                                                    style={{ ...s.btnFollowUp, backgroundColor: '#ecfdf5', color: '#059669', border: 'none' }}
-                                                >
-                                                    Gerar Pix agora (Mercado Pago)
-                                                </LoadingButton>
-                                            </div>
+                                    {/* Datas do ciclo — mesma âncora de dia-do-mês usada no cálculo de cota/preço do
+                                        backend (ver proxima_cobranca em routes/clientes.js), só pra deixar visível pro
+                                        admin quando a próxima mensalidade vence. */}
+                                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '12px', color: '#4b5563', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px' }}>
+                                        <span>Assinante desde: <strong>{clienteSelecionado.assinante_desde ? formatarDataSemFuso(clienteSelecionado.assinante_desde) : '—'}</strong></span>
+                                        <span>Próxima cobrança: <strong>{clienteSelecionado.proxima_cobranca ? formatarDataSemFuso(clienteSelecionado.proxima_cobranca) : '—'}</strong></span>
+                                    </div>
 
-                                            {/* Cobrança automática dos PRÓXIMOS ciclos — configuração separada de gerar/cobrar uma
-                                                cobrança pontual acima. */}
-                                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                                {!clienteSelecionado.assinatura_forma_pagamento && (
-                                                    <LoadingButton
-                                                        loading={loadingId === clienteSelecionado.id + 'ativar'}
-                                                        onClick={() => ativarRecorrente(clienteSelecionado)}
-                                                        style={{ ...s.btnFollowUp, backgroundColor: '#eef2ff', color: '#4338ca', border: 'none' }}
-                                                    >
-                                                        Ativar cobrança automática por Pix
-                                                    </LoadingButton>
-                                                )}
-                                                {clienteSelecionado.assinatura_forma_pagamento === 'cartao' && (
-                                                    <LoadingButton
-                                                        loading={loadingId === clienteSelecionado.id + 'lembrete'}
-                                                        onClick={() => enviarLembreteCartao(clienteSelecionado)}
-                                                        style={{ ...s.btnFollowUp, backgroundColor: '#fff7ed', color: '#c2410c', border: 'none' }}
-                                                    >
-                                                        Enviar lembrete de cobrança
-                                                    </LoadingButton>
-                                                )}
-                                                {!clienteSelecionado.assinatura_forma_pagamento && (
-                                                    <span style={{ fontSize: '11px', color: '#9ca3af' }}>Cartão automático só o próprio cliente configura, pelo perfil dele.</span>
-                                                )}
-                                            </div>
+                                    {/* Pagamento avulso — cliente já pagou (por fora) ou vai pagar agora via Pix real do
+                                        Mercado Pago. Duas ações distintas de propósito: uma registra o que já aconteceu, a
+                                        outra cobra de verdade. */}
+                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                        <button
+                                            onClick={() => setMostrarBaixaManual(v => !v)}
+                                            style={{ ...s.btnFollowUp, backgroundColor: '#eff6ff', color: '#1d4ed8' }}
+                                        >
+                                            Dar baixa manual (pagamento por fora)
+                                        </button>
+                                        <LoadingButton
+                                            loading={loadingId === clienteSelecionado.id + 'pix'}
+                                            onClick={() => gerarPixAgora(clienteSelecionado)}
+                                            style={{ ...s.btnFollowUp, backgroundColor: '#ecfdf5', color: '#059669', border: 'none' }}
+                                        >
+                                            Gerar Pix agora (Mercado Pago)
+                                        </LoadingButton>
+                                    </div>
 
-                                            {pixAssinaturaInfo && (
-                                                <div style={{ textAlign: 'center', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px' }}>
-                                                    {pixAssinaturaInfo.qr_code_base64 && (
-                                                        <img
-                                                            src={`data:image/png;base64,${pixAssinaturaInfo.qr_code_base64}`}
-                                                            alt="QR Code do Pix da assinatura"
-                                                            style={{ width: '160px', maxWidth: '100%', height: 'auto', border: '1px solid #eee', borderRadius: '8px', padding: '6px', background: '#fff' }}
-                                                        />
-                                                    )}
-                                                    <div style={{ marginTop: '8px' }}>
-                                                        <button type="button" onClick={copiarCodigoPixAssinatura} style={{ ...s.btnFollowUp, backgroundColor: '#fff' }}>Copiar código Pix</button>
-                                                    </div>
-                                                    <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#9ca3af' }}>Já enviado por e-mail/WhatsApp pro cliente — dá baixa automaticamente quando for pago.</p>
-                                                </div>
+                                    {/* Cobrança automática dos PRÓXIMOS ciclos — configuração separada de gerar/cobrar uma
+                                        cobrança pontual acima. */}
+                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                        {!clienteSelecionado.assinatura_forma_pagamento && (
+                                            <LoadingButton
+                                                loading={loadingId === clienteSelecionado.id + 'ativar'}
+                                                onClick={() => ativarRecorrente(clienteSelecionado)}
+                                                style={{ ...s.btnFollowUp, backgroundColor: '#eef2ff', color: '#4338ca', border: 'none' }}
+                                            >
+                                                Ativar cobrança automática por Pix
+                                            </LoadingButton>
+                                        )}
+                                        {clienteSelecionado.assinatura_forma_pagamento === 'cartao' && (
+                                            <LoadingButton
+                                                loading={loadingId === clienteSelecionado.id + 'lembrete'}
+                                                onClick={() => enviarLembreteCartao(clienteSelecionado)}
+                                                style={{ ...s.btnFollowUp, backgroundColor: '#fff7ed', color: '#c2410c', border: 'none' }}
+                                            >
+                                                Enviar lembrete de cobrança
+                                            </LoadingButton>
+                                        )}
+                                    </div>
+
+                                    {/* Cadastro de cartão exige o dono do cartão autorizando no Mercado Pago — o admin
+                                        não consegue fazer isso por ele, só convidar pro link da área do cliente. */}
+                                    {clienteSelecionado.assinatura_forma_pagamento !== 'cartao' && (clienteSelecionado.telefone || clienteSelecionado.email) && (
+                                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                            <LoadingButton
+                                                loading={loadingId === clienteSelecionado.id + 'linkcartao'}
+                                                onClick={() => enviarLinkCartao(clienteSelecionado)}
+                                                style={{ ...s.btnFollowUp, backgroundColor: '#f0f9ff', color: '#0369a1', border: 'none' }}
+                                            >
+                                                Enviar link para cadastrar cartão
+                                            </LoadingButton>
+                                            <span style={{ fontSize: '11px', color: '#9ca3af' }}>Manda por e-mail e WhatsApp o link da área dele pra cadastrar cartão (ou escolher Pix).</span>
+                                        </div>
+                                    )}
+
+                                    {pixAssinaturaInfo && (
+                                        <div style={{ textAlign: 'center', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px' }}>
+                                            {pixAssinaturaInfo.qr_code_base64 && (
+                                                <img
+                                                    src={`data:image/png;base64,${pixAssinaturaInfo.qr_code_base64}`}
+                                                    alt="QR Code do Pix da assinatura"
+                                                    style={{ width: '160px', maxWidth: '100%', height: 'auto', border: '1px solid #eee', borderRadius: '8px', padding: '6px', background: '#fff' }}
+                                                />
                                             )}
+                                            <div style={{ marginTop: '8px' }}>
+                                                <button type="button" onClick={copiarCodigoPixAssinatura} style={{ ...s.btnFollowUp, backgroundColor: '#fff' }}>Copiar código Pix</button>
+                                            </div>
+                                            <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#9ca3af' }}>Já enviado por e-mail/WhatsApp pro cliente — dá baixa automaticamente quando for pago.</p>
+                                        </div>
+                                    )}
 
-                                            {mostrarBaixaManual && (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px' }}>
-                                                    <label style={s.label}>Forma de pagamento</label>
-                                                    <select style={{ ...s.inputModal, cursor: 'pointer' }} value={baixaFormaPagamento} onChange={e => setBaixaFormaPagamento(e.target.value)}>
-                                                        <option value='dinheiro'>Dinheiro</option>
-                                                        <option value='pix'>Pix (chave da barbearia)</option>
-                                                        <option value='credito'>Cartão de crédito (fora do Mercado Pago)</option>
-                                                        <option value='debito'>Cartão de débito (fora do Mercado Pago)</option>
-                                                    </select>
-                                                    <label style={s.label}>Observações (opcional)</label>
-                                                    <textarea
-                                                        style={{ ...s.inputModal, minHeight: '50px', resize: 'vertical' }}
-                                                        value={baixaObservacoes}
-                                                        onChange={e => setBaixaObservacoes(e.target.value)}
-                                                        placeholder="Ex: pago no balcão junto com o corte de hoje"
-                                                    />
-                                                    <LoadingButton
-                                                        loading={loadingId === clienteSelecionado.id + 'baixa'}
-                                                        onClick={() => darBaixaManual(clienteSelecionado)}
-                                                        style={s.btnSalvarModal}
-                                                    >
-                                                        Confirmar baixa
-                                                    </LoadingButton>
-                                                </div>
-                                            )}
-                                        </>
+                                    {mostrarBaixaManual && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px' }}>
+                                            <label style={s.label}>Forma de pagamento</label>
+                                            <select style={{ ...s.inputModal, cursor: 'pointer' }} value={baixaFormaPagamento} onChange={e => setBaixaFormaPagamento(e.target.value)}>
+                                                <option value='dinheiro'>Dinheiro</option>
+                                                <option value='pix'>Pix (chave da barbearia)</option>
+                                                <option value='credito'>Cartão de crédito (fora do Mercado Pago)</option>
+                                                <option value='debito'>Cartão de débito (fora do Mercado Pago)</option>
+                                            </select>
+                                            <label style={s.label}>Observações (opcional)</label>
+                                            <textarea
+                                                style={{ ...s.inputModal, minHeight: '50px', resize: 'vertical' }}
+                                                value={baixaObservacoes}
+                                                onChange={e => setBaixaObservacoes(e.target.value)}
+                                                placeholder="Ex: pago no balcão junto com o corte de hoje"
+                                            />
+                                            <LoadingButton
+                                                loading={loadingId === clienteSelecionado.id + 'baixa'}
+                                                onClick={() => darBaixaManual(clienteSelecionado)}
+                                                style={s.btnSalvarModal}
+                                            >
+                                                Confirmar baixa
+                                            </LoadingButton>
+                                        </div>
                                     )}
                                 </div>
                             )}
