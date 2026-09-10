@@ -8,6 +8,15 @@ import useDebouncedValue from '../../hooks/useDebouncedValue';
 import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
 
+// 'pendente' é o estado de quem acabou de ser vinculado a um plano mas ainda não teve nenhuma
+// cobrança confirmada (baixa manual ou pagamento real) — ver PUT /admin/clientes/:id/plano no
+// backend. Trata-lo como "Em dia" seria mostrar o cliente pagando sem nenhuma baixa de verdade.
+function infoStatusAssinatura(status) {
+    if (status === 'inadimplente') return { label: 'Inadimplente', labelLonga: 'Mensalidade em atraso', cor: '#dc2626', bg: '#fee2e2', fg: '#991b1b' };
+    if (status === 'em_dia') return { label: 'Em dia', labelLonga: 'Mensalidade em dia', cor: '#059669', bg: '#d1fae5', fg: '#065f46' };
+    return { label: 'Pendente', labelLonga: 'Aguardando 1ª cobrança — sem benefício de assinante ainda', cor: '#b45309', bg: '#fef3c7', fg: '#92400e' };
+}
+
 function AdminClientes({ empresaId }) {
     const confirmar = useConfirm();
     const idEfetivo = empresaId || localStorage.getItem('empresaId');
@@ -544,8 +553,8 @@ function AdminClientes({ empresaId }) {
                                             {c.assinante ? 'Assinante' : 'Comum'}
                                         </span>
                                         {c.assinante && (
-                                            <div style={{ marginTop: '5px', fontSize: '11px', fontWeight: '600', color: c.status_assinatura === 'inadimplente' ? '#dc2626' : '#059669' }}>
-                                                {c.status_assinatura === 'inadimplente' ? 'Inadimplente' : 'Em dia'}
+                                            <div style={{ marginTop: '5px', fontSize: '11px', fontWeight: '600', color: infoStatusAssinatura(c.status_assinatura).cor }}>
+                                                {infoStatusAssinatura(c.status_assinatura).label}
                                                 {c.proxima_cobranca && <span style={{ color: '#9ca3af', fontWeight: '500' }}> · próx. {formatarDataSemFuso(c.proxima_cobranca, { somenteDiaMes: true })}</span>}
                                             </div>
                                         )}
@@ -726,15 +735,20 @@ function AdminClientes({ empresaId }) {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                         <span style={{
                                             fontSize: '11px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px',
-                                            backgroundColor: clienteSelecionado.status_assinatura === 'inadimplente' ? '#fee2e2' : '#d1fae5',
-                                            color: clienteSelecionado.status_assinatura === 'inadimplente' ? '#991b1b' : '#065f46'
+                                            backgroundColor: infoStatusAssinatura(clienteSelecionado.status_assinatura).bg,
+                                            color: infoStatusAssinatura(clienteSelecionado.status_assinatura).fg
                                         }}>
-                                            {clienteSelecionado.status_assinatura === 'inadimplente' ? 'Mensalidade em atraso' : 'Mensalidade em dia'}
+                                            {infoStatusAssinatura(clienteSelecionado.status_assinatura).labelLonga}
                                         </span>
                                         <span style={{ fontSize: '12px', color: '#6b7280' }}>
                                             Cobrança automática: {clienteSelecionado.assinatura_forma_pagamento === 'pix' ? 'Pix' : clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? 'Cartão (configurada pelo cliente)' : 'não configurada'}
                                         </span>
                                     </div>
+                                    {clienteSelecionado.status_assinatura !== 'em_dia' && clienteSelecionado.status_assinatura !== 'inadimplente' && (
+                                        <p style={{ margin: 0, fontSize: '11px', color: '#92400e' }}>
+                                            O cliente só passa a valer o preço/cota de assinante depois de uma baixa real — dê baixa manual, gere um Pix (e aguarde o pagamento) ou ative a cobrança automática.
+                                        </p>
+                                    )}
 
                                     {/* Datas do ciclo — mesma âncora de dia-do-mês usada no cálculo de cota/preço do
                                         backend (ver proxima_cobranca em routes/clientes.js), só pra deixar visível pro

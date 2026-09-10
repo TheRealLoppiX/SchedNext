@@ -129,6 +129,10 @@ function Assinatura() {
   const cobrancaAtivaPix = formaConfigurada === 'pix' && statusAssinatura !== 'inadimplente';
   const cobrancaAtiva = cobrancaAtivaCartao || cobrancaAtivaPix;
   const inadimplente = statusAssinatura === 'inadimplente';
+  // Recém-vinculado pelo admin, ainda sem nenhuma cobrança confirmada (ver PUT
+  // /admin/clientes/:id/plano no backend) — não é "assinante em dia" nem "em atraso", é um
+  // estado à parte: o benefício do plano (preço/cota) só libera com uma baixa real.
+  const pendente = statusAssinatura === 'pendente';
 
   return (
     <div style={styles.body}>
@@ -144,8 +148,9 @@ function Assinatura() {
             <div style={styles.card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <strong style={{ fontSize: '18px' }}>{plano?.nome || 'Seu plano'}</strong>
-                {assinante && !inadimplente && <span style={styles.badgeAtivo}>Assinante</span>}
+                {assinante && statusAssinatura === 'em_dia' && <span style={styles.badgeAtivo}>Assinante</span>}
                 {assinante && inadimplente && <span style={styles.badgeInadimplente}>Mensalidade em atraso</span>}
+                {assinante && pendente && <span style={styles.badgePendente}>Aguardando 1º pagamento</span>}
               </div>
               {plano?.preco != null && (
                 <p style={{ margin: '8px 0 0', fontSize: '15px', color: '#374151' }}>R$ {Number(plano.preco).toFixed(2)}/mês</p>
@@ -156,6 +161,14 @@ function Assinatura() {
               <div style={{ ...styles.card, marginTop: '16px', background: '#fef2f2', border: '1px solid #fecaca' }}>
                 <p style={{ margin: 0, fontSize: '13px', color: '#991b1b' }}>
                   Não identificamos o pagamento da sua mensalidade. Enquanto isso, o preço e a cota do seu plano ficam suspensos — regularize abaixo ou diretamente com o estabelecimento.
+                </p>
+              </div>
+            )}
+
+            {pendente && (
+              <div style={{ ...styles.card, marginTop: '16px', background: '#fffbeb', border: '1px solid #fde68a' }}>
+                <p style={{ margin: 0, fontSize: '13px', color: '#92400e' }}>
+                  Seu plano foi vinculado, mas ainda não identificamos nenhum pagamento. O preço e a cota de assinante só liberam depois da primeira mensalidade confirmada — configure a cobrança abaixo ou pague diretamente com o estabelecimento.
                 </p>
               </div>
             )}
@@ -238,6 +251,7 @@ const styles = {
   card: { backgroundColor: '#f9fafb', padding: '18px', borderRadius: '12px', border: '1px solid #f0f0f0' },
   badgeAtivo: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', backgroundColor: '#d1fae5', color: '#065f46' },
   badgeInadimplente: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', backgroundColor: '#fee2e2', color: '#991b1b' },
+  badgePendente: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', backgroundColor: '#fef3c7', color: '#92400e' },
   formaPagamentoRow: { display: 'flex', gap: '8px', marginBottom: '14px' },
   btnForma: { flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid #d1d5db', background: '#fff', color: '#374151', fontWeight: '600', fontSize: '13px', cursor: 'pointer' },
   btnFormaAtiva: { border: '1px solid #2554eb', background: '#eef2ff', color: '#2554eb' },
