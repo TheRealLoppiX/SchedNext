@@ -778,15 +778,17 @@ function AdminClientes({ empresaId }) {
                                     </div>
 
                                     {/* Cobrança automática dos PRÓXIMOS ciclos — configuração separada de gerar/cobrar uma
-                                        cobrança pontual acima. */}
+                                        cobrança pontual acima. Fica disponível mesmo com forma_pagamento='cartao' já
+                                        marcado (ver comentário em ativar-recorrente no backend) — sem isso, um cliente
+                                        com cadastro de cartão parado/expirado não tinha como o admin trocar pra Pix. */}
                                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                        {!clienteSelecionado.assinatura_forma_pagamento && (
+                                        {clienteSelecionado.assinatura_forma_pagamento !== 'pix' && (
                                             <LoadingButton
                                                 loading={loadingId === clienteSelecionado.id + 'ativar'}
                                                 onClick={() => ativarRecorrente(clienteSelecionado)}
                                                 style={{ ...s.btnFollowUp, backgroundColor: '#eef2ff', color: '#4338ca', border: 'none' }}
                                             >
-                                                Ativar cobrança automática por Pix
+                                                {clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? 'Trocar para cobrança automática por Pix' : 'Ativar cobrança automática por Pix'}
                                             </LoadingButton>
                                         )}
                                         {clienteSelecionado.assinatura_forma_pagamento === 'cartao' && (
