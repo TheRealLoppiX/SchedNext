@@ -14,7 +14,7 @@ import { API_URL } from '../../services/api';
 function infoStatusAssinatura(status) {
     if (status === 'inadimplente') return { label: 'Inadimplente', labelLonga: 'Mensalidade em atraso', cor: '#dc2626', bg: '#fee2e2', fg: '#991b1b' };
     if (status === 'em_dia') return { label: 'Em dia', labelLonga: 'Mensalidade em dia', cor: '#059669', bg: '#d1fae5', fg: '#065f46' };
-    return { label: 'Pendente', labelLonga: 'Aguardando 1ª cobrança — sem benefício de assinante ainda', cor: '#b45309', bg: '#fef3c7', fg: '#92400e' };
+    return { label: 'Pendente', labelLonga: 'Aguardando 1ª cobrança, sem benefício de assinante ainda', cor: '#b45309', bg: '#fef3c7', fg: '#92400e' };
 }
 
 function AdminClientes({ empresaId }) {
@@ -142,7 +142,7 @@ function AdminClientes({ empresaId }) {
                 body: JSON.stringify({ plano_id: planoId || null })
             });
             if (res.ok) {
-                mostrarFeedback(planoId ? 'Plano vinculado — assinatura ativa. Já dá pra cobrar.' : 'Assinatura removida.');
+                mostrarFeedback(planoId ? 'Plano vinculado, assinatura ativa. Já dá pra cobrar.' : 'Assinatura removida.');
                 const resC = await fetch(`${API_URL}/admin/clientes/${idEfetivo}`);
                 const dataC = await resC.json();
                 const listaAtualizada = Array.isArray(dataC) ? dataC : [];
@@ -631,13 +631,13 @@ function AdminClientes({ empresaId }) {
                                                 title={`${riscoFaltas.faltas} de ${riscoFaltas.total} atendimentos passados cancelados ou sem comparecimento (${riscoFaltas.percentual}%)`}
                                                 style={{ ...s.badgeAssinante, backgroundColor: riscoFaltas.risco === 'alto' ? '#fef2f2' : '#fffbeb', color: riscoFaltas.risco === 'alto' ? '#dc2626' : '#b45309' }}
                                             >
-                                                ⚠️ Risco de falta {riscoFaltas.risco === 'alto' ? 'alto' : 'médio'}
+                                                Risco de falta {riscoFaltas.risco === 'alto' ? 'alto' : 'médio'}
                                             </span>
                                         )}
                                     </div>
                                 </div>
                             </div>
-                            <button onClick={() => setClienteSelecionado(null)} style={s.btnFechar}>✕</button>
+                            <button onClick={() => setClienteSelecionado(null)} style={s.btnFechar}><Icons.Close color="#9ca3af" /></button>
                         </div>
 
                         {/* Stats */}
@@ -724,7 +724,7 @@ function AdminClientes({ empresaId }) {
                                             <option key={p.id} value={p.id}>{p.nome} · R$ {parseFloat(p.preco).toFixed(2).replace('.', ',')}/mês</option>
                                         ))}
                                     </select>
-                                    <small style={{ fontSize: '11px', color: '#9ca3af' }}>Escolher um plano vincula e ativa a assinatura na hora — já dá pra cobrar em seguida.</small>
+                                    <small style={{ fontSize: '11px', color: '#9ca3af' }}>Escolher um plano vincula e ativa a assinatura na hora, já dá pra cobrar em seguida.</small>
                                 </div>
                             ) : (
                                 <p style={{ margin: 0, fontSize: '12px', color: '#92400e' }}>Cadastre um plano em "Assinaturas" antes de vincular um cliente.</p>
@@ -746,7 +746,7 @@ function AdminClientes({ empresaId }) {
                                     </div>
                                     {clienteSelecionado.status_assinatura !== 'em_dia' && clienteSelecionado.status_assinatura !== 'inadimplente' && (
                                         <p style={{ margin: 0, fontSize: '11px', color: '#92400e' }}>
-                                            O cliente só passa a valer o preço/cota de assinante depois de uma baixa real — dê baixa manual, gere um Pix (e aguarde o pagamento) ou ative a cobrança automática.
+                                            O cliente só passa a valer o preço/cota de assinante depois de uma baixa real. Dê baixa manual, gere um Pix (e aguarde o pagamento) ou ative a cobrança automática.
                                         </p>
                                     )}
 
@@ -827,7 +827,7 @@ function AdminClientes({ empresaId }) {
                                             <div style={{ marginTop: '8px' }}>
                                                 <button type="button" onClick={copiarCodigoPixAssinatura} style={{ ...s.btnFollowUp, backgroundColor: '#fff' }}>Copiar código Pix</button>
                                             </div>
-                                            <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#9ca3af' }}>Já enviado por e-mail/WhatsApp pro cliente — dá baixa automaticamente quando for pago.</p>
+                                            <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#9ca3af' }}>Já enviado por e-mail/WhatsApp pro cliente. Dá baixa automaticamente quando for pago.</p>
                                         </div>
                                     )}
 
@@ -863,7 +863,7 @@ function AdminClientes({ empresaId }) {
                         {permiteIA && (
                             <div style={s.cardSugestaoIA}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontWeight: '700', fontSize: '13px', color: '#111827' }}>✨ Sugestão de mensagem com IA</span>
+                                    <span style={{ fontWeight: '700', fontSize: '13px', color: '#111827' }}>Sugestão de mensagem com IA</span>
                                     <button onClick={() => gerarSugestaoFollowUp(clienteSelecionado)} disabled={gerandoSugestao} style={s.btnGerarSugestao}>
                                         {gerandoSugestao ? 'Gerando...' : 'Gerar'}
                                     </button>
@@ -904,6 +904,7 @@ const Icons = {
     Diamond: ({ color, size = 14 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"></path><path d="M11 3L8 9l4 13 4-13-3-6"></path><line x1="2" y1="9" x2="22" y2="9"></line></svg>,
     CheckCircle: ({ color }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>,
     Alert: ({ color }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>,
+    Close: ({ color = 'currentColor', size = 18 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
 };
 
 const s = {

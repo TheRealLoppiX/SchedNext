@@ -179,10 +179,15 @@ function Barbeiros() {
     const valorMedia = parseFloat(media) || 0;
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '15px' }}>
-        <div style={{ color: '#ffc107', fontSize: '18px' }}>
-          {[1, 2, 3, 4, 5].map((estrela) => (
-            <span key={estrela}>{estrela <= Math.round(valorMedia) ? '★' : '☆'}</span>
-          ))}
+        <div style={{ display: 'flex', gap: '2px' }}>
+          {[1, 2, 3, 4, 5].map((estrela) => {
+            const preenchida = estrela <= Math.round(valorMedia);
+            return (
+              <svg key={estrela} width="16" height="16" viewBox="0 0 24 24" fill={preenchida ? '#ffc107' : 'none'} stroke="#ffc107" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+            );
+          })}
         </div>
         <span style={{ fontSize: '13px', color: '#888' }}>{valorMedia > 0 ? valorMedia.toFixed(1) : 'Novo'}</span>
       </div>
@@ -271,7 +276,7 @@ function Barbeiros() {
               <h3 style={s.name}>{b.nome}</h3>
       {isAssinante && (
         <div style={{ background: '#ede9fe', color: '#6d28d9', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '700', marginBottom: '8px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-          💎 Assinante
+          Assinante
         </div>
       )}
               {renderEstrelas(b.media_estrelas)}

@@ -126,7 +126,7 @@ function AdminApiKeys({ empresaId }) {
       </form>
 
       {chaves.length === 0 ? (
-        <EmptyState icon="🔌" title="Nenhuma chave gerada ainda." hint="Gere a primeira chave acima para começar a integrar." />
+        <EmptyState title="Nenhuma chave gerada ainda." hint="Gere a primeira chave acima para começar a integrar." />
       ) : (
         <div style={styles.tabela}>
           {chaves.map((c) => (

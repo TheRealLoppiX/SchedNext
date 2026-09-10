@@ -267,7 +267,7 @@ function AdminWhatsapp() {
         <label style={styles.label}>Mensagem de boas-vindas</label>
         <input
           type="text"
-          placeholder='Ex: "Olá! Bem-vindo à Barbearia do João 💈"'
+          placeholder='Ex: "Olá! Bem-vindo à Barbearia do João"'
           value={botConfig.boasVindas}
           maxLength={300}
           onChange={(e) => setBotConfig((c) => ({ ...c, boasVindas: e.target.value }))}

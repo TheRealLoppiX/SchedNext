@@ -505,13 +505,13 @@ function AbaChaves({ toast, confirmar }) {
                   ))}
                 </select>
 
-                <label style={labelEstilo}>Duração (dias) — ex: 90 para 3 meses</label>
+                <label style={labelEstilo}>Duração (dias), ex: 90 para 3 meses</label>
                 <input type="number" style={inputEstilo} value={form.duracao_dias} onChange={(e) => setForm({ ...form, duracao_dias: e.target.value })} />
 
                 <label style={labelEstilo}>Quantidade de chaves</label>
                 <input type="number" min="1" max="50" style={inputEstilo} value={form.quantidade} onChange={(e) => setForm({ ...form, quantidade: e.target.value })} />
 
-                <label style={labelEstilo}>Prazo para resgatar, em dias (opcional — vazio = sem prazo)</label>
+                <label style={labelEstilo}>Prazo para resgatar, em dias (opcional, vazio = sem prazo)</label>
                 <input type="number" style={inputEstilo} value={form.prazo_resgate_dias} onChange={(e) => setForm({ ...form, prazo_resgate_dias: e.target.value })} />
 
                 <label style={labelEstilo}>Observação (opcional, uso interno)</label>

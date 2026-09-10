@@ -113,14 +113,14 @@ function AdminMercadoPago() {
             <LoadingButton loading={desconectando} onClick={desconectar} style={styles.btnExcluir}>Desconectar</LoadingButton>
           </div>
           <p style={{ margin: '16px 0 0', fontSize: '13px', color: '#6b7280' }}>
-            A SchedNext fica com {taxa}% de cada Pix cobrado (taxa do seu plano atual) — o restante cai direto na sua conta Mercado Pago.
+            A SchedNext fica com {taxa}% de cada Pix cobrado (taxa do seu plano atual). O restante cai direto na sua conta Mercado Pago.
           </p>
         </div>
       ) : (
         <div style={styles.cardForm}>
           <p style={{ margin: '0 0 8px', fontSize: '14px', color: '#374151' }}>Nenhuma conta conectada ainda.</p>
           <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#6b7280' }}>
-            A SchedNext fica com {taxa}% de cada Pix cobrado no seu plano atual — o dinheiro cai direto na sua conta, sem passar pela SchedNext.
+            A SchedNext fica com {taxa}% de cada Pix cobrado no seu plano atual. O dinheiro cai direto na sua conta, sem passar pela SchedNext.
           </p>
           <LoadingButton loading={conectando} onClick={conectar} style={styles.btnCadastrar}>Conectar Mercado Pago</LoadingButton>
         </div>

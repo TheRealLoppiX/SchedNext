@@ -382,7 +382,7 @@ function AdminBarbeiros({ empresaId }) {
             <div style={styles.grid}>
                 {barbeiros.length > 0 ? barbeiros.map(b => (
                     <div key={b.id} style={{...styles.card, borderTop: b.ativo ? '4px solid #059669' : '4px solid #dc2626'}}>
-                        <button onClick={() => deletarBarbeiro(b.id, b.nome)} style={styles.btnXCard} title={`Excluir ${termos.profissional}`}>✕</button>
+                        <button onClick={() => deletarBarbeiro(b.id, b.nome)} style={styles.btnXCard} title={`Excluir ${termos.profissional}`}><Icons.Trash color="#dc2626" /></button>
                         
                         <div style={styles.info}>
                             <div style={styles.avatar}>
@@ -446,7 +446,6 @@ function AdminBarbeiros({ empresaId }) {
                 )) : (
                     <div style={{ gridColumn: '1 / -1', backgroundColor: '#fff', borderRadius: '12px', border: '1px dashed #d1d5db' }}>
                         <EmptyState
-                            icon={termos.emoji}
                             title={`Nenhum ${termos.profissional.toLowerCase()} cadastrado nesta unidade ainda.`}
                             hint="Use o formulário acima para cadastrar o primeiro profissional da equipe."
                         />

@@ -445,7 +445,7 @@ function AdminEstoque({ empresaId }) {
                 )
                 }) : (
                     <tr><td colSpan="5">
-                        <EmptyState icon="📦" title="Nenhum produto cadastrado no estoque." hint="Use o formulário acima para cadastrar o primeiro produto." />
+                        <EmptyState title="Nenhum produto cadastrado no estoque." hint="Use o formulário acima para cadastrar o primeiro produto." />
                     </td></tr>
                 )}
             </tbody>
@@ -524,7 +524,7 @@ function AdminEstoque({ empresaId }) {
         <div style={styles.overlay}>
           <div style={{...styles.modalCard, maxWidth: '850px', width: '95%'}}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{margin: 0, color: '#111827', fontSize: '20px'}}>📄 Relatório de Auditoria</h3>
+                <h3 style={{margin: 0, color: '#111827', fontSize: '20px'}}>Relatório de Auditoria</h3>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <button onClick={exportarParaExcel} style={{...styles.btnPrincipal, background: '#059669', color: '#fff', display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 15px', height: 'auto'}}>
                         <Icons.Download color="#fff" /> Exportar Excel
@@ -532,7 +532,7 @@ function AdminEstoque({ empresaId }) {
                     <button onClick={exportarParaPDF} style={{...styles.btnPrincipal, background: '#dc2626', color: '#fff', display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 15px', height: 'auto'}}>
                         <Icons.FileText color="#fff" /> Exportar PDF
                     </button>
-                    <button onClick={() => setModalRelatorio(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#999', marginLeft: '10px' }}>✕</button>
+                    <button onClick={() => setModalRelatorio(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', marginLeft: '10px', display: 'flex', alignItems: 'center' }}><Icons.Close color="#999" /></button>
                 </div>
             </div>
             
@@ -607,7 +607,8 @@ const Icons = {
   FileText: ({color}) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '6px', verticalAlign: 'text-bottom'}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>,
   UserPlus: ({color}) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '6px', verticalAlign: 'text-bottom'}}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>,
   Search: ({color}) => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
-  Download: ({color}) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+  Download: ({color}) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
+  Close: ({color}) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 };
 
 const styles = {

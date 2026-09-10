@@ -9,22 +9,22 @@ const TERMINOLOGIA = {
   barbearia: {
     profissional: 'Barbeiro', profissionalPlural: 'Barbeiros',
     local: 'Barbearia', artigo: 'a', artigoContraido: 'da',
-    exemploNome: 'Barbearia do João', emoji: '💈'
+    exemploNome: 'Barbearia do João'
   },
   salao: {
     profissional: 'Cabeleireiro', profissionalPlural: 'Cabeleireiros',
     local: 'Salão', artigo: 'o', artigoContraido: 'do',
-    exemploNome: 'Salão da Maria', emoji: '💇'
+    exemploNome: 'Salão da Maria'
   },
   estudio_unhas: {
     profissional: 'Nail Designer', profissionalPlural: 'Nail Designers',
     local: 'Estúdio', artigo: 'o', artigoContraido: 'do',
-    exemploNome: 'Nail Studio da Ana', emoji: '💅'
+    exemploNome: 'Nail Studio da Ana'
   },
   generico: {
     profissional: 'Profissional', profissionalPlural: 'Profissionais',
     local: 'Estabelecimento', artigo: 'o', artigoContraido: 'do',
-    exemploNome: 'Meu Negócio', emoji: '📋'
+    exemploNome: 'Meu Negócio'
   }
 };
 

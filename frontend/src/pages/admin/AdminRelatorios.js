@@ -372,7 +372,7 @@ function AdminRelatorios({ empresaId }) {
 
       <div style={styles.secao}>
         <h3 style={styles.secaoTitulo}>Taxas de maquineta</h3>
-        <p style={{ ...styles.vazio, marginBottom: '14px' }}>Percentual descontado por forma de pagamento, usado só para calcular a receita líquida abaixo — não muda o que o cliente paga.</p>
+        <p style={{ ...styles.vazio, marginBottom: '14px' }}>Percentual descontado por forma de pagamento, usado só para calcular a receita líquida abaixo. Não muda o que o cliente paga.</p>
         <div style={styles.gridTaxas}>
           {[
             { chave: 'dinheiro', rotulo: 'Dinheiro' },
@@ -546,7 +546,7 @@ function AdminRelatorios({ empresaId }) {
           {ia.disponivel && (
             <div style={styles.secao}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                <h3 style={{ ...styles.secaoTitulo, margin: 0 }}>✨ Resumo com IA</h3>
+                <h3 style={{ ...styles.secaoTitulo, margin: 0 }}>Resumo com IA</h3>
                 <LoadingButton loading={ia.gerando} onClick={gerarResumoIA} style={styles.btnExportar}>
                   {ia.texto ? 'Gerar de novo' : 'Gerar resumo'}
                 </LoadingButton>

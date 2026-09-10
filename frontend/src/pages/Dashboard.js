@@ -166,7 +166,7 @@ function AgendamentosView({ userId }) {
 
   return (
     <div>
-      <h2 style={styles.titulo}>🗓️ Meus Agendamentos</h2>
+      <h2 style={styles.titulo}>Meus Agendamentos</h2>
 
       {/* --- MODAL DE CANCELAMENTO PROFISSIONAL --- */}
       {modalCancelamento.aberto && (
@@ -208,11 +208,13 @@ function AgendamentosView({ userId }) {
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', margin: '20px 0' }}>
               {[1, 2, 3, 4, 5].map((num) => (
                 <span key={num}
-                  style={{ fontSize: '40px', cursor: 'pointer', color: (hoverEmoji || notaEmoji) >= num ? '#ffc107' : '#e4e5e9' }}
+                  style={{ cursor: 'pointer', color: (hoverEmoji || notaEmoji) >= num ? '#ffc107' : '#e4e5e9', display: 'inline-flex' }}
                   onMouseEnter={() => setHoverEmoji(num)}
                   onMouseLeave={() => setHoverEmoji(0)}
                   onClick={() => setNotaEmoji(num)}
-                >★</span>
+                >
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill={(hoverEmoji || notaEmoji) >= num ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                </span>
               ))}
             </div>
             <textarea
@@ -261,9 +263,9 @@ function AgendamentosView({ userId }) {
               <div style={{ textAlign: 'right' }}>
                 {podeAvaliar ? (
                   ag.ja_avaliado > 0 ? (
-                    <span style={{ color: '#28a745', fontSize: '13px', fontWeight: 'bold' }}>✅ Avaliado</span>
+                    <span style={{ color: '#28a745', fontSize: '13px', fontWeight: 'bold' }}>Avaliado</span>
                   ) : (
-                    <button onClick={() => abrirModalAvaliacao(ag)} style={styles.btnAvaliar}>⭐ Avaliar</button>
+                    <button onClick={() => abrirModalAvaliacao(ag)} style={styles.btnAvaliar}>Avaliar</button>
                   )
                 ) : (
                   (!ehPassado && ag.status !== 'cancelado') ? (
@@ -345,7 +347,12 @@ function DadosView() {
       
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
         <div style={styles.fotoGrande}>
-          {form.foto_url ? <img src={form.foto_url} style={styles.imgFull} alt="Perfil" /> : "👤"}
+          {form.foto_url ? <img src={form.foto_url} style={styles.imgFull} alt="Perfil" /> : (
+            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          )}
         </div>
         <button 
           onClick={() => setEditando(true)}
@@ -460,7 +467,7 @@ function PrivacidadeView({ userId, emailAtual }) {
 
   return (
     <div>
-      <h2 style={styles.titulo}>🔒 Segurança da Conta</h2>
+      <h2 style={styles.titulo}>Segurança da Conta</h2>
       
       {passo === 1 ? (
         <div style={{ padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
@@ -786,7 +793,7 @@ function AgendamentosAdminView({ empresaId }) {
 
   return (
     <div>
-      <h2 style={styles.titulo}>📅 Gestão de Agendamentos</h2>
+      <h2 style={styles.titulo}>Gestão de Agendamentos</h2>
       
       {/* Filtros */}
       <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>

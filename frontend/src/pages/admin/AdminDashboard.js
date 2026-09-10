@@ -296,8 +296,12 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
           )}
 
           {filtroPeriodo !== '' && (
-            <button onClick={limparFiltros} style={styles.btnLimparFiltro} title="Voltar a ver todos os agendamentos, sem filtro de período">
-              ✕ Limpar filtro
+            <button onClick={limparFiltros} style={{ ...styles.btnLimparFiltro, display: 'inline-flex', alignItems: 'center', gap: '5px' }} title="Voltar a ver todos os agendamentos, sem filtro de período">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+              Limpar filtro
             </button>
           )}
         </div>
@@ -329,7 +333,7 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
       {permiteIA && (
         <div style={styles.cardResumoIA}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-            <span style={{ fontWeight: '700', color: '#111827' }}>✨ Resumo executivo com IA</span>
+            <span style={{ fontWeight: '700', color: '#111827' }}>Resumo executivo com IA</span>
             <button onClick={gerarResumoIA} disabled={gerandoResumo} style={styles.btnGerarResumo}>
               {gerandoResumo ? 'Gerando...' : resumoIA ? 'Gerar de novo' : 'Gerar resumo'}
             </button>

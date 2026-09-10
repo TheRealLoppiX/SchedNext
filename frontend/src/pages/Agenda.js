@@ -374,7 +374,11 @@ function Agenda() {
     <div style={styles.body}>
       <div style={styles.notificacaoContainer}>
         <div onClick={toggleNotificacoes} style={styles.sininhoIcon}>
-          🔔 {notificacoes.filter(n => !n.lida).length > 0 && (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          {notificacoes.filter(n => !n.lida).length > 0 && (
             <span style={styles.badge}>{notificacoes.filter(n => !n.lida).length}</span>
           )}
         </div>
@@ -525,12 +529,16 @@ function Agenda() {
                     disabled={noCarrinho}
                     style={{...styles.addBtn, background: noCarrinho ? '#e0e0e0' : 'linear-gradient(135deg, #4c74f0, #2554eb)', color: noCarrinho ? '#999' : '#ffffff'}}
                   >
-                    {noCarrinho ? '✓' : 'Adicionar'}
+                    {noCarrinho ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    ) : 'Adicionar'}
                   </button>
                 </div>
                 {esgotado && (
                   <p style={{margin: 0, fontSize: '11px', color: '#92400e', lineHeight: 1.4}}>
-                    Você já usou todos os {s.nome.toLowerCase()} inclusos no seu plano este mês — esse aqui entra à parte, por R$ {parseFloat(s.valor).toFixed(2).replace('.',',')}.
+                    Você já usou todos os {s.nome.toLowerCase()} inclusos no seu plano este mês. Esse aqui entra à parte, por R$ {parseFloat(s.valor).toFixed(2).replace('.',',')}.
                   </p>
                 )}
                 {risco && (
@@ -544,7 +552,7 @@ function Agenda() {
         </div>
 
         <div style={styles.cartBox}>
-          <h4 style={styles.cartTitle}>🛒 Resumo:</h4>
+          <h4 style={styles.cartTitle}>Resumo:</h4>
           {carrinho.map((item, index) => {
             const serv = servicos.find(s => String(s.id) === String(item.id));
             const noPlano = isAssinante && servicosPlano.includes(item.id);
@@ -555,7 +563,12 @@ function Agenda() {
                   {noPlano && <span style={{background:'#ede9fe',color:'#6d28d9',fontSize:'10px',fontWeight:'700',padding:'1px 6px',borderRadius:'4px'}}>Incluso na assinatura</span>}
                   {isAssinante && !noPlano && <span style={{fontSize:'12px',color:'#6b7280'}}>R$ {parseFloat(serv?.valor||0).toFixed(2).replace('.',',')}</span>}
                 </div>
-                <button onClick={() => setCarrinho(carrinho.filter((_, i) => i !== index))} style={styles.removeBtn}>✕</button>
+                <button onClick={() => setCarrinho(carrinho.filter((_, i) => i !== index))} style={styles.removeBtn}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
               </div>
             );
           })}
@@ -592,7 +605,7 @@ function Agenda() {
 
         {erroConflito && (
           <p style={{ fontSize: '13px', color: '#991b1b', margin: '0 0 10px 0', textAlign: 'left' }}>
-            ⚠️ {erroConflito}
+            {erroConflito}
           </p>
         )}
 
@@ -613,11 +626,11 @@ function Agenda() {
         {pixInfo && (
           <div style={styles.pixBox}>
             {pixInfo.pago ? (
-              <p style={{ margin: 0, textAlign: 'center', color: '#166534', fontWeight: '700', fontSize: '14px' }}>✅ Pagamento recebido!</p>
+              <p style={{ margin: 0, textAlign: 'center', color: '#166534', fontWeight: '700', fontSize: '14px' }}>Pagamento recebido.</p>
             ) : pixInfo.falhou ? (
               <div style={{ textAlign: 'center' }}>
-                <p style={{ margin: 0, color: '#991b1b', fontWeight: '700', fontSize: '14px' }}>⚠️ Não foi possível confirmar o pagamento.</p>
-                <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#6b7280' }}>Seu agendamento continua reservado — combine o pagamento diretamente com o estabelecimento.</p>
+                <p style={{ margin: 0, color: '#991b1b', fontWeight: '700', fontSize: '14px' }}>Não foi possível confirmar o pagamento.</p>
+                <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#6b7280' }}>Seu agendamento continua reservado. Combine o pagamento diretamente com o estabelecimento.</p>
               </div>
             ) : (
               <div style={{ textAlign: 'center' }}>

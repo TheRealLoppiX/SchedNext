@@ -130,7 +130,7 @@ function Assinatura() {
   const cobrancaAtiva = cobrancaAtivaCartao || cobrancaAtivaPix;
   const inadimplente = statusAssinatura === 'inadimplente';
   // Recém-vinculado pelo admin, ainda sem nenhuma cobrança confirmada (ver PUT
-  // /admin/clientes/:id/plano no backend) — não é "assinante em dia" nem "em atraso", é um
+  // /admin/clientes/:id/plano no backend). Não é "assinante em dia" nem "em atraso", é um
   // estado à parte: o benefício do plano (preço/cota) só libera com uma baixa real.
   const pendente = statusAssinatura === 'pendente';
 
@@ -160,7 +160,7 @@ function Assinatura() {
             {inadimplente && (
               <div style={{ ...styles.card, marginTop: '16px', background: '#fef2f2', border: '1px solid #fecaca' }}>
                 <p style={{ margin: 0, fontSize: '13px', color: '#991b1b' }}>
-                  Não identificamos o pagamento da sua mensalidade. Enquanto isso, o preço e a cota do seu plano ficam suspensos — regularize abaixo ou diretamente com o estabelecimento.
+                  Não identificamos o pagamento da sua mensalidade. Enquanto isso, o preço e a cota do seu plano ficam suspensos. Regularize abaixo, no cartão ou no Pix, ou diretamente com o estabelecimento.
                 </p>
               </div>
             )}
@@ -168,7 +168,7 @@ function Assinatura() {
             {pendente && (
               <div style={{ ...styles.card, marginTop: '16px', background: '#fffbeb', border: '1px solid #fde68a' }}>
                 <p style={{ margin: 0, fontSize: '13px', color: '#92400e' }}>
-                  Seu plano foi vinculado, mas ainda não identificamos nenhum pagamento. O preço e a cota de assinante só liberam depois da primeira mensalidade confirmada — configure a cobrança abaixo ou pague diretamente com o estabelecimento.
+                  Seu plano foi vinculado, mas ainda não identificamos nenhum pagamento. O preço e a cota de assinante só liberam depois da primeira mensalidade confirmada. Escolha Cartão ou Pix logo abaixo pra cadastrar a cobrança agora, ou pague diretamente com o estabelecimento.
                 </p>
               </div>
             )}
@@ -178,17 +178,17 @@ function Assinatura() {
               {cobrancaAtiva && !inadimplente ? (
                 <>
                   <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#059669', fontWeight: '600' }}>
-                    ✅ Ativa por {formaConfigurada === 'pix' ? 'Pix' : 'cartão'} — {formaConfigurada === 'pix' ? 'você recebe um Pix novo por e-mail e WhatsApp todo mês.' : 'seu cartão é cobrado automaticamente todo mês.'}
+                    Ativa por {formaConfigurada === 'pix' ? 'Pix' : 'cartão'}: {formaConfigurada === 'pix' ? 'você recebe um Pix novo por e-mail e WhatsApp todo mês.' : 'seu cartão é cobrado automaticamente todo mês.'}
                   </p>
                   <LoadingButton loading={processando} onClick={cancelar} style={styles.btnCancelar}>Cancelar cobrança automática</LoadingButton>
                 </>
               ) : pixInfo ? (
                 <div style={styles.pixBox}>
                   {pixInfo.pago ? (
-                    <p style={{ margin: 0, textAlign: 'center', color: '#166534', fontWeight: '700', fontSize: '14px' }}>✅ Pagamento recebido!</p>
+                    <p style={{ margin: 0, textAlign: 'center', color: '#166534', fontWeight: '700', fontSize: '14px' }}>Pagamento recebido.</p>
                   ) : pixInfo.falhou ? (
                     <div style={{ textAlign: 'center' }}>
-                      <p style={{ margin: 0, color: '#991b1b', fontWeight: '700', fontSize: '14px' }}>⚠️ Não foi possível confirmar o pagamento.</p>
+                      <p style={{ margin: 0, color: '#991b1b', fontWeight: '700', fontSize: '14px' }}>Não foi possível confirmar o pagamento.</p>
                       <LoadingButton loading={processando} onClick={() => setPixInfo(null)} style={{ ...styles.btnAssinar, marginTop: '10px' }}>Gerar novo Pix</LoadingButton>
                     </div>
                   ) : (
@@ -213,7 +213,7 @@ function Assinatura() {
                   <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#6b7280' }}>
                     {inadimplente
                       ? 'Regularize sua mensalidade por cartão ou Pix, ou combine o pagamento diretamente com o estabelecimento.'
-                      : 'Ainda não tem cobrança automática configurada. Assine pra não precisar combinar o pagamento por fora todo mês — é opcional, a primeira mensalidade pode ser paga presencialmente.'}
+                      : 'Ainda não tem cobrança automática configurada. Assine pra não precisar combinar o pagamento por fora todo mês. É opcional, a primeira mensalidade pode ser paga presencialmente.'}
                   </p>
                   <div style={styles.formaPagamentoRow}>
                     <button

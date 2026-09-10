@@ -236,7 +236,7 @@ function AdminUnidades({ empresaId }) {
       </form>
 
       {unidades.length === 0 ? (
-        <EmptyState icon="🏢" title="Nenhuma unidade cadastrada ainda." hint="Cadastre a primeira unidade acima." />
+        <EmptyState title="Nenhuma unidade cadastrada ainda." hint="Cadastre a primeira unidade acima." />
       ) : (
         <div style={styles.grid}>
           {unidades.map((u) => (

@@ -129,14 +129,14 @@ function AdminAcoes() {
     return (
         <div className="admin-page-container" style={s.container}>
             <header style={s.header}>
-                <h2 style={s.title}>⭐ Ações & Fidelidade</h2>
+                <h2 style={s.title}>Ações & Fidelidade</h2>
                 <p style={s.subtitle}>Crie campanhas sazonais e programe prêmios para reter clientes.</p>
             </header>
 
             {permiteIA && (
                 <div style={s.card}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                        <h3 style={{ ...s.cardTitle, margin: 0 }}>✨ Sugestão de campanha com IA</h3>
+                        <h3 style={{ ...s.cardTitle, margin: 0 }}>Sugestão de campanha com IA</h3>
                         <LoadingButton loading={gerandoSugestao} onClick={gerarSugestaoCampanha} style={s.btnPrincipal}>
                             {sugestaoIA ? 'Gerar outra' : 'Sugerir campanha'}
                         </LoadingButton>
@@ -229,9 +229,6 @@ function AdminAcoes() {
                         {/* Preview do prêmio */}
                         {form.premio_selecionado && (
                             <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ fontSize: '18px' }}>
-                                    {form.tipo_premio === 'servico' ? '🎟️' : form.tipo_premio === 'produto' ? '🎁' : '💰'}
-                                </span>
                                 <div>
                                     <span style={{ fontSize: '12px', color: '#6b7280', display: 'block' }}>O cliente vai ganhar:</span>
                                     <strong style={{ color: '#065f46', fontSize: '14px' }}>
@@ -268,7 +265,6 @@ function AdminAcoes() {
                         ) : campanhas.length === 0 ? (
                             <tr><td colSpan={6}>
                                 <EmptyState
-                                    icon="⭐"
                                     title="Nenhuma ação de fidelidade cadastrada ainda."
                                     hint="Use o formulário acima para lançar a primeira campanha."
                                 />

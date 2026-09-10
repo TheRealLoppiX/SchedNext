@@ -398,7 +398,7 @@ function AdminConta({ empresaId }) {
 
                                 {assinatura.plano_pendente && (
                                     <div style={styles.avisoCancelamento}>
-                                        Troca para o plano <strong>{assinatura.plano_pendente.nome}</strong> aguardando confirmação do pagamento. Seus recursos atuais continuam valendo normalmente até lá — se você já pagou e o plano não ativou em alguns minutos, fale com o suporte.
+                                        Troca para o plano <strong>{assinatura.plano_pendente.nome}</strong> aguardando confirmação do pagamento. Seus recursos atuais continuam valendo normalmente até lá. Se você já pagou e o plano não ativou em alguns minutos, fale com o suporte.
                                     </div>
                                 )}
 

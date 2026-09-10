@@ -216,7 +216,7 @@ function GestaoServicos({ empresaId }) {
                   disabled={gerandoDescricao}
                   style={styles.btnGerarIA}
                 >
-                  {gerandoDescricao ? 'Gerando...' : '✨ Gerar com IA'}
+                  {gerandoDescricao ? 'Gerando...' : 'Gerar com IA'}
                 </button>
               </div>
               <textarea

@@ -182,7 +182,12 @@ function CadastroEmpresa({ setEmpresaLogada }) {
               required
             />
             {statusSlug.checando && <p style={{ fontSize: '12px', color: 'var(--bb-text-muted)' }}>Checando disponibilidade...</p>}
-            {!statusSlug.checando && statusSlug.disponivel === true && <p style={{ fontSize: '12px', color: 'var(--bb-success)' }}>✓ Disponível</p>}
+            {!statusSlug.checando && statusSlug.disponivel === true && (
+              <p style={{ fontSize: '12px', color: 'var(--bb-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Disponível
+              </p>
+            )}
             {!statusSlug.checando && statusSlug.disponivel === false && <p style={{ fontSize: '12px', color: 'var(--bb-danger)' }}>{statusSlug.motivo || 'Indisponível'}</p>}
 
             <input
