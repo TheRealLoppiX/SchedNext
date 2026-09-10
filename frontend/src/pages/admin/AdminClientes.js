@@ -801,17 +801,23 @@ function AdminClientes({ empresaId }) {
                                     </div>
 
                                     {/* Cadastro de cartão exige o dono do cartão autorizando no Mercado Pago — o admin
-                                        não consegue fazer isso por ele, só convidar pro link da área do cliente. */}
-                                    {clienteSelecionado.assinatura_forma_pagamento !== 'cartao' && (clienteSelecionado.telefone || clienteSelecionado.email) && (
+                                        não consegue fazer isso por ele, só convidar pro link. Fica disponível mesmo com
+                                        assinatura_forma_pagamento='cartao' já marcado: esse campo vira 'cartao' assim
+                                        que o link é gerado, antes mesmo de o cliente autorizar — sem isso, um link que
+                                        expirou ou nunca foi aberto não tinha como ser reenviado (o botão sumia e só
+                                        sobrava "Enviar lembrete de cobrança", que só aponta pra área do cliente, não
+                                        gera um link novo). Cada clique cria uma autorização nova no Mercado Pago; a
+                                        anterior, se não usada, só fica órfã por lá. */}
+                                    {(clienteSelecionado.telefone || clienteSelecionado.email) && (
                                         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                                             <LoadingButton
                                                 loading={loadingId === clienteSelecionado.id + 'linkcartao'}
                                                 onClick={() => enviarLinkCartao(clienteSelecionado)}
                                                 style={{ ...s.btnFollowUp, backgroundColor: '#f0f9ff', color: '#0369a1', border: 'none' }}
                                             >
-                                                Enviar link para cadastrar cartão
+                                                {clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? 'Reenviar link para cadastrar cartão' : 'Enviar link para cadastrar cartão'}
                                             </LoadingButton>
-                                            <span style={{ fontSize: '11px', color: '#9ca3af' }}>Manda por e-mail e WhatsApp o link da área dele pra cadastrar cartão (ou escolher Pix).</span>
+                                            <span style={{ fontSize: '11px', color: '#9ca3af' }}>Manda por e-mail e WhatsApp o link da área dele pra cadastrar cartão (ou escolher Pix). Use se o cliente perdeu o link ou ele expirou.</span>
                                         </div>
                                     )}
 
