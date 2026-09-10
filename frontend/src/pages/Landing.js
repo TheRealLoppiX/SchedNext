@@ -225,6 +225,7 @@ function Landing() {
           <a href="#recursos" className="ln-nav-link ln-nav-scroll" style={s.linkHeader}>Recursos</a>
           <a href="#planos" className="ln-nav-link ln-nav-scroll" style={s.linkHeader}>Planos</a>
           <a href="#faq" className="ln-nav-link ln-nav-scroll" style={s.linkHeader}>FAQ</a>
+          <Link to="/docs" className="ln-nav-link ln-nav-scroll" style={s.linkHeader}>Documentação</Link>
           <Link to="/admin/login" className="ln-nav-link" style={s.linkHeader}>Entrar</Link>
           <Link to="/cadastrar" className="ln-cta-primary" style={s.btnHeader}>Criar conta grátis</Link>
         </nav>
@@ -436,6 +437,7 @@ function Landing() {
           <div>
             <h4 style={s.footerTitulo}>Empresa</h4>
             <a href="#faq" style={s.footerLink}>FAQ</a>
+            <Link to="/docs" style={s.footerLink}>Documentação</Link>
             <Link to="/admin/login" style={s.footerLink}>Entrar</Link>
           </div>
           <div>

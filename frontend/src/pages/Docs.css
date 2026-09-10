@@ -1,0 +1,181 @@
+/* Documentação (/docs) — mesma paleta escura da Landing, layout de duas colunas
+   (índice fixo + conteúdo). Ver Landing.css pros efeitos de scroll/hover compartilhados
+   (ln-nav-link, ln-cta-primary etc, reaproveitados aqui). */
+
+.doc-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 48px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 48px 24px 100px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .doc-layout { grid-template-columns: 1fr; padding: 32px 18px 70px; }
+  .doc-sidebar { position: static !important; max-height: none !important; order: 2; }
+  .doc-conteudo { order: 1; }
+}
+
+.doc-sidebar {
+  position: sticky;
+  top: 90px;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.doc-sidebar::-webkit-scrollbar { width: 6px; }
+.doc-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+.doc-nav-grupo { margin-bottom: 22px; }
+.doc-nav-grupo-titulo {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: rgba(255,255,255,0.4);
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+
+.doc-nav-link {
+  display: block;
+  padding: 6px 10px;
+  margin: 2px 0;
+  border-radius: 7px;
+  color: rgba(255,255,255,0.72);
+  text-decoration: none;
+  font-size: 13.5px;
+  border-left: 2px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.doc-nav-link:hover { background: rgba(255,255,255,0.05); color: #fff; }
+.doc-nav-link.doc-nav-ativo {
+  color: #fff;
+  background: rgba(76,116,240,0.14);
+  border-left-color: #4c74f0;
+  font-weight: 600;
+}
+
+.doc-secao {
+  scroll-margin-top: 90px;
+  padding-bottom: 46px;
+  margin-bottom: 46px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.doc-secao:last-child { border-bottom: none; }
+
+.doc-secao h2 {
+  font-size: 24px;
+  color: #fff;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.doc-secao-eyebrow {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #4c74f0;
+  margin: 0 0 8px;
+}
+.doc-secao > p.doc-intro {
+  color: rgba(255,255,255,0.66);
+  font-size: 15px;
+  margin: 0 0 22px;
+  max-width: 680px;
+}
+
+.doc-secao h3 {
+  font-size: 16px;
+  color: #fff;
+  margin: 26px 0 8px;
+}
+
+.doc-secao p, .doc-secao li {
+  color: rgba(255,255,255,0.72);
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+.doc-secao ul, .doc-secao ol { padding-left: 20px; margin: 8px 0 16px; }
+.doc-secao li { margin-bottom: 6px; }
+
+.doc-secao a { color: #7c9dfb; text-decoration: underline; text-underline-offset: 2px; }
+.doc-secao a:hover { color: #a8c0ff; }
+
+.doc-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin: 14px 0;
+}
+
+.doc-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+
+.doc-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.doc-badge-pro { background: rgba(76,116,240,0.18); color: #a8c0ff; }
+.doc-badge-ent { background: rgba(224,41,62,0.18); color: #ff9aa6; }
+.doc-badge-todos { background: rgba(74,222,128,0.15); color: #86efac; }
+
+.doc-tabela-wrap { overflow-x: auto; margin: 16px 0; }
+.doc-tabela { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 560px; }
+.doc-tabela th, .doc-tabela td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.75);
+}
+.doc-tabela th { color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; background: rgba(255,255,255,0.03); }
+.doc-tabela td:first-child, .doc-tabela th:first-child { color: #fff; font-weight: 600; }
+
+.doc-passo {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.doc-passo-num {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(76,116,240,0.18);
+  color: #a8c0ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.doc-hero {
+  text-align: center;
+  padding: 90px 20px 20px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.doc-hero h1 { font-size: clamp(28px, 4vw, 40px); color: #fff; margin: 0 0 12px; }
+.doc-hero p { color: rgba(255,255,255,0.65); font-size: 16px; margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-nav-link, .doc-sidebar { transition: none !important; }
+}
