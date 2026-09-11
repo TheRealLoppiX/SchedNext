@@ -208,7 +208,7 @@ function AdminRelatorios({ empresaId }) {
     linhas.push(`Variação vs período anterior (%),${relatorio.resumo.variacao_faturamento_pct}`);
     linhas.push(`Taxa de clientes recorrentes (%),${relatorio.recorrencia ? relatorio.recorrencia.taxa_recorrencia_pct : ''}`);
     linhas.push('');
-    linhas.push(`Faturamento por ${LABEL_AGRUPAMENTO[agrupamento]}`);
+    linhas.push(tituloFaturamentoPorPeriodo);
     linhas.push('Período,Faturamento,Quantidade');
     relatorio.serie_diaria.forEach((d) => linhas.push(`${formatarRotuloPeriodo(d.data, agrupamento)},${d.faturamento},${d.quantidade}`));
     linhas.push('');
@@ -283,7 +283,7 @@ function AdminRelatorios({ empresaId }) {
     };
 
     const faturamentoDiarioHtml = tabela(
-      `Faturamento por ${LABEL_AGRUPAMENTO[agrupamento]}`,
+      tituloFaturamentoPorPeriodo,
       ['Período', 'Faturamento', 'Qtd'],
       relatorio.serie_diaria.map((d) => [formatarRotuloPeriodo(d.data, agrupamento), formatarMoeda(d.faturamento), d.quantidade])
     );
@@ -365,6 +365,9 @@ function AdminRelatorios({ empresaId }) {
   const maiorFaturamentoProfissional = relatorio ? Math.max(1, ...relatorio.top_profissionais.map((p) => p.faturamento)) : 1;
   const variacao = relatorio?.resumo?.variacao_faturamento_pct ?? 0;
   const nomesServicosFiltrados = servicosDisponiveis.filter((sv) => servicosSelecionados.includes(sv.id)).map((sv) => sv.nome).join(', ');
+  // Título da série de faturamento (tela, CSV e PDF) — com filtro de serviço ativo, deixa explícito
+  // ali mesmo qual serviço está sendo mostrado, não só na linha de período lá em cima do relatório.
+  const tituloFaturamentoPorPeriodo = `Faturamento por ${LABEL_AGRUPAMENTO[agrupamento]}${nomesServicosFiltrados ? ` — ${nomesServicosFiltrados}` : ''}`;
 
   return (
     <div className="admin-page-container" style={styles.container}>
@@ -408,9 +411,14 @@ function AdminRelatorios({ empresaId }) {
             </button>
           )}
         </div>
-        <button onClick={() => { carregarComissionamento(); gerarRelatorio(); }} disabled={gerando} style={{ ...styles.btnGerar, flex: '1 1 200px', minWidth: '200px' }}>
-          {gerando ? 'Gerando...' : 'Aplicar'}
-        </button>
+        <div style={{ flex: '1 1 200px', minWidth: '200px' }}>
+          {/* Rótulo fantasma — alinha o topo do botão com o topo dos inputs dos campos ao lado
+              (que têm um rótulo visível ocupando essa mesma faixa antes do próprio input). */}
+          <label style={{ ...styles.label, visibility: 'hidden' }}>Aplicar</label>
+          <button onClick={() => { carregarComissionamento(); gerarRelatorio(); }} disabled={gerando} style={{ ...styles.btnGerar, width: '100%', boxSizing: 'border-box' }}>
+            {gerando ? 'Gerando...' : 'Aplicar'}
+          </button>
+        </div>
         {/* Linha própria (flex-basis 100%) de propósito — dividir espaço com os campos de data/
             select acima cortava o texto dos checkboxes em telas menores (nowrap + item flex
             encolhendo abaixo do conteúdo). Aqui cada checkbox tem a largura toda da barra pra
@@ -612,7 +620,7 @@ function AdminRelatorios({ empresaId }) {
           </div>
 
           <div style={styles.secao}>
-            <h3 style={styles.secaoTitulo}>Faturamento por {LABEL_AGRUPAMENTO[agrupamento]}</h3>
+            <h3 style={styles.secaoTitulo}>{tituloFaturamentoPorPeriodo}</h3>
             {relatorio.serie_diaria.length === 0 ? (
               <p style={styles.vazio}>Nenhum atendimento concluído nesse período.</p>
             ) : (
@@ -704,7 +712,11 @@ const styles = {
   title: { fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 5px 0' },
   subtitle: { color: '#6b7280', fontSize: '15px', marginBottom: '25px' },
   upsell: { padding: '20px', backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px dashed #d1d5db' },
-  filtros: { display: 'flex', gap: '14px', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '24px', backgroundColor: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #f3f4f6', overflow: 'hidden' },
+  // alignItems 'flex-start' de propósito — com 'flex-end' o campo "Serviços" (mais alto que os
+  // outros por causa do select multiple + "Limpar seleção") empurrava só o próprio rótulo pra
+  // cima, desalinhando com os rótulos dos campos vizinhos. Com 'flex-start' todo mundo alinha
+  // pelo topo (rótulo), que é o que os olhos comparam primeiro numa barra de filtros.
+  filtros: { display: 'flex', gap: '14px', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '24px', backgroundColor: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #f3f4f6', overflow: 'hidden' },
   label: { display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '600' },
   checkboxLabel: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#374151', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
   input: { padding: '8px 8px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', width: 'calc(100% - 6px)', maxWidth: '100%', boxSizing: 'border-box' },
