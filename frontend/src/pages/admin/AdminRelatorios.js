@@ -236,8 +236,8 @@ function AdminRelatorios({ empresaId }) {
     linhas.push(`Receita líquida,${relatorio.resumo.receita_liquida}`);
     linhas.push(`Ticket médio,${relatorio.resumo.ticket_medio}`);
     linhas.push(`Atendimentos concluídos,${relatorio.resumo.quantidade_concluidos}`);
-    linhas.push(`Taxa de descontos de maquineta (%),${relatorio.resumo.descontos_pct}`);
-    linhas.push(`Descontos de maquineta (R$),${relatorio.resumo.descontos_valor}`);
+    linhas.push(`Descontos e taxas (%),${relatorio.resumo.descontos_pct}`);
+    linhas.push(`Descontos e taxas (R$),${relatorio.resumo.descontos_valor}`);
     linhas.push(`Variação vs período anterior (%),${relatorio.resumo.variacao_faturamento_pct}`);
     linhas.push(`Taxa de clientes recorrentes (%),${relatorio.recorrencia ? relatorio.recorrencia.taxa_recorrencia_pct : ''}`);
     linhas.push('');
@@ -302,7 +302,7 @@ function AdminRelatorios({ empresaId }) {
       ['Receita líquida', formatarMoeda(relatorio.resumo.receita_liquida)],
       ['Ticket médio', formatarMoeda(relatorio.resumo.ticket_medio)],
       ['Atendimentos concluídos', relatorio.resumo.quantidade_concluidos],
-      ['Descontos de maquineta', `${relatorio.resumo.descontos_pct}% (${formatarMoeda(relatorio.resumo.descontos_valor)})`]
+      ['Descontos e taxas', `${relatorio.resumo.descontos_pct}% (${formatarMoeda(relatorio.resumo.descontos_valor)})`]
     ];
     if (relatorio.avancado) {
       cards.push(['Variação vs período anterior', `${variacao >= 0 ? '+' : ''}${variacao}%`]);
@@ -701,7 +701,7 @@ function AdminRelatorios({ empresaId }) {
               <span style={styles.cardValor}>{relatorio.resumo.quantidade_concluidos}</span>
             </div>
             <div style={styles.card}>
-              <span style={styles.cardLabel}>Taxa de descontos (maquineta)</span>
+              <span style={styles.cardLabel}>Descontos e taxas</span>
               <span style={styles.cardValor}>{relatorio.resumo.descontos_pct}%</span>
               <span style={styles.cardVariacao}>{formatarMoeda(relatorio.resumo.descontos_valor)} descontados</span>
             </div>
