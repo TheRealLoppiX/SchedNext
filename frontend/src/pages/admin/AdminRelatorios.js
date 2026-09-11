@@ -29,6 +29,16 @@ function formatarDataHora(iso) {
   return `${dia}/${mes} ${hora}:${minuto}`;
 }
 
+const LABEL_AGRUPAMENTO = { dia: 'dia', mes: 'mês', ano: 'ano' };
+
+// Cada item de serie_diaria vem com `data` no formato do agrupamento escolhido: 'YYYY-MM-DD'
+// (dia), 'YYYY-MM' (mês) ou 'YYYY' (ano) — ver chaveAgrupamento em routes/relatorios.js.
+function formatarRotuloPeriodo(data, agrupamento) {
+  if (agrupamento === 'ano') return data;
+  if (agrupamento === 'mes') return `${data.slice(5, 7)}/${data.slice(0, 4)}`;
+  return `${data.slice(8, 10)}/${data.slice(5, 7)}`;
+}
+
 function AdminRelatorios({ empresaId }) {
   const toast = useToast();
   const [carregando, setCarregando] = useState(true);
@@ -38,6 +48,12 @@ function AdminRelatorios({ empresaId }) {
   const [dataInicio, setDataInicio] = useState(inicioDoMes());
   const [dataFim, setDataFim] = useState(formatarDataLocal(new Date()));
   const [ia, setIa] = useState({ disponivel: false, gerando: false, texto: '' });
+
+  // Filtros opcionais estilo BI (Power BI/Tableau): granularidade do gráfico de faturamento e
+  // duas seções que podem ser ligadas/desligadas tanto na tela quanto na exportação.
+  const [agrupamento, setAgrupamento] = useState('dia');
+  const [mostrarComissionamento, setMostrarComissionamento] = useState(true);
+  const [mostrarDetalhamento, setMostrarDetalhamento] = useState(true);
 
   // Taxas de maquineta e comissionamento não são exclusivos do plano Enterprise — são
   // necessidade operacional básica de qualquer negócio com equipe (ver PENDENCIAS.md).
@@ -122,9 +138,12 @@ function AdminRelatorios({ empresaId }) {
 
   const carregarComissionamento = useCallback(async () => {
     if (!idEfetivo) return;
+    // Seção desligada no filtro: nem chama o endpoint (é o cálculo mais pesado do relatório,
+    // com o rateio de assinatura por ciclo — ver routes/relatorios.js).
+    if (!mostrarComissionamento) { setComissionamento(null); setCarregandoComissao(false); return; }
     setCarregandoComissao(true);
     try {
-      const res = await fetch(`${API_URL}/admin/relatorios/comissionamento/${idEfetivo}?dataInicio=${dataInicio}&dataFim=${dataFim}`);
+      const res = await fetch(`${API_URL}/admin/relatorios/comissionamento/${idEfetivo}?dataInicio=${dataInicio}&dataFim=${dataFim}&incluirItens=${mostrarDetalhamento}`);
       const dados = await res.json();
       if (res.ok) setComissionamento(dados);
     } catch (err) {
@@ -132,7 +151,7 @@ function AdminRelatorios({ empresaId }) {
     } finally {
       setCarregandoComissao(false);
     }
-  }, [idEfetivo, dataInicio, dataFim]);
+  }, [idEfetivo, dataInicio, dataFim, mostrarComissionamento, mostrarDetalhamento]);
 
   useEffect(() => { carregarComissionamento(); }, [carregarComissionamento]);
 
@@ -144,7 +163,7 @@ function AdminRelatorios({ empresaId }) {
     setGerando(true);
     setErro('');
     try {
-      const res = await fetch(`${API_URL}/admin/relatorios/${idEfetivo}?dataInicio=${dataInicio}&dataFim=${dataFim}`);
+      const res = await fetch(`${API_URL}/admin/relatorios/${idEfetivo}?dataInicio=${dataInicio}&dataFim=${dataFim}&agrupamento=${agrupamento}`);
       const data = await res.json();
       if (res.ok) {
         setRelatorio(data);
@@ -156,7 +175,7 @@ function AdminRelatorios({ empresaId }) {
     } finally {
       setGerando(false);
     }
-  }, [idEfetivo, dataInicio, dataFim]);
+  }, [idEfetivo, dataInicio, dataFim, agrupamento]);
 
   useEffect(() => { gerarRelatorio(); }, [gerarRelatorio]);
 
@@ -173,11 +192,11 @@ function AdminRelatorios({ empresaId }) {
     linhas.push(`Atendimentos concluídos,${relatorio.resumo.quantidade_concluidos}`);
     linhas.push(`Taxa de cancelamento (%),${relatorio.resumo.taxa_cancelamento}`);
     linhas.push(`Variação vs período anterior (%),${relatorio.resumo.variacao_faturamento_pct}`);
-    linhas.push(`Taxa de clientes recorrentes (%),${relatorio.recorrencia.taxa_recorrencia_pct}`);
+    linhas.push(`Taxa de clientes recorrentes (%),${relatorio.recorrencia ? relatorio.recorrencia.taxa_recorrencia_pct : ''}`);
     linhas.push('');
-    linhas.push('Faturamento por dia');
-    linhas.push('Data,Faturamento,Quantidade');
-    relatorio.serie_diaria.forEach((d) => linhas.push(`${d.data},${d.faturamento},${d.quantidade}`));
+    linhas.push(`Faturamento por ${LABEL_AGRUPAMENTO[agrupamento]}`);
+    linhas.push('Período,Faturamento,Quantidade');
+    relatorio.serie_diaria.forEach((d) => linhas.push(`${formatarRotuloPeriodo(d.data, agrupamento)},${d.faturamento},${d.quantidade}`));
     linhas.push('');
     linhas.push('Top serviços');
     linhas.push('Serviço,Quantidade,Faturamento');
@@ -250,9 +269,9 @@ function AdminRelatorios({ empresaId }) {
     };
 
     const faturamentoDiarioHtml = tabela(
-      'Faturamento por dia',
-      ['Data', 'Faturamento', 'Qtd'],
-      relatorio.serie_diaria.map((d) => [new Date(d.data + 'T00:00:00').toLocaleDateString('pt-BR'), formatarMoeda(d.faturamento), d.quantidade])
+      `Faturamento por ${LABEL_AGRUPAMENTO[agrupamento]}`,
+      ['Período', 'Faturamento', 'Qtd'],
+      relatorio.serie_diaria.map((d) => [formatarRotuloPeriodo(d.data, agrupamento), formatarMoeda(d.faturamento), d.quantidade])
     );
 
     const topServicosHtml = relatorio.avancado ? tabela(
@@ -345,6 +364,24 @@ function AdminRelatorios({ empresaId }) {
           <label style={styles.label}>Até</label>
           <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} style={styles.input} />
         </div>
+        <div style={{ flex: '1 1 150px', minWidth: '150px' }}>
+          <label style={styles.label}>Faturamento por</label>
+          <select value={agrupamento} onChange={(e) => setAgrupamento(e.target.value)} style={{ ...styles.input, cursor: 'pointer' }}>
+            <option value="dia">Dia</option>
+            <option value="mes">Mês</option>
+            <option value="ano">Ano</option>
+          </select>
+        </div>
+        <div style={{ flex: '2 1 320px', minWidth: '280px', display: 'flex', gap: '18px', alignItems: 'center', paddingBottom: '9px' }}>
+          <label style={styles.checkboxLabel}>
+            <input type="checkbox" checked={mostrarComissionamento} onChange={(e) => setMostrarComissionamento(e.target.checked)} />
+            Comissionamento por profissional
+          </label>
+          <label style={{ ...styles.checkboxLabel, opacity: mostrarComissionamento ? 1 : 0.5 }}>
+            <input type="checkbox" checked={mostrarDetalhamento} disabled={!mostrarComissionamento} onChange={(e) => setMostrarDetalhamento(e.target.checked)} />
+            Detalhamento por atendimento
+          </label>
+        </div>
         <button onClick={() => { carregarComissionamento(); gerarRelatorio(); }} disabled={gerando} style={{ ...styles.btnGerar, flex: '1 1 200px', minWidth: '200px' }}>
           {gerando ? 'Gerando...' : 'Aplicar'}
         </button>
@@ -394,6 +431,7 @@ function AdminRelatorios({ empresaId }) {
         <LoadingButton loading={salvandoTaxas} onClick={salvarTaxas} style={{ ...styles.btnGerar, marginTop: '14px' }}>Salvar taxas</LoadingButton>
       </div>
 
+      {mostrarComissionamento && (
       <div style={styles.secao}>
         <h3 style={styles.secaoTitulo}>Comissionamento por profissional</h3>
         {carregandoComissao ? (
@@ -417,14 +455,14 @@ function AdminRelatorios({ empresaId }) {
               <tbody>
                 {comissionamento.profissionais.map((p) => {
                   const chave = p.id ?? p.nome;
-                  const expandido = profissionalExpandido === chave;
+                  const expandido = mostrarDetalhamento && profissionalExpandido === chave;
                   return (
                     <React.Fragment key={chave}>
                       <tr
-                        onClick={() => setProfissionalExpandido(expandido ? null : chave)}
-                        style={{ cursor: 'pointer' }}
+                        onClick={() => mostrarDetalhamento && setProfissionalExpandido(expandido ? null : chave)}
+                        style={{ cursor: mostrarDetalhamento ? 'pointer' : 'default' }}
                       >
-                        <td style={{ ...styles.td, color: '#9ca3af', width: '20px' }}>{expandido ? '▾' : '▸'}</td>
+                        <td style={{ ...styles.td, color: '#9ca3af', width: '20px' }}>{mostrarDetalhamento ? (expandido ? '▾' : '▸') : ''}</td>
                         <td style={styles.td}>{p.nome}</td>
                         <td style={styles.td}>{p.percentual_comissao}%</td>
                         <td style={styles.td}>{p.quantidade}</td>
@@ -484,8 +522,14 @@ function AdminRelatorios({ empresaId }) {
             </table>
           </div>
         )}
-        <p style={{ ...styles.vazio, marginTop: '12px' }}>Clique num profissional pra ver o detalhamento por atendimento. Atendimentos de clientes assinantes entram pela fatia proporcional da mensalidade (valor do plano ÷ visitas no mês), já que o serviço em si sai de graça pro cliente.</p>
+        <p style={{ ...styles.vazio, marginTop: '12px' }}>
+          {mostrarDetalhamento
+            ? 'Clique num profissional pra ver o detalhamento por atendimento. '
+            : 'Ligue "Detalhamento por atendimento" no filtro acima pra poder abrir cada atendimento. '}
+          Atendimentos de clientes assinantes entram pela fatia proporcional da mensalidade (valor do plano ÷ visitas no mês), já que o serviço em si sai de graça pro cliente.
+        </p>
       </div>
+      )}
 
       {erro && <p style={{ color: '#dc2626', fontSize: '14px' }}>{erro}</p>}
 
@@ -528,15 +572,15 @@ function AdminRelatorios({ empresaId }) {
           </div>
 
           <div style={styles.secao}>
-            <h3 style={styles.secaoTitulo}>Faturamento por dia</h3>
+            <h3 style={styles.secaoTitulo}>Faturamento por {LABEL_AGRUPAMENTO[agrupamento]}</h3>
             {relatorio.serie_diaria.length === 0 ? (
               <p style={styles.vazio}>Nenhum atendimento concluído nesse período.</p>
             ) : (
               <div style={styles.grafico}>
                 {relatorio.serie_diaria.map((d) => (
-                  <div key={d.data} style={styles.barraColuna} title={`${d.data}: ${formatarMoeda(d.faturamento)}`}>
+                  <div key={d.data} style={styles.barraColuna} title={`${formatarRotuloPeriodo(d.data, agrupamento)}: ${formatarMoeda(d.faturamento)}`}>
                     <div style={{ ...styles.barra, height: `${Math.max(4, (d.faturamento / maiorFaturamentoDiario) * 120)}px` }} />
-                    <span style={styles.barraLabel}>{d.data.slice(8, 10)}/{d.data.slice(5, 7)}</span>
+                    <span style={styles.barraLabel}>{formatarRotuloPeriodo(d.data, agrupamento)}</span>
                   </div>
                 ))}
               </div>
@@ -622,6 +666,7 @@ const styles = {
   upsell: { padding: '20px', backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px dashed #d1d5db' },
   filtros: { display: 'flex', gap: '14px', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '24px', backgroundColor: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #f3f4f6', overflow: 'hidden' },
   label: { display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '600' },
+  checkboxLabel: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#374151', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
   input: { padding: '8px 8px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', width: 'calc(100% - 6px)', maxWidth: '100%', boxSizing: 'border-box' },
   gridTaxas: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px', maxWidth: '520px' },
   btnGerar: { padding: '9px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '600', cursor: 'pointer' },
