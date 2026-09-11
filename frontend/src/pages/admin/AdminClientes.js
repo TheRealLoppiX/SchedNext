@@ -17,6 +17,44 @@ function infoStatusAssinatura(status) {
     return { label: 'Pendente', labelLonga: 'Aguardando 1ª cobrança, sem benefício de assinante ainda', cor: '#b45309', bg: '#fef3c7', fg: '#92400e' };
 }
 
+function formatarMoedaBRL(valor) {
+    return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+// data_hora do agendamento é "ingênuo" (números representam o horário de parede pretendido,
+// salvos com rótulo UTC sem conversão real — mesma pegadinha de AdminRelatorios.js); usa os
+// getters UTC pra pegar exatamente os números gravados, sem deslocar de fuso.
+function formatarDataHoraAgendamento(iso) {
+    const d = new Date(iso);
+    const dia = String(d.getUTCDate()).padStart(2, '0');
+    const mes = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const ano = d.getUTCFullYear();
+    const hora = String(d.getUTCHours()).padStart(2, '0');
+    const minuto = String(d.getUTCMinutes()).padStart(2, '0');
+    return { data: `${dia}/${mes}/${ano}`, hora: `${hora}:${minuto}` };
+}
+
+// pago_em/criado_em de assinatura_cobrancas SÃO instantes de verdade (TIMESTAMPTZ, diferente de
+// data_hora acima), então aqui new Date + toLocaleDateString já converte fuso corretamente.
+function formatarInstante(iso) {
+    return iso ? new Date(iso).toLocaleDateString('pt-BR') : '-';
+}
+
+// Pagamento dividido (formas_pagamento, ver sql/2026_split_pagamento.sql) mostra cada perna com
+// seu valor; senão cai na forma única de sempre.
+function formatarFormaPagamento(agendamento) {
+    if (agendamento.formas_pagamento && agendamento.formas_pagamento.length > 0) {
+        return agendamento.formas_pagamento.map((p) => `${p.forma_pagamento} ${formatarMoedaBRL(p.valor)}`).join(' + ');
+    }
+    return agendamento.forma_pagamento || '-';
+}
+
+// Nomes de serviço/profissional vêm de cadastro livre — sem escapar, um nome com "<script>"
+// executaria dentro da janela de impressão (mesmo cuidado do relatório em AdminRelatorios.js).
+function escaparHtml(v) {
+    return String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function AdminClientes({ empresaId }) {
     const confirmar = useConfirm();
     const idEfetivo = empresaId || localStorage.getItem('empresaId');
@@ -46,6 +84,9 @@ function AdminClientes({ empresaId }) {
     const [pixAssinaturaInfo, setPixAssinaturaInfo] = useState(null);
     const [mostrarEditarVencimento, setMostrarEditarVencimento] = useState(false);
     const [novoVencimento, setNovoVencimento] = useState('');
+    const [relatorioAberto, setRelatorioAberto] = useState(false);
+    const [relatorioCliente, setRelatorioCliente] = useState(null);
+    const [carregandoRelatorio, setCarregandoRelatorio] = useState(false);
 
     useEffect(() => {
         if (!idEfetivo) return;
@@ -290,6 +331,126 @@ function AdminClientes({ empresaId }) {
             }
         } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
         setLoadingId(null);
+    };
+
+    // Extrato completo do cliente (agendamentos + pagamentos de assinatura, ver GET
+    // /admin/clientes/:id/relatorio) — sem filtro de período, é o histórico inteiro dele.
+    const abrirRelatorio = async (cliente) => {
+        setRelatorioAberto(true);
+        setRelatorioCliente(null);
+        setCarregandoRelatorio(true);
+        try {
+            const res = await fetch(`${API_URL}/admin/clientes/${cliente.id}/relatorio`);
+            const data = await res.json();
+            if (res.ok) {
+                setRelatorioCliente(data);
+            } else {
+                mostrarFeedback(data.error || 'Não foi possível gerar o relatório.', 'erro');
+                setRelatorioAberto(false);
+            }
+        } catch (err) {
+            mostrarFeedback('Erro de conexão.', 'erro');
+            setRelatorioAberto(false);
+        }
+        setCarregandoRelatorio(false);
+    };
+
+    const fecharRelatorio = () => {
+        setRelatorioAberto(false);
+        setRelatorioCliente(null);
+    };
+
+    // "Excel" aqui é CSV (abre direto no Excel) — mesmo formato usado em AdminRelatorios.js, sem
+    // depender de nenhuma lib de planilha.
+    const exportarRelatorioCsv = () => {
+        if (!relatorioCliente) return;
+        const { cliente, agendamentos, pagamentos_assinatura } = relatorioCliente;
+        const linhas = [];
+        linhas.push(`Relatorio de ${cliente.nome_completo}`);
+        linhas.push('');
+        linhas.push('Agendamentos');
+        linhas.push('Data,Hora,Servico(s),Profissional,Status,Forma de pagamento,Valor');
+        agendamentos.forEach((a) => {
+            const { data, hora } = formatarDataHoraAgendamento(a.data_hora);
+            linhas.push(`${data},${hora},${a.servicos || '-'},${a.barbeiro_nome || '-'},${a.status},${formatarFormaPagamento(a)},${a.valor_total}`);
+        });
+        linhas.push('');
+        linhas.push('Pagamentos de assinatura');
+        linhas.push('Ciclo,Valor,Forma de pagamento,Status,Pago em,Observacoes');
+        pagamentos_assinatura.forEach((p) => {
+            const observacoes = (p.observacoes || '').replace(/,/g, ';');
+            linhas.push(`${formatarDataSemFuso(p.ciclo_ref)},${p.valor},${p.forma_pagamento || '-'},${p.status},${formatarInstante(p.pago_em)},${observacoes}`);
+        });
+
+        const blob = new Blob([linhas.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `relatorio-${cliente.nome_completo.trim().replace(/\s+/g, '-').toLowerCase()}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const exportarRelatorioPdf = () => {
+        if (!relatorioCliente) return;
+        const { cliente, agendamentos, pagamentos_assinatura } = relatorioCliente;
+        const janela = window.open('', '_blank');
+        if (!janela) {
+            return mostrarFeedback('O navegador bloqueou a janela de impressão. Permita pop-ups para este site e tente novamente.', 'erro');
+        }
+
+        const tabela = (titulo, cabecalhos, linhas) => {
+            if (!linhas.length) return `<h2>${escaparHtml(titulo)}</h2><p class='vazio'>Nada registrado.</p>`;
+            const thead = cabecalhos.map((c) => `<th>${escaparHtml(c)}</th>`).join('');
+            const tbody = linhas.map((l) => `<tr>${l.map((v) => `<td>${escaparHtml(v)}</td>`).join('')}</tr>`).join('');
+            return `<h2>${escaparHtml(titulo)}</h2><table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>`;
+        };
+
+        const agendamentosHtml = tabela(
+            'Agendamentos',
+            ['Data', 'Hora', 'Serviço(s)', 'Profissional', 'Status', 'Forma de pagamento', 'Valor'],
+            agendamentos.map((a) => {
+                const { data, hora } = formatarDataHoraAgendamento(a.data_hora);
+                return [data, hora, a.servicos || '-', a.barbeiro_nome || '-', a.status, formatarFormaPagamento(a), formatarMoedaBRL(a.valor_total)];
+            })
+        );
+
+        const pagamentosHtml = tabela(
+            'Pagamentos de assinatura',
+            ['Ciclo', 'Valor', 'Forma de pagamento', 'Status', 'Pago em', 'Observações'],
+            pagamentos_assinatura.map((p) => [
+                formatarDataSemFuso(p.ciclo_ref),
+                formatarMoedaBRL(p.valor),
+                p.forma_pagamento || '-',
+                p.status,
+                formatarInstante(p.pago_em),
+                p.observacoes || '-'
+            ])
+        );
+
+        janela.document.write(`<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Relatório - ${escaparHtml(cliente.nome_completo)}</title><style>
+          *{margin:0;padding:0;box-sizing:border-box}
+          body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#111827}
+          h1{font-size:20px;font-weight:800;margin-bottom:4px}
+          .sub{font-size:13px;color:#6b7280;margin-bottom:22px}
+          h2{font-size:14px;margin:22px 0 10px;color:#111827}
+          table{width:100%;border-collapse:collapse;margin-bottom:6px}
+          thead tr{background:#111827}
+          th{padding:9px 10px;text-align:left;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.4px}
+          td{padding:8px 10px;font-size:12px;color:#374151;border-bottom:1px solid #f3f4f6}
+          tr:nth-child(even) td{background:#f9fafb}
+          .vazio{font-size:12px;color:#9ca3af;margin-bottom:10px}
+          .footer{margin-top:24px;font-size:11px;color:#9ca3af;text-align:right}
+          @media print{@page{margin:16mm}}
+        </style></head><body>
+          <h1>Relatório de ${escaparHtml(cliente.nome_completo)}</h1>
+          <p class='sub'>${escaparHtml(cliente.email || '')}${cliente.email && cliente.telefone ? ' · ' : ''}${escaparHtml(cliente.telefone || '')}</p>
+          ${agendamentosHtml}
+          ${pagamentosHtml}
+          <div class='footer'>Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+        </body></html>`);
+        janela.document.close();
+        setTimeout(() => { janela.print(); }, 400);
     };
 
     const copiarCodigoPixAssinatura = () => {
@@ -598,6 +759,9 @@ function AdminClientes({ empresaId }) {
                                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                                             <button onClick={() => { setClienteSelecionado({ ...c, telefone: formatarTelefone(c.telefone || '') }); setSugestaoIA(''); setMostrarBaixaManual(false); setBaixaObservacoes(''); setPixAssinaturaInfo(null); setMostrarEditarVencimento(false); }} style={s.btnIcone} title="Editar">
                                                 <Icons.Edit color="#4b5563" />
+                                            </button>
+                                            <button onClick={() => abrirRelatorio(c)} style={{ ...s.btnIcone, backgroundColor: '#f5f3ff' }} title="Relatório do cliente">
+                                                <Icons.FileText color="#6d28d9" />
                                             </button>
                                             <button
                                                 onClick={() => enviarFollowUp(c, 'saudade', 'email')}
@@ -966,6 +1130,114 @@ function AdminClientes({ empresaId }) {
                     </div>
                 </div>
             )}
+
+            {/* MODAL DE RELATÓRIO — extrato completo do cliente (ver GET
+                /admin/clientes/:id/relatorio), sem filtro de período. */}
+            {relatorioAberto && (
+                <div style={s.overlay} onClick={e => { if (e.target === e.currentTarget) fecharRelatorio(); }}>
+                    <div style={{ ...s.modal, maxWidth: '860px' }}>
+                        <div style={s.modalHeader}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#111827' }}>
+                                    Relatório{relatorioCliente ? ` de ${relatorioCliente.cliente.nome_completo}` : ''}
+                                </h3>
+                                {relatorioCliente && (
+                                    <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                        {relatorioCliente.agendamentos.length} agendamento(s) · {relatorioCliente.pagamentos_assinatura.length} pagamento(s) de assinatura
+                                    </span>
+                                )}
+                            </div>
+                            <button onClick={fecharRelatorio} style={s.btnFechar}><Icons.Close color="#9ca3af" /></button>
+                        </div>
+
+                        {carregandoRelatorio ? (
+                            <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Gerando relatório...</p>
+                        ) : relatorioCliente ? (
+                            <>
+                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', padding: '16px 24px 0' }}>
+                                    <button onClick={exportarRelatorioCsv} style={s.btnExportarCsv}>
+                                        <Icons.Download color="#fff" /> Exportar Excel (CSV)
+                                    </button>
+                                    <button onClick={exportarRelatorioPdf} style={s.btnExportarPdf}>
+                                        <Icons.FileText color="#fff" /> Exportar PDF
+                                    </button>
+                                </div>
+
+                                <div style={{ padding: '16px 24px 24px', maxHeight: '60vh', overflowY: 'auto' }}>
+                                    <h4 style={{ margin: '10px 0', fontSize: '14px', color: '#111827' }}>Agendamentos</h4>
+                                    {relatorioCliente.agendamentos.length === 0 ? (
+                                        <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#9ca3af' }}>Nenhum agendamento registrado.</p>
+                                    ) : (
+                                        <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
+                                            <table style={s.table}>
+                                                <thead>
+                                                    <tr>
+                                                        <th style={s.th}>Data</th>
+                                                        <th style={s.th}>Hora</th>
+                                                        <th style={s.th}>Serviço(s)</th>
+                                                        <th style={s.th}>Profissional</th>
+                                                        <th style={s.th}>Status</th>
+                                                        <th style={s.th}>Forma de pagamento</th>
+                                                        <th style={s.th}>Valor</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {relatorioCliente.agendamentos.map((a) => {
+                                                        const { data, hora } = formatarDataHoraAgendamento(a.data_hora);
+                                                        return (
+                                                            <tr key={a.id} style={s.tr}>
+                                                                <td style={s.td}>{data}</td>
+                                                                <td style={s.td}>{hora}</td>
+                                                                <td style={s.td}>{a.servicos || '—'}</td>
+                                                                <td style={s.td}>{a.barbeiro_nome || '—'}</td>
+                                                                <td style={s.td}>{a.status}</td>
+                                                                <td style={s.td}>{formatarFormaPagamento(a)}</td>
+                                                                <td style={s.td}>{formatarMoedaBRL(a.valor_total)}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+
+                                    <h4 style={{ margin: '10px 0', fontSize: '14px', color: '#111827' }}>Pagamentos de assinatura</h4>
+                                    {relatorioCliente.pagamentos_assinatura.length === 0 ? (
+                                        <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af' }}>Nenhum pagamento de assinatura registrado.</p>
+                                    ) : (
+                                        <div style={{ overflowX: 'auto' }}>
+                                            <table style={s.table}>
+                                                <thead>
+                                                    <tr>
+                                                        <th style={s.th}>Ciclo</th>
+                                                        <th style={s.th}>Valor</th>
+                                                        <th style={s.th}>Forma de pagamento</th>
+                                                        <th style={s.th}>Status</th>
+                                                        <th style={s.th}>Pago em</th>
+                                                        <th style={s.th}>Observações</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {relatorioCliente.pagamentos_assinatura.map((p) => (
+                                                        <tr key={p.id} style={s.tr}>
+                                                            <td style={s.td}>{formatarDataSemFuso(p.ciclo_ref)}</td>
+                                                            <td style={s.td}>{formatarMoedaBRL(p.valor)}</td>
+                                                            <td style={s.td}>{p.forma_pagamento || '—'}</td>
+                                                            <td style={s.td}>{p.status}</td>
+                                                            <td style={s.td}>{formatarInstante(p.pago_em)}</td>
+                                                            <td style={s.td}>{p.observacoes || '—'}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        ) : null}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -981,6 +1253,8 @@ const Icons = {
     CheckCircle: ({ color }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>,
     Alert: ({ color }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>,
     Close: ({ color = 'currentColor', size = 18 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+    FileText: ({ color = 'currentColor' }) => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>,
+    Download: ({ color = '#fff' }) => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
 };
 
 const s = {
@@ -1020,6 +1294,8 @@ const s = {
     cardSugestaoIA: { background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '10px', padding: '14px', marginBottom: '14px' },
     btnGerarSugestao: { padding: '6px 14px', borderRadius: '6px', border: 'none', background: '#6d28d9', color: '#fff', fontWeight: '700', fontSize: '12px', cursor: 'pointer' },
     btnExcluir: { padding: '12px 14px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    btnExportarCsv: { display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '8px', border: 'none', background: '#059669', color: '#fff', fontWeight: '600', fontSize: '13px', cursor: 'pointer' },
+    btnExportarPdf: { display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '8px', border: 'none', background: '#dc2626', color: '#fff', fontWeight: '600', fontSize: '13px', cursor: 'pointer' },
 };
 
 export default AdminClientes;
