@@ -44,6 +44,8 @@ function AdminClientes({ empresaId }) {
     const [baixaFormaPagamento, setBaixaFormaPagamento] = useState('dinheiro');
     const [baixaObservacoes, setBaixaObservacoes] = useState('');
     const [pixAssinaturaInfo, setPixAssinaturaInfo] = useState(null);
+    const [mostrarEditarVencimento, setMostrarEditarVencimento] = useState(false);
+    const [novoVencimento, setNovoVencimento] = useState('');
 
     useEffect(() => {
         if (!idEfetivo) return;
@@ -193,6 +195,39 @@ function AdminClientes({ empresaId }) {
                 }
             } else {
                 mostrarFeedback(data.error || 'Erro ao registrar a baixa.', 'erro');
+            }
+        } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
+        setLoadingId(null);
+    };
+
+    // Reancora manualmente o dia de vencimento (assinante_desde no backend, ver PUT
+    // /admin/clientes/:id/assinatura/vencimento) — o próximo ciclo (e os seguintes, todo mês)
+    // passa a cair no dia escolhido aqui.
+    const salvarVencimento = async (cliente) => {
+        if (!novoVencimento) return mostrarFeedback('Escolha uma data.', 'erro');
+        setLoadingId(cliente.id + 'vencimento');
+        try {
+            const res = await fetch(`${API_URL}/admin/clientes/${cliente.id}/assinatura/vencimento`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vencimento: novoVencimento })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                mostrarFeedback(
+                    data.forma_pagamento === 'cartao'
+                        ? `Vencimento atualizado. Como é cobrança por cartão, foi enviado um novo link pra ${cliente.nome_completo} autorizar de novo.`
+                        : `Vencimento de ${cliente.nome_completo} atualizado.`
+                );
+                setMostrarEditarVencimento(false);
+                setNovoVencimento('');
+                const resC = await fetch(`${API_URL}/admin/clientes/${idEfetivo}`);
+                const dataC = await resC.json();
+                const listaAtualizada = Array.isArray(dataC) ? dataC : [];
+                setClientes(listaAtualizada);
+                setClienteSelecionado(prev => listaAtualizada.find(c => c.id === prev.id) || prev);
+            } else {
+                mostrarFeedback(data.error || 'Erro ao atualizar o vencimento.', 'erro');
             }
         } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
         setLoadingId(null);
@@ -561,7 +596,7 @@ function AdminClientes({ empresaId }) {
                                     </td>
                                     <td style={{ ...s.td, textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                            <button onClick={() => { setClienteSelecionado({ ...c, telefone: formatarTelefone(c.telefone || '') }); setSugestaoIA(''); setMostrarBaixaManual(false); setBaixaObservacoes(''); setPixAssinaturaInfo(null); }} style={s.btnIcone} title="Editar">
+                                            <button onClick={() => { setClienteSelecionado({ ...c, telefone: formatarTelefone(c.telefone || '') }); setSugestaoIA(''); setMostrarBaixaManual(false); setBaixaObservacoes(''); setPixAssinaturaInfo(null); setMostrarEditarVencimento(false); }} style={s.btnIcone} title="Editar">
                                                 <Icons.Edit color="#4b5563" />
                                             </button>
                                             <button
@@ -753,10 +788,43 @@ function AdminClientes({ empresaId }) {
                                     {/* Datas do ciclo — mesma âncora de dia-do-mês usada no cálculo de cota/preço do
                                         backend (ver proxima_cobranca em routes/clientes.js), só pra deixar visível pro
                                         admin quando a próxima mensalidade vence. */}
-                                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '12px', color: '#4b5563', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px' }}>
+                                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', fontSize: '12px', color: '#4b5563', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px' }}>
                                         <span>Assinante desde: <strong>{clienteSelecionado.assinante_desde ? formatarDataSemFuso(clienteSelecionado.assinante_desde) : '—'}</strong></span>
                                         <span>Próxima cobrança: <strong>{clienteSelecionado.proxima_cobranca ? formatarDataSemFuso(clienteSelecionado.proxima_cobranca) : '—'}</strong></span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setNovoVencimento(clienteSelecionado.proxima_cobranca ? clienteSelecionado.proxima_cobranca.slice(0, 10) : '');
+                                                setMostrarEditarVencimento(v => !v);
+                                            }}
+                                            style={{ ...s.btnFollowUp, backgroundColor: '#f3f4f6', color: '#374151', padding: '3px 9px', fontSize: '11px' }}
+                                        >
+                                            Alterar vencimento
+                                        </button>
                                     </div>
+
+                                    {mostrarEditarVencimento && (
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px' }}>
+                                            <input
+                                                type="date"
+                                                style={{ ...s.inputModal, width: 'auto' }}
+                                                value={novoVencimento}
+                                                onChange={e => setNovoVencimento(e.target.value)}
+                                            />
+                                            <LoadingButton
+                                                loading={loadingId === clienteSelecionado.id + 'vencimento'}
+                                                onClick={() => salvarVencimento(clienteSelecionado)}
+                                                style={{ ...s.btnFollowUp, backgroundColor: '#eef2ff', color: '#4338ca', border: 'none' }}
+                                            >
+                                                Salvar novo vencimento
+                                            </LoadingButton>
+                                            {clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? (
+                                                <span style={{ fontSize: '11px', color: '#c2410c' }}>Cobrança por cartão: o Mercado Pago não deixa só mudar a data de uma assinatura já autorizada, então isso cancela o cadastro de cartão atual e manda um novo link pro cliente autorizar de novo pra essa data.</span>
+                                            ) : (
+                                                <span style={{ fontSize: '11px', color: '#9ca3af' }}>A próxima cobrança passa a cair nessa data (e as seguintes, todo mês no mesmo dia).</span>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* Pagamento avulso — cliente já pagou (por fora) ou vai pagar agora via Pix real do
                                         Mercado Pago. Duas ações distintas de propósito: uma registra o que já aconteceu, a
