@@ -54,6 +54,11 @@ function AdminRelatorios({ empresaId }) {
   const [agrupamento, setAgrupamento] = useState('dia');
   const [mostrarComissionamento, setMostrarComissionamento] = useState(true);
   const [mostrarDetalhamento, setMostrarDetalhamento] = useState(true);
+  // Filtro por serviço(s) feito(s) — vazio = todos. Mantém o agendamento inteiro (valor_total
+  // completo) sempre que ele incluiu pelo menos um dos serviços marcados (ver
+  // filtrarPorServicos em routes/relatorios.js); não recorta só a fatia do serviço escolhido.
+  const [servicosDisponiveis, setServicosDisponiveis] = useState([]);
+  const [servicosSelecionados, setServicosSelecionados] = useState([]);
 
   // Taxas de maquineta e comissionamento não são exclusivos do plano Enterprise — são
   // necessidade operacional básica de qualquer negócio com equipe (ver PENDENCIAS.md).
@@ -79,6 +84,14 @@ function AdminRelatorios({ empresaId }) {
   }, [idEfetivo]);
 
   useEffect(() => { carregarPermissao(); }, [carregarPermissao]);
+
+  useEffect(() => {
+    if (!idEfetivo) return;
+    fetch(`${API_URL}/admin/servicos`)
+      .then((r) => r.json())
+      .then((dados) => setServicosDisponiveis(Array.isArray(dados) ? dados : []))
+      .catch((err) => console.error('Erro ao carregar serviços para o filtro:', err));
+  }, [idEfetivo]);
 
   // Resumo executivo em texto do período filtrado — reaproveita o mesmo endpoint/padrão de
   // resumo-dashboard (ver routes/ia.js e AdminDashboard.js), só trocando os dados enviados.
@@ -143,7 +156,7 @@ function AdminRelatorios({ empresaId }) {
     if (!mostrarComissionamento) { setComissionamento(null); setCarregandoComissao(false); return; }
     setCarregandoComissao(true);
     try {
-      const res = await fetch(`${API_URL}/admin/relatorios/comissionamento/${idEfetivo}?dataInicio=${dataInicio}&dataFim=${dataFim}&incluirItens=${mostrarDetalhamento}`);
+      const res = await fetch(`${API_URL}/admin/relatorios/comissionamento/${idEfetivo}?dataInicio=${dataInicio}&dataFim=${dataFim}&incluirItens=${mostrarDetalhamento}&servicos=${servicosSelecionados.join(',')}`);
       const dados = await res.json();
       if (res.ok) setComissionamento(dados);
     } catch (err) {
@@ -151,7 +164,7 @@ function AdminRelatorios({ empresaId }) {
     } finally {
       setCarregandoComissao(false);
     }
-  }, [idEfetivo, dataInicio, dataFim, mostrarComissionamento, mostrarDetalhamento]);
+  }, [idEfetivo, dataInicio, dataFim, mostrarComissionamento, mostrarDetalhamento, servicosSelecionados]);
 
   useEffect(() => { carregarComissionamento(); }, [carregarComissionamento]);
 
@@ -163,7 +176,7 @@ function AdminRelatorios({ empresaId }) {
     setGerando(true);
     setErro('');
     try {
-      const res = await fetch(`${API_URL}/admin/relatorios/${idEfetivo}?dataInicio=${dataInicio}&dataFim=${dataFim}&agrupamento=${agrupamento}`);
+      const res = await fetch(`${API_URL}/admin/relatorios/${idEfetivo}?dataInicio=${dataInicio}&dataFim=${dataFim}&agrupamento=${agrupamento}&servicos=${servicosSelecionados.join(',')}`);
       const data = await res.json();
       if (res.ok) {
         setRelatorio(data);
@@ -175,7 +188,7 @@ function AdminRelatorios({ empresaId }) {
     } finally {
       setGerando(false);
     }
-  }, [idEfetivo, dataInicio, dataFim, agrupamento]);
+  }, [idEfetivo, dataInicio, dataFim, agrupamento, servicosSelecionados]);
 
   useEffect(() => { gerarRelatorio(); }, [gerarRelatorio]);
 
@@ -184,6 +197,7 @@ function AdminRelatorios({ empresaId }) {
     const linhas = [];
     linhas.push('Relatório avançado');
     linhas.push(`Período,${relatorio.periodo.inicio} a ${relatorio.periodo.fim}`);
+    linhas.push(`Serviços,${nomesServicosFiltrados || 'Todos'}`);
     linhas.push('');
     linhas.push('Resumo');
     linhas.push(`Faturamento total,${relatorio.resumo.faturamento_total}`);
@@ -331,6 +345,7 @@ function AdminRelatorios({ empresaId }) {
       <h1>Relatório avançado</h1>
       <p class='sub'>Faturamento, taxas de maquineta, comissionamento e desempenho da equipe.</p>
       <span class='periodo'>Período: ${escaparHtml(periodo)}</span>
+      <span class='periodo'>Serviços: ${escaparHtml(nomesServicosFiltrados || 'Todos')}</span>
       <div class='cards'>${cardsHtml}</div>
       ${faturamentoDiarioHtml}
       ${topServicosHtml}
@@ -349,6 +364,7 @@ function AdminRelatorios({ empresaId }) {
   const maiorFaturamentoServico = relatorio ? Math.max(1, ...relatorio.top_servicos.map((s) => s.faturamento)) : 1;
   const maiorFaturamentoProfissional = relatorio ? Math.max(1, ...relatorio.top_profissionais.map((p) => p.faturamento)) : 1;
   const variacao = relatorio?.resumo?.variacao_faturamento_pct ?? 0;
+  const nomesServicosFiltrados = servicosDisponiveis.filter((sv) => servicosSelecionados.includes(sv.id)).map((sv) => sv.nome).join(', ');
 
   return (
     <div className="admin-page-container" style={styles.container}>
@@ -372,7 +388,34 @@ function AdminRelatorios({ empresaId }) {
             <option value="ano">Ano</option>
           </select>
         </div>
-        <div style={{ flex: '2 1 320px', minWidth: '280px', display: 'flex', gap: '18px', alignItems: 'center', paddingBottom: '9px' }}>
+        <div style={{ flex: '1 1 220px', minWidth: '200px' }}>
+          <label style={styles.label}>Serviços (todos se vazio)</label>
+          <select
+            multiple
+            value={servicosSelecionados.map(String)}
+            onChange={(e) => setServicosSelecionados(Array.from(e.target.selectedOptions, (o) => Number(o.value)))}
+            style={{ ...styles.input, height: '74px', cursor: 'pointer' }}
+          >
+            {servicosDisponiveis.map((sv) => <option key={sv.id} value={sv.id}>{sv.nome}</option>)}
+          </select>
+          {servicosSelecionados.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setServicosSelecionados([])}
+              style={{ marginTop: '4px', background: 'none', border: 'none', color: '#2554eb', fontSize: '11px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+            >
+              Limpar seleção
+            </button>
+          )}
+        </div>
+        <button onClick={() => { carregarComissionamento(); gerarRelatorio(); }} disabled={gerando} style={{ ...styles.btnGerar, flex: '1 1 200px', minWidth: '200px' }}>
+          {gerando ? 'Gerando...' : 'Aplicar'}
+        </button>
+        {/* Linha própria (flex-basis 100%) de propósito — dividir espaço com os campos de data/
+            select acima cortava o texto dos checkboxes em telas menores (nowrap + item flex
+            encolhendo abaixo do conteúdo). Aqui cada checkbox tem a largura toda da barra pra
+            sobrar espaço sempre, independente do que mais está no filtro. */}
+        <div style={{ flex: '1 1 100%', display: 'flex', gap: '18px', flexWrap: 'wrap', alignItems: 'center' }}>
           <label style={styles.checkboxLabel}>
             <input type="checkbox" checked={mostrarComissionamento} onChange={(e) => setMostrarComissionamento(e.target.checked)} />
             Comissionamento por profissional
@@ -382,9 +425,6 @@ function AdminRelatorios({ empresaId }) {
             Detalhamento por atendimento
           </label>
         </div>
-        <button onClick={() => { carregarComissionamento(); gerarRelatorio(); }} disabled={gerando} style={{ ...styles.btnGerar, flex: '1 1 200px', minWidth: '200px' }}>
-          {gerando ? 'Gerando...' : 'Aplicar'}
-        </button>
         {relatorio && (
           <div style={styles.grupoExportar}>
             <button
