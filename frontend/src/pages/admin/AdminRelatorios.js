@@ -31,6 +31,15 @@ function formatarDataHora(iso) {
 
 const LABEL_AGRUPAMENTO = { dia: 'dia', mes: 'mês', ano: 'ano' };
 
+// Pagamento dividido (formas_pagamento, ver sql/2026_split_pagamento.sql) mostra cada perna com
+// seu valor; senão cai na forma única de sempre.
+function formatarFormaPagamentoRelatorio(item) {
+  if (item.formas_pagamento && item.formas_pagamento.length > 0) {
+    return item.formas_pagamento.map((p) => `${p.forma_pagamento} ${formatarMoeda(p.valor)}`).join(' + ');
+  }
+  return item.forma_pagamento || '-';
+}
+
 // Cada item de serie_diaria vem com `data` no formato do agrupamento escolhido: 'YYYY-MM-DD'
 // (dia), 'YYYY-MM' (mês) ou 'YYYY' (ano) — ver chaveAgrupamento em routes/relatorios.js.
 function formatarRotuloPeriodo(data, agrupamento) {
@@ -50,9 +59,12 @@ function AdminRelatorios({ empresaId }) {
   const [ia, setIa] = useState({ disponivel: false, gerando: false, texto: '' });
 
   // Filtros opcionais estilo BI (Power BI/Tableau): granularidade do gráfico de faturamento e
-  // duas seções que podem ser ligadas/desligadas tanto na tela quanto na exportação.
+  // seções que podem ser ligadas/desligadas tanto na tela quanto na exportação.
   const [agrupamento, setAgrupamento] = useState('dia');
   const [mostrarComissionamento, setMostrarComissionamento] = useState(true);
+  // Controla TANTO o detalhamento por atendimento dentro do comissionamento (itens por
+  // profissional) QUANTO a tabela geral "Detalhamento por atendimento" mais abaixo — são
+  // independentes um do outro (dá pra ver o detalhamento geral sem abrir comissionamento).
   const [mostrarDetalhamento, setMostrarDetalhamento] = useState(true);
   // Filtro por serviço(s) feito(s) — vazio = todos. Mantém o agendamento inteiro (valor_total
   // completo) sempre que ele incluiu pelo menos um dos serviços marcados (ver
@@ -62,6 +74,15 @@ function AdminRelatorios({ empresaId }) {
   // Filtro por tipo de cliente — 'todos' (padrão), 'assinante' ou 'avulso' (ver tipoClienteFiltro
   // em routes/relatorios.js, mesma heurística usada no rateio de comissão).
   const [tipoCliente, setTipoCliente] = useState('todos');
+
+  // Snapshot dos filtros que REALMENTE valem pro relatório atual — só muda quando "Aplicar" é
+  // clicado (ver aplicarFiltros). Os estados acima (dataInicio, agrupamento, etc.) só controlam o
+  // que aparece digitado/marcado nos campos; mudar um deles sozinho não busca nada de novo. Sem
+  // essa separação, o relatório atualizava sozinho a cada campo mudado, e o botão "Aplicar" virava
+  // decoração confusa.
+  const [filtrosAplicados, setFiltrosAplicados] = useState(() => ({
+    dataInicio, dataFim, agrupamento, servicosSelecionados, tipoCliente, mostrarComissionamento, mostrarDetalhamento
+  }));
 
   // Taxas de maquineta e comissionamento não são exclusivos do plano Enterprise — são
   // necessidade operacional básica de qualquer negócio com equipe (ver PENDENCIAS.md).
@@ -154,12 +175,13 @@ function AdminRelatorios({ empresaId }) {
 
   const carregarComissionamento = useCallback(async () => {
     if (!idEfetivo) return;
+    const f = filtrosAplicados;
     // Seção desligada no filtro: nem chama o endpoint (é o cálculo mais pesado do relatório,
     // com o rateio de assinatura por ciclo — ver routes/relatorios.js).
-    if (!mostrarComissionamento) { setComissionamento(null); setCarregandoComissao(false); return; }
+    if (!f.mostrarComissionamento) { setComissionamento(null); setCarregandoComissao(false); return; }
     setCarregandoComissao(true);
     try {
-      const res = await fetch(`${API_URL}/admin/relatorios/comissionamento/${idEfetivo}?dataInicio=${dataInicio}&dataFim=${dataFim}&incluirItens=${mostrarDetalhamento}&servicos=${servicosSelecionados.join(',')}`);
+      const res = await fetch(`${API_URL}/admin/relatorios/comissionamento/${idEfetivo}?dataInicio=${f.dataInicio}&dataFim=${f.dataFim}&incluirItens=${f.mostrarDetalhamento}&servicos=${f.servicosSelecionados.join(',')}`);
       const dados = await res.json();
       if (res.ok) setComissionamento(dados);
     } catch (err) {
@@ -167,7 +189,7 @@ function AdminRelatorios({ empresaId }) {
     } finally {
       setCarregandoComissao(false);
     }
-  }, [idEfetivo, dataInicio, dataFim, mostrarComissionamento, mostrarDetalhamento, servicosSelecionados]);
+  }, [idEfetivo, filtrosAplicados]);
 
   useEffect(() => { carregarComissionamento(); }, [carregarComissionamento]);
 
@@ -176,10 +198,11 @@ function AdminRelatorios({ empresaId }) {
   // (rankings/recorrência/comparação) aparecem ou ficam atrás do upsell abaixo.
   const gerarRelatorio = useCallback(async () => {
     if (!idEfetivo) return;
+    const f = filtrosAplicados;
     setGerando(true);
     setErro('');
     try {
-      const res = await fetch(`${API_URL}/admin/relatorios/${idEfetivo}?dataInicio=${dataInicio}&dataFim=${dataFim}&agrupamento=${agrupamento}&servicos=${servicosSelecionados.join(',')}&tipoCliente=${tipoCliente}`);
+      const res = await fetch(`${API_URL}/admin/relatorios/${idEfetivo}?dataInicio=${f.dataInicio}&dataFim=${f.dataFim}&agrupamento=${f.agrupamento}&servicos=${f.servicosSelecionados.join(',')}&tipoCliente=${f.tipoCliente}&incluirDetalhamento=${f.mostrarDetalhamento}`);
       const data = await res.json();
       if (res.ok) {
         setRelatorio(data);
@@ -191,9 +214,15 @@ function AdminRelatorios({ empresaId }) {
     } finally {
       setGerando(false);
     }
-  }, [idEfetivo, dataInicio, dataFim, agrupamento, servicosSelecionados, tipoCliente]);
+  }, [idEfetivo, filtrosAplicados]);
 
   useEffect(() => { gerarRelatorio(); }, [gerarRelatorio]);
+
+  // Único gatilho que efetivamente busca dados de novo — clicar em campos/checkboxes do filtro só
+  // muda o que está digitado/marcado, sem disparar nada sozinho (ver filtrosAplicados acima).
+  const aplicarFiltros = () => {
+    setFiltrosAplicados({ dataInicio, dataFim, agrupamento, servicosSelecionados, tipoCliente, mostrarComissionamento, mostrarDetalhamento });
+  };
 
   const exportarCsv = () => {
     if (!relatorio) return;
@@ -207,13 +236,18 @@ function AdminRelatorios({ empresaId }) {
     linhas.push(`Receita líquida,${relatorio.resumo.receita_liquida}`);
     linhas.push(`Ticket médio,${relatorio.resumo.ticket_medio}`);
     linhas.push(`Atendimentos concluídos,${relatorio.resumo.quantidade_concluidos}`);
-    linhas.push(`Taxa de cancelamento (%),${relatorio.resumo.taxa_cancelamento}`);
+    linhas.push(`Taxa de descontos de maquineta (%),${relatorio.resumo.descontos_pct}`);
+    linhas.push(`Descontos de maquineta (R$),${relatorio.resumo.descontos_valor}`);
     linhas.push(`Variação vs período anterior (%),${relatorio.resumo.variacao_faturamento_pct}`);
     linhas.push(`Taxa de clientes recorrentes (%),${relatorio.recorrencia ? relatorio.recorrencia.taxa_recorrencia_pct : ''}`);
     linhas.push('');
     linhas.push(tituloFaturamentoPorPeriodo);
     linhas.push('Período,Serviço,Tipo,Faturamento,Quantidade');
-    relatorio.detalhe_periodo.forEach((d) => linhas.push(`${formatarRotuloPeriodo(d.periodo, agrupamento)},${d.servico},${d.tipo === 'assinante' ? 'Assinante' : 'Avulso'},${d.faturamento},${d.quantidade}`));
+    relatorio.detalhe_periodo.forEach((d) => linhas.push(`${formatarRotuloPeriodo(d.periodo, agrupamentoAplicado)},${d.servico},${d.tipo === 'assinante' ? 'Assinante' : 'Avulso'},${d.faturamento},${d.quantidade}`));
+    linhas.push('');
+    linhas.push('Detalhamento por atendimento');
+    linhas.push('Data,Cliente,Serviço,Tipo,Forma de pagamento,Valor');
+    relatorio.detalhamento_atendimentos.forEach((item) => linhas.push(`${formatarDataHora(item.data_hora)},${item.cliente},${item.servico},${item.tipo === 'assinante' ? 'Assinante' : 'Avulso'},${formatarFormaPagamentoRelatorio(item)},${item.valor}`));
     linhas.push('');
     linhas.push('Top serviços');
     linhas.push('Serviço,Quantidade,Faturamento');
@@ -243,7 +277,7 @@ function AdminRelatorios({ empresaId }) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `relatorio-${dataInicio}-a-${dataFim}.csv`;
+    link.download = `relatorio-${relatorio.periodo.inicio}-a-${relatorio.periodo.fim}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -261,14 +295,14 @@ function AdminRelatorios({ empresaId }) {
       return toast.error('O navegador bloqueou a janela de impressão. Permita pop-ups para este site e tente novamente.');
     }
 
-    const periodo = `${new Date(dataInicio + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(dataFim + 'T00:00:00').toLocaleDateString('pt-BR')}`;
+    const periodo = `${new Date(relatorio.periodo.inicio + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(relatorio.periodo.fim + 'T00:00:00').toLocaleDateString('pt-BR')}`;
 
     const cards = [
       ['Faturamento no período', formatarMoeda(relatorio.resumo.faturamento_total)],
       ['Receita líquida', formatarMoeda(relatorio.resumo.receita_liquida)],
       ['Ticket médio', formatarMoeda(relatorio.resumo.ticket_medio)],
       ['Atendimentos concluídos', relatorio.resumo.quantidade_concluidos],
-      ['Taxa de cancelamento', `${relatorio.resumo.taxa_cancelamento}%`]
+      ['Descontos de maquineta', `${relatorio.resumo.descontos_pct}% (${formatarMoeda(relatorio.resumo.descontos_valor)})`]
     ];
     if (relatorio.avancado) {
       cards.push(['Variação vs período anterior', `${variacao >= 0 ? '+' : ''}${variacao}%`]);
@@ -289,11 +323,24 @@ function AdminRelatorios({ empresaId }) {
       tituloFaturamentoPorPeriodo,
       ['Período', 'Serviço', 'Tipo', 'Faturamento', 'Qtd'],
       relatorio.detalhe_periodo.map((d) => [
-        formatarRotuloPeriodo(d.periodo, agrupamento),
+        formatarRotuloPeriodo(d.periodo, agrupamentoAplicado),
         d.servico,
         d.tipo === 'assinante' ? 'Assinante' : 'Avulso',
         formatarMoeda(d.faturamento),
         d.quantidade
+      ])
+    );
+
+    const detalhamentoAtendimentosHtml = tabela(
+      'Detalhamento por atendimento',
+      ['Data', 'Cliente', 'Serviço', 'Tipo', 'Forma de pagamento', 'Valor'],
+      relatorio.detalhamento_atendimentos.map((item) => [
+        formatarDataHora(item.data_hora),
+        item.cliente,
+        item.servico,
+        item.tipo === 'assinante' ? 'Assinante' : 'Avulso',
+        formatarFormaPagamentoRelatorio(item),
+        formatarMoeda(item.valor)
       ])
     );
 
@@ -357,6 +404,7 @@ function AdminRelatorios({ empresaId }) {
       <span class='periodo'>Serviços: ${escaparHtml(nomesServicosFiltrados || 'Todos')}</span>
       <div class='cards'>${cardsHtml}</div>
       ${faturamentoDiarioHtml}
+      ${detalhamentoAtendimentosHtml}
       ${topServicosHtml}
       ${topProfissionaisHtml}
       ${comissionamentoHtml}
@@ -373,12 +421,28 @@ function AdminRelatorios({ empresaId }) {
   const maiorFaturamentoServico = relatorio ? Math.max(1, ...relatorio.top_servicos.map((s) => s.faturamento)) : 1;
   const maiorFaturamentoProfissional = relatorio ? Math.max(1, ...relatorio.top_profissionais.map((p) => p.faturamento)) : 1;
   const variacao = relatorio?.resumo?.variacao_faturamento_pct ?? 0;
-  const nomesServicosFiltrados = servicosDisponiveis.filter((sv) => servicosSelecionados.includes(sv.id)).map((sv) => sv.nome).join(', ');
+  // Usa filtrosAplicados (não os estados dos campos) pra descrever o que está de fato carregado
+  // em `relatorio` — se o admin mexeu num filtro sem clicar "Aplicar", o rótulo/formatação não
+  // pode mudar antes dos dados mudarem, senão ficaria descrevendo algo diferente do que é exibido.
+  const agrupamentoAplicado = filtrosAplicados.agrupamento;
+  const mostrarComissionamentoAplicado = filtrosAplicados.mostrarComissionamento;
+  const mostrarDetalhamentoAplicado = filtrosAplicados.mostrarDetalhamento;
+  // Compara o que está nos campos com o que foi de fato aplicado — só pra mostrar um aviso "há
+  // filtro pendente" perto do botão, deixando claro quando um clique em Aplicar é necessário.
+  const filtrosPendentes = dataInicio !== filtrosAplicados.dataInicio
+    || dataFim !== filtrosAplicados.dataFim
+    || agrupamento !== filtrosAplicados.agrupamento
+    || tipoCliente !== filtrosAplicados.tipoCliente
+    || mostrarComissionamento !== filtrosAplicados.mostrarComissionamento
+    || mostrarDetalhamento !== filtrosAplicados.mostrarDetalhamento
+    || servicosSelecionados.length !== filtrosAplicados.servicosSelecionados.length
+    || servicosSelecionados.some((id) => !filtrosAplicados.servicosSelecionados.includes(id));
+  const nomesServicosFiltrados = servicosDisponiveis.filter((sv) => filtrosAplicados.servicosSelecionados.includes(sv.id)).map((sv) => sv.nome).join(', ');
   // Título da série de faturamento (tela, CSV e PDF). Sem o nome do serviço aqui de propósito —
   // já aparece na linha de período lá em cima do relatório/exportação, repetir no título ficaria
   // redundante. Qual serviço/tipo é cada linha aparece dentro da própria tabela de detalhamento
   // (detalhe_periodo), logo abaixo.
-  const tituloFaturamentoPorPeriodo = `Faturamento por ${LABEL_AGRUPAMENTO[agrupamento]}`;
+  const tituloFaturamentoPorPeriodo = `Faturamento por ${LABEL_AGRUPAMENTO[agrupamentoAplicado]}`;
 
   return (
     <div className="admin-page-container" style={styles.container}>
@@ -437,8 +501,16 @@ function AdminRelatorios({ empresaId }) {
           {/* Rótulo fantasma — alinha o topo do botão com o topo dos inputs dos campos ao lado
               (que têm um rótulo visível ocupando essa mesma faixa antes do próprio input). */}
           <label style={{ ...styles.label, visibility: 'hidden' }}>Aplicar</label>
-          <button onClick={() => { carregarComissionamento(); gerarRelatorio(); }} disabled={gerando} style={{ ...styles.btnGerar, width: '100%', boxSizing: 'border-box' }}>
+          <button
+            onClick={aplicarFiltros}
+            disabled={gerando}
+            style={{ ...styles.btnGerar, width: '100%', boxSizing: 'border-box', position: 'relative', ...(filtrosPendentes ? { boxShadow: '0 0 0 2px #f59e0b' } : {}) }}
+            title={filtrosPendentes ? 'Você mudou um filtro — clique aqui pra atualizar o relatório' : ''}
+          >
             {gerando ? 'Gerando...' : 'Aplicar'}
+            {filtrosPendentes && !gerando && (
+              <span style={{ position: 'absolute', top: '-5px', right: '-5px', width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b', border: '2px solid #fff' }} />
+            )}
           </button>
         </div>
         {/* Linha própria (flex-basis 100%) de propósito — dividir espaço com os campos de data/
@@ -450,8 +522,8 @@ function AdminRelatorios({ empresaId }) {
             <input type="checkbox" checked={mostrarComissionamento} onChange={(e) => setMostrarComissionamento(e.target.checked)} />
             Comissionamento por profissional
           </label>
-          <label style={{ ...styles.checkboxLabel, opacity: mostrarComissionamento ? 1 : 0.5 }}>
-            <input type="checkbox" checked={mostrarDetalhamento} disabled={!mostrarComissionamento} onChange={(e) => setMostrarDetalhamento(e.target.checked)} />
+          <label style={styles.checkboxLabel}>
+            <input type="checkbox" checked={mostrarDetalhamento} onChange={(e) => setMostrarDetalhamento(e.target.checked)} />
             Detalhamento por atendimento
           </label>
         </div>
@@ -501,7 +573,7 @@ function AdminRelatorios({ empresaId }) {
         <LoadingButton loading={salvandoTaxas} onClick={salvarTaxas} style={{ ...styles.btnGerar, marginTop: '14px' }}>Salvar taxas</LoadingButton>
       </div>
 
-      {mostrarComissionamento && (
+      {mostrarComissionamentoAplicado && (
       <div style={styles.secao}>
         <h3 style={styles.secaoTitulo}>Comissionamento por profissional</h3>
         {carregandoComissao ? (
@@ -525,14 +597,14 @@ function AdminRelatorios({ empresaId }) {
               <tbody>
                 {comissionamento.profissionais.map((p) => {
                   const chave = p.id ?? p.nome;
-                  const expandido = mostrarDetalhamento && profissionalExpandido === chave;
+                  const expandido = mostrarDetalhamentoAplicado && profissionalExpandido === chave;
                   return (
                     <React.Fragment key={chave}>
                       <tr
-                        onClick={() => mostrarDetalhamento && setProfissionalExpandido(expandido ? null : chave)}
-                        style={{ cursor: mostrarDetalhamento ? 'pointer' : 'default' }}
+                        onClick={() => mostrarDetalhamentoAplicado && setProfissionalExpandido(expandido ? null : chave)}
+                        style={{ cursor: mostrarDetalhamentoAplicado ? 'pointer' : 'default' }}
                       >
-                        <td style={{ ...styles.td, color: '#9ca3af', width: '20px' }}>{mostrarDetalhamento ? (expandido ? '▾' : '▸') : ''}</td>
+                        <td style={{ ...styles.td, color: '#9ca3af', width: '20px' }}>{mostrarDetalhamentoAplicado ? (expandido ? '▾' : '▸') : ''}</td>
                         <td style={styles.td}>{p.nome}</td>
                         <td style={styles.td}>{p.percentual_comissao}%</td>
                         <td style={styles.td}>{p.quantidade}</td>
@@ -593,9 +665,9 @@ function AdminRelatorios({ empresaId }) {
           </div>
         )}
         <p style={{ ...styles.vazio, marginTop: '12px' }}>
-          {mostrarDetalhamento
+          {mostrarDetalhamentoAplicado
             ? 'Clique num profissional pra ver o detalhamento por atendimento. '
-            : 'Ligue "Detalhamento por atendimento" no filtro acima pra poder abrir cada atendimento. '}
+            : 'Ligue "Detalhamento por atendimento" no filtro acima e clique em Aplicar pra poder abrir cada atendimento. '}
           Atendimentos de clientes assinantes entram pela fatia proporcional da mensalidade (valor do plano ÷ visitas no mês), já que o serviço em si sai de graça pro cliente.
         </p>
       </div>
@@ -629,8 +701,9 @@ function AdminRelatorios({ empresaId }) {
               <span style={styles.cardValor}>{relatorio.resumo.quantidade_concluidos}</span>
             </div>
             <div style={styles.card}>
-              <span style={styles.cardLabel}>Taxa de cancelamento</span>
-              <span style={styles.cardValor}>{relatorio.resumo.taxa_cancelamento}%</span>
+              <span style={styles.cardLabel}>Taxa de descontos (maquineta)</span>
+              <span style={styles.cardValor}>{relatorio.resumo.descontos_pct}%</span>
+              <span style={styles.cardVariacao}>{formatarMoeda(relatorio.resumo.descontos_valor)} descontados</span>
             </div>
             {relatorio.avancado && relatorio.recorrencia && (
               <div style={styles.card}>
@@ -648,9 +721,9 @@ function AdminRelatorios({ empresaId }) {
             ) : (
               <div style={styles.grafico}>
                 {relatorio.serie_diaria.map((d) => (
-                  <div key={d.data} style={styles.barraColuna} title={`${formatarRotuloPeriodo(d.data, agrupamento)}: ${formatarMoeda(d.faturamento)}`}>
+                  <div key={d.data} style={styles.barraColuna} title={`${formatarRotuloPeriodo(d.data, agrupamentoAplicado)}: ${formatarMoeda(d.faturamento)}`}>
                     <div style={{ ...styles.barra, height: `${Math.max(4, (d.faturamento / maiorFaturamentoDiario) * 120)}px` }} />
-                    <span style={styles.barraLabel}>{formatarRotuloPeriodo(d.data, agrupamento)}</span>
+                    <span style={styles.barraLabel}>{formatarRotuloPeriodo(d.data, agrupamentoAplicado)}</span>
                   </div>
                 ))}
               </div>
@@ -675,7 +748,7 @@ function AdminRelatorios({ empresaId }) {
                   <tbody>
                     {relatorio.detalhe_periodo.map((d, idx) => (
                       <tr key={idx}>
-                        <td style={styles.td}>{formatarRotuloPeriodo(d.periodo, agrupamento)}</td>
+                        <td style={styles.td}>{formatarRotuloPeriodo(d.periodo, agrupamentoAplicado)}</td>
                         <td style={styles.td}>{d.servico}</td>
                         <td style={styles.td}>
                           {d.tipo === 'assinante' ? <span style={styles.tagAssinante}>Assinante</span> : <span style={styles.tagAvulso}>Avulso</span>}
@@ -689,6 +762,47 @@ function AdminRelatorios({ empresaId }) {
               </div>
             )}
           </div>
+
+          {/* Uma linha por serviço de cada atendimento (não agregado por período) — pra saber
+              quem foi o cliente e como pagou. Independente do comissionamento, controlado pelo
+              mesmo checkbox "Detalhamento por atendimento" (ver mostrarDetalhamento). */}
+          {mostrarDetalhamentoAplicado && (
+            <div style={styles.secao}>
+              <h3 style={styles.secaoTitulo}>Detalhamento por atendimento</h3>
+              {relatorio.detalhamento_atendimentos.length === 0 ? (
+                <p style={styles.vazio}>Nenhum atendimento concluído nesse período.</p>
+              ) : (
+                <div style={{ overflowX: 'auto', maxHeight: '420px', overflowY: 'auto' }}>
+                  <table style={styles.tabela}>
+                    <thead>
+                      <tr>
+                        <th style={styles.th}>Data</th>
+                        <th style={styles.th}>Cliente</th>
+                        <th style={styles.th}>Serviço</th>
+                        <th style={styles.th}>Tipo</th>
+                        <th style={styles.th}>Forma de pagamento</th>
+                        <th style={styles.th}>Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {relatorio.detalhamento_atendimentos.map((item, idx) => (
+                        <tr key={idx}>
+                          <td style={styles.td}>{formatarDataHora(item.data_hora)}</td>
+                          <td style={styles.td}>{item.cliente}</td>
+                          <td style={styles.td}>{item.servico}</td>
+                          <td style={styles.td}>
+                            {item.tipo === 'assinante' ? <span style={styles.tagAssinante}>Assinante</span> : <span style={styles.tagAvulso}>Avulso</span>}
+                          </td>
+                          <td style={styles.td}>{formatarFormaPagamentoRelatorio(item)}</td>
+                          <td style={styles.td}>{formatarMoeda(item.valor)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
 
           {ia.disponivel && (
             <div style={styles.secao}>
