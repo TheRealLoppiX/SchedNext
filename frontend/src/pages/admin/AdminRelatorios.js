@@ -430,7 +430,10 @@ function AdminRelatorios({ empresaId }) {
             <option value="avulso">Só avulso</option>
           </select>
         </div>
-        <div style={{ flex: '1 1 200px', minWidth: '200px' }}>
+        {/* flex '0 1 ...' (sem grow) de propósito — com mais campos de filtro a fileira não
+            cabe mais tudo numa linha só, e quando o botão sobra sozinho numa linha, um flex-grow
+            fazia ele esticar pra ocupar a largura toda (ficava gigante). */}
+        <div style={{ flex: '0 1 160px', minWidth: '140px' }}>
           {/* Rótulo fantasma — alinha o topo do botão com o topo dos inputs dos campos ao lado
               (que têm um rótulo visível ocupando essa mesma faixa antes do próprio input). */}
           <label style={{ ...styles.label, visibility: 'hidden' }}>Aplicar</label>
@@ -775,7 +778,10 @@ const styles = {
   gridTaxas: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px', maxWidth: '520px' },
   btnGerar: { padding: '9px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '600', cursor: 'pointer' },
   btnExportar: { padding: '9px 18px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', color: '#111827', fontWeight: '600', cursor: 'pointer' },
-  grupoExportar: { display: 'flex', gap: '8px', flex: '2 1 320px', minWidth: '320px' },
+  // flex '0 1 ...' (sem grow) de propósito — sozinho numa linha (depois que os checkboxes acima
+  // ocupam a linha toda), um flex-grow esticava esse grupo pra largura inteira da barra e os
+  // botões (flex:1 aqui dentro) ficavam gigantes.
+  grupoExportar: { display: 'flex', gap: '8px', flex: '0 1 320px', minWidth: '260px' },
   btnExportarCsv: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '9px 16px', borderRadius: '8px', border: 'none', background: '#059669', color: '#fff', fontWeight: '600', fontSize: '14px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(5,150,105,0.25)', transition: 'filter 0.15s' },
   btnExportarPdf: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '9px 16px', borderRadius: '8px', border: 'none', background: '#dc2626', color: '#fff', fontWeight: '600', fontSize: '14px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(220,38,38,0.25)', transition: 'filter 0.15s' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '28px' },
