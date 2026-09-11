@@ -59,6 +59,9 @@ function AdminRelatorios({ empresaId }) {
   // filtrarPorServicos em routes/relatorios.js); não recorta só a fatia do serviço escolhido.
   const [servicosDisponiveis, setServicosDisponiveis] = useState([]);
   const [servicosSelecionados, setServicosSelecionados] = useState([]);
+  // Filtro por tipo de cliente — 'todos' (padrão), 'assinante' ou 'avulso' (ver tipoClienteFiltro
+  // em routes/relatorios.js, mesma heurística usada no rateio de comissão).
+  const [tipoCliente, setTipoCliente] = useState('todos');
 
   // Taxas de maquineta e comissionamento não são exclusivos do plano Enterprise — são
   // necessidade operacional básica de qualquer negócio com equipe (ver PENDENCIAS.md).
@@ -176,7 +179,7 @@ function AdminRelatorios({ empresaId }) {
     setGerando(true);
     setErro('');
     try {
-      const res = await fetch(`${API_URL}/admin/relatorios/${idEfetivo}?dataInicio=${dataInicio}&dataFim=${dataFim}&agrupamento=${agrupamento}&servicos=${servicosSelecionados.join(',')}`);
+      const res = await fetch(`${API_URL}/admin/relatorios/${idEfetivo}?dataInicio=${dataInicio}&dataFim=${dataFim}&agrupamento=${agrupamento}&servicos=${servicosSelecionados.join(',')}&tipoCliente=${tipoCliente}`);
       const data = await res.json();
       if (res.ok) {
         setRelatorio(data);
@@ -188,7 +191,7 @@ function AdminRelatorios({ empresaId }) {
     } finally {
       setGerando(false);
     }
-  }, [idEfetivo, dataInicio, dataFim, agrupamento, servicosSelecionados]);
+  }, [idEfetivo, dataInicio, dataFim, agrupamento, servicosSelecionados, tipoCliente]);
 
   useEffect(() => { gerarRelatorio(); }, [gerarRelatorio]);
 
@@ -209,8 +212,8 @@ function AdminRelatorios({ empresaId }) {
     linhas.push(`Taxa de clientes recorrentes (%),${relatorio.recorrencia ? relatorio.recorrencia.taxa_recorrencia_pct : ''}`);
     linhas.push('');
     linhas.push(tituloFaturamentoPorPeriodo);
-    linhas.push('Período,Faturamento,Quantidade');
-    relatorio.serie_diaria.forEach((d) => linhas.push(`${formatarRotuloPeriodo(d.data, agrupamento)},${d.faturamento},${d.quantidade}`));
+    linhas.push('Período,Serviço,Tipo,Faturamento,Quantidade');
+    relatorio.detalhe_periodo.forEach((d) => linhas.push(`${formatarRotuloPeriodo(d.periodo, agrupamento)},${d.servico},${d.tipo === 'assinante' ? 'Assinante' : 'Avulso'},${d.faturamento},${d.quantidade}`));
     linhas.push('');
     linhas.push('Top serviços');
     linhas.push('Serviço,Quantidade,Faturamento');
@@ -284,8 +287,14 @@ function AdminRelatorios({ empresaId }) {
 
     const faturamentoDiarioHtml = tabela(
       tituloFaturamentoPorPeriodo,
-      ['Período', 'Faturamento', 'Qtd'],
-      relatorio.serie_diaria.map((d) => [formatarRotuloPeriodo(d.data, agrupamento), formatarMoeda(d.faturamento), d.quantidade])
+      ['Período', 'Serviço', 'Tipo', 'Faturamento', 'Qtd'],
+      relatorio.detalhe_periodo.map((d) => [
+        formatarRotuloPeriodo(d.periodo, agrupamento),
+        d.servico,
+        d.tipo === 'assinante' ? 'Assinante' : 'Avulso',
+        formatarMoeda(d.faturamento),
+        d.quantidade
+      ])
     );
 
     const topServicosHtml = relatorio.avancado ? tabela(
@@ -365,9 +374,11 @@ function AdminRelatorios({ empresaId }) {
   const maiorFaturamentoProfissional = relatorio ? Math.max(1, ...relatorio.top_profissionais.map((p) => p.faturamento)) : 1;
   const variacao = relatorio?.resumo?.variacao_faturamento_pct ?? 0;
   const nomesServicosFiltrados = servicosDisponiveis.filter((sv) => servicosSelecionados.includes(sv.id)).map((sv) => sv.nome).join(', ');
-  // Título da série de faturamento (tela, CSV e PDF) — com filtro de serviço ativo, deixa explícito
-  // ali mesmo qual serviço está sendo mostrado, não só na linha de período lá em cima do relatório.
-  const tituloFaturamentoPorPeriodo = `Faturamento por ${LABEL_AGRUPAMENTO[agrupamento]}${nomesServicosFiltrados ? ` — ${nomesServicosFiltrados}` : ''}`;
+  // Título da série de faturamento (tela, CSV e PDF). Sem o nome do serviço aqui de propósito —
+  // já aparece na linha de período lá em cima do relatório/exportação, repetir no título ficaria
+  // redundante. Qual serviço/tipo é cada linha aparece dentro da própria tabela de detalhamento
+  // (detalhe_periodo), logo abaixo.
+  const tituloFaturamentoPorPeriodo = `Faturamento por ${LABEL_AGRUPAMENTO[agrupamento]}`;
 
   return (
     <div className="admin-page-container" style={styles.container}>
@@ -410,6 +421,14 @@ function AdminRelatorios({ empresaId }) {
               Limpar seleção
             </button>
           )}
+        </div>
+        <div style={{ flex: '1 1 150px', minWidth: '150px' }}>
+          <label style={styles.label}>Tipo de cliente</label>
+          <select value={tipoCliente} onChange={(e) => setTipoCliente(e.target.value)} style={{ ...styles.input, cursor: 'pointer' }}>
+            <option value="todos">Todos</option>
+            <option value="assinante">Só assinantes</option>
+            <option value="avulso">Só avulso</option>
+          </select>
         </div>
         <div style={{ flex: '1 1 200px', minWidth: '200px' }}>
           {/* Rótulo fantasma — alinha o topo do botão com o topo dos inputs dos campos ao lado
@@ -631,6 +650,39 @@ function AdminRelatorios({ empresaId }) {
                     <span style={styles.barraLabel}>{formatarRotuloPeriodo(d.data, agrupamento)}</span>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Mesma série do gráfico acima, só que aberta por período + serviço + tipo de
+                cliente — pra saber do que se trata cada linha sem precisar abrir o
+                comissionamento. Atendimento com mais de um serviço junto divide o valor em
+                partes iguais entre eles (ver detalhePeriodo em routes/relatorios.js). */}
+            {relatorio.detalhe_periodo.length > 0 && (
+              <div style={{ overflowX: 'auto', marginTop: '18px' }}>
+                <table style={styles.tabela}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Período</th>
+                      <th style={styles.th}>Serviço</th>
+                      <th style={styles.th}>Tipo</th>
+                      <th style={styles.th}>Faturamento</th>
+                      <th style={styles.th}>Qtd</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {relatorio.detalhe_periodo.map((d, idx) => (
+                      <tr key={idx}>
+                        <td style={styles.td}>{formatarRotuloPeriodo(d.periodo, agrupamento)}</td>
+                        <td style={styles.td}>{d.servico}</td>
+                        <td style={styles.td}>
+                          {d.tipo === 'assinante' ? <span style={styles.tagAssinante}>Assinante</span> : <span style={styles.tagAvulso}>Avulso</span>}
+                        </td>
+                        <td style={styles.td}>{formatarMoeda(d.faturamento)}</td>
+                        <td style={styles.td}>{d.quantidade}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
