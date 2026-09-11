@@ -21,7 +21,7 @@ function AdminBarbeiros({ empresaId }) {
 
     const [editando, setEditando] = useState(null);
     const [bloqueando, setBloqueando] = useState(null);
-    const [dadosBloqueio, setDadosBloqueio] = useState({ data: '', dataFim: '', inicio: '', fim: '', motivo: 'Intervalo/Folga' });
+    const [dadosBloqueio, setDadosBloqueio] = useState({ data: '', dataFim: '', inicio: '', fim: '', diaTodo: false, motivo: 'Intervalo/Folga' });
 
     const [modalServicos, setModalServicos] = useState(false);
     const [barbeiroSelecionado, setBarbeiroSelecionado] = useState(null);
@@ -234,16 +234,25 @@ function AdminBarbeiros({ empresaId }) {
     };
 
     const salvarBloqueio = async () => {
-        if (!dadosBloqueio.data || !dadosBloqueio.inicio || !dadosBloqueio.fim) {
-            return toast.error("Preencha Data de Início, Hora de Início e Hora de Fim.");
+        if (!dadosBloqueio.data) {
+            return toast.error("Preencha a data de início do bloqueio.");
+        }
+        if (!dadosBloqueio.diaTodo && (!dadosBloqueio.inicio || !dadosBloqueio.fim)) {
+            return toast.error("Preencha a Hora de Início e Hora de Fim, ou marque 'Dia todo'.");
+        }
+        if (dadosBloqueio.dataFim && dadosBloqueio.dataFim < dadosBloqueio.data) {
+            return toast.error("A data 'Até' não pode ser anterior à data 'De'.");
         }
 
         const dadosParaEnviar = {
             barbeiro_id: Number(bloqueando.id),
             data_bloqueio: dadosBloqueio.data,
             data_fim: dadosBloqueio.dataFim || dadosBloqueio.data,
-            hora_inicio: dadosBloqueio.inicio,
-            hora_fim: dadosBloqueio.fim,
+            // "Dia todo" bloqueia das 00:00 às 23:59 em cada dia do período — mesma âncora de
+            // hora_inicio/hora_fim já usada pra bloqueio com horário específico (ver
+            // /disponibilidade-filtro em routes/servicos.js), só cobrindo o dia inteiro.
+            hora_inicio: dadosBloqueio.diaTodo ? '00:00' : dadosBloqueio.inicio,
+            hora_fim: dadosBloqueio.diaTodo ? '23:59' : dadosBloqueio.fim,
             motivo: dadosBloqueio.motivo || 'Intervalo/Folga'
         };
 
@@ -257,7 +266,7 @@ function AdminBarbeiros({ empresaId }) {
 
             if (res.ok) {
                 setBloqueando(null);
-                setDadosBloqueio({ data: '', dataFim: '', inicio: '', fim: '', motivo: 'Intervalo/Folga' });
+                setDadosBloqueio({ data: '', dataFim: '', inicio: '', fim: '', diaTodo: false, motivo: 'Intervalo/Folga' });
                 carregarEquipe();
                 toast.success('Bloqueio adicionado à agenda!');
             } else {
@@ -415,10 +424,18 @@ function AdminBarbeiros({ empresaId }) {
                                 if (!dataParaUsar) return null;
                                 const dataIniObj = new Date(dataParaUsar + 'T00:00:00');
                                 const dataIniFormatada = dataIniObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-                                
+                                const dataFimFormatada = bloq.data_fim && bloq.data_fim !== dataParaUsar
+                                    ? new Date(bloq.data_fim + 'T00:00:00').toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})
+                                    : null;
+                                const periodo = dataFimFormatada ? `${dataIniFormatada} até ${dataFimFormatada}` : dataIniFormatada;
+                                // Bloqueio criado com "Dia todo" salva hora_inicio=00:00/hora_fim=23:59 (ver
+                                // salvarBloqueio acima) — detecta pelo mesmo par pra mostrar o rótulo em vez do horário.
+                                const diaTodo = bloq.hora_inicio?.substring(0,5) === '00:00' && bloq.hora_fim?.substring(0,5) === '23:59';
+                                const horario = diaTodo ? 'Dia todo' : `${bloq.hora_inicio?.substring(0,5)} - ${bloq.hora_fim?.substring(0,5)}`;
+
                                 return (
                                     <div key={bloq.id} style={styles.itemBloqueio}>
-                                        <span>{dataIniFormatada} | {bloq.hora_inicio?.substring(0,5)} - {bloq.hora_fim?.substring(0,5)}</span>
+                                        <span>{periodo} | {horario}</span>
                                         <button onClick={() => excluirBloqueio(bloq.id)} style={styles.btnX} title="Remover Bloqueio">
                                             <Icons.Trash color="#ef4444" />
                                         </button>
@@ -430,7 +447,7 @@ function AdminBarbeiros({ empresaId }) {
                         <div style={styles.containerBotoes}>
                             <div style={{ display: 'flex', gap: '10px' }}>
                                 <button onClick={() => setEditando(b)} style={styles.btnSecundario}><Icons.Edit color="#4b5563" /> Editar</button>
-                                <button onClick={() => setBloqueando(b)} style={styles.btnSecundario}><Icons.Lock color="#4b5563" /> Bloquear</button>
+                                <button onClick={() => { setDadosBloqueio({ data: '', dataFim: '', inicio: '', fim: '', diaTodo: false, motivo: 'Intervalo/Folga' }); setBloqueando(b); }} style={styles.btnSecundario}><Icons.Lock color="#4b5563" /> Bloquear</button>
                             </div>
                             
                             <button onClick={() => abrirModalServicos(b)} style={styles.btnVincular}>
@@ -502,17 +519,35 @@ function AdminBarbeiros({ empresaId }) {
                         {bloqueando && (
                             <>
                                 <h3 style={styles.modalTitle}>Bloquear Horário: {bloqueando.nome}</h3>
-                                <label style={styles.label}>Data do Bloqueio:</label>
-                                <input type="date" style={styles.inputModal} value={dadosBloqueio.data} onChange={e => setDadosBloqueio({...dadosBloqueio, data: e.target.value})} />
-                                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={styles.label}>De:</label>
+                                        <input type="date" style={styles.inputModal} value={dadosBloqueio.data} onChange={e => setDadosBloqueio({...dadosBloqueio, data: e.target.value})} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={styles.label}>Até (opcional):</label>
+                                        <input type="date" style={styles.inputModal} min={dadosBloqueio.data || undefined} value={dadosBloqueio.dataFim} onChange={e => setDadosBloqueio({...dadosBloqueio, dataFim: e.target.value})} />
+                                    </div>
+                                </div>
+                                <small style={{ display: 'block', marginTop: '4px', fontSize: '11px', color: '#9ca3af' }}>
+                                    Deixe "Até" em branco pra bloquear só o dia "De". Com um período, o horário abaixo (ou "Dia todo") vale pra todos os dias do período.
+                                </small>
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '12px', alignItems: 'flex-end' }}>
                                     <div style={{flex: 1}}>
                                         <label style={styles.label}>Hora Início:</label>
-                                        <input type="time" style={styles.inputModal} value={dadosBloqueio.inicio} onChange={e => setDadosBloqueio({...dadosBloqueio, inicio: e.target.value})} />
+                                        <input type="time" disabled={dadosBloqueio.diaTodo} style={{ ...styles.inputModal, opacity: dadosBloqueio.diaTodo ? 0.5 : 1 }} value={dadosBloqueio.inicio} onChange={e => setDadosBloqueio({...dadosBloqueio, inicio: e.target.value})} />
                                     </div>
                                     <div style={{flex: 1}}>
                                         <label style={styles.label}>Hora Fim:</label>
-                                        <input type="time" style={styles.inputModal} value={dadosBloqueio.fim} onChange={e => setDadosBloqueio({...dadosBloqueio, fim: e.target.value})} />
+                                        <input type="time" disabled={dadosBloqueio.diaTodo} style={{ ...styles.inputModal, opacity: dadosBloqueio.diaTodo ? 0.5 : 1 }} value={dadosBloqueio.fim} onChange={e => setDadosBloqueio({...dadosBloqueio, fim: e.target.value})} />
                                     </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDadosBloqueio({...dadosBloqueio, diaTodo: !dadosBloqueio.diaTodo})}
+                                        style={dadosBloqueio.diaTodo ? styles.btnDiaTodoAtivo : styles.btnDiaTodo}
+                                    >
+                                        Dia todo
+                                    </button>
                                 </div>
                                 <div style={styles.modalAcoes}>
                                     <button onClick={() => setBloqueando(null)} style={styles.btnCancelarModal}>Cancelar</button>
@@ -608,7 +643,9 @@ const styles = {
     itemServico: { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', borderRadius: '6px' },
     modalAcoes: { display: 'flex', gap: '10px', marginTop: '15px' },
     btnSalvarModal: { flex: 1, padding: '12px', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' },
-    btnCancelarModal: { flex: 1, padding: '12px', backgroundColor: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }
+    btnCancelarModal: { flex: 1, padding: '12px', backgroundColor: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
+    btnDiaTodo: { padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', color: '#4b5563', fontWeight: '600', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' },
+    btnDiaTodoAtivo: { padding: '10px 14px', borderRadius: '8px', border: '1px solid #2554eb', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '700', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }
 };
 
 export default AdminBarbeiros;
