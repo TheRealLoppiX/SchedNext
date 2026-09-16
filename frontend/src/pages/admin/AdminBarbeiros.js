@@ -519,12 +519,15 @@ function AdminBarbeiros({ empresaId }) {
                         {bloqueando && (
                             <>
                                 <h3 style={styles.modalTitle}>Bloquear Horário: {bloqueando.nome}</h3>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <div style={{ flex: 1 }}>
+                                {/* flexWrap + minWidth:0 de propósito — input[type=date] no Safari/iOS tem uma
+                                    largura mínima nativa que ignora flex-shrink sem minWidth:0, e sem wrap os dois
+                                    campos ficavam espremidos/cortados em telas estreitas (ex: iPhone SE). */}
+                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                    <div style={{ flex: '1 1 130px', minWidth: 0 }}>
                                         <label style={styles.label}>De:</label>
                                         <input type="date" style={styles.inputModal} value={dadosBloqueio.data} onChange={e => setDadosBloqueio({...dadosBloqueio, data: e.target.value})} />
                                     </div>
-                                    <div style={{ flex: 1 }}>
+                                    <div style={{ flex: '1 1 130px', minWidth: 0 }}>
                                         <label style={styles.label}>Até (opcional):</label>
                                         <input type="date" style={styles.inputModal} min={dadosBloqueio.data || undefined} value={dadosBloqueio.dataFim} onChange={e => setDadosBloqueio({...dadosBloqueio, dataFim: e.target.value})} />
                                     </div>
@@ -532,19 +535,21 @@ function AdminBarbeiros({ empresaId }) {
                                 <small style={{ display: 'block', marginTop: '4px', fontSize: '11px', color: '#9ca3af' }}>
                                     Deixe "Até" em branco pra bloquear só o dia "De". Com um período, o horário abaixo (ou "Dia todo") vale pra todos os dias do período.
                                 </small>
-                                <div style={{ display: 'flex', gap: '10px', marginTop: '12px', alignItems: 'flex-end' }}>
-                                    <div style={{flex: 1}}>
+                                {/* Mesmo motivo do flexWrap acima — em telas estreitas o botão "Dia todo" quebra
+                                    pra uma linha própria em vez de espremer os dois campos de hora. */}
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                                    <div style={{ flex: '1 1 110px', minWidth: 0 }}>
                                         <label style={styles.label}>Hora Início:</label>
                                         <input type="time" disabled={dadosBloqueio.diaTodo} style={{ ...styles.inputModal, opacity: dadosBloqueio.diaTodo ? 0.5 : 1 }} value={dadosBloqueio.inicio} onChange={e => setDadosBloqueio({...dadosBloqueio, inicio: e.target.value})} />
                                     </div>
-                                    <div style={{flex: 1}}>
+                                    <div style={{ flex: '1 1 110px', minWidth: 0 }}>
                                         <label style={styles.label}>Hora Fim:</label>
                                         <input type="time" disabled={dadosBloqueio.diaTodo} style={{ ...styles.inputModal, opacity: dadosBloqueio.diaTodo ? 0.5 : 1 }} value={dadosBloqueio.fim} onChange={e => setDadosBloqueio({...dadosBloqueio, fim: e.target.value})} />
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setDadosBloqueio({...dadosBloqueio, diaTodo: !dadosBloqueio.diaTodo})}
-                                        style={dadosBloqueio.diaTodo ? styles.btnDiaTodoAtivo : styles.btnDiaTodo}
+                                        style={{ ...(dadosBloqueio.diaTodo ? styles.btnDiaTodoAtivo : styles.btnDiaTodo), flex: '0 0 auto' }}
                                     >
                                         Dia todo
                                     </button>

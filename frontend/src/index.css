@@ -475,6 +475,15 @@ code {
     width: 250px !important;
     transform: translateX(-100%);
     transition: transform 0.25s ease !important;
+    /* 100vh no Safari/iOS conta a altura da tela com a barra de endereço recolhida — maior do
+       que o espaço realmente visível quando ela está à mostra. O menu (fixed + overflowY:auto
+       no inline style) ficava com "Perfil"/"Sair" atrás da barra do navegador, sem gesto de
+       scroll pra chegar lá porque o conteúdo cabia exatamente nos 100vh "cheios". 100dvh
+       (dynamic viewport height) acompanha a barra de verdade; navegadores sem suporte ignoram
+       essa linha e ficam só com o 100vh acima. */
+    height: 100vh !important;
+    height: 100dvh !important;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .bb-sidebar.aberto {

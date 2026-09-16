@@ -1154,16 +1154,19 @@ function AdminClientes({ empresaId }) {
                             <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Gerando relatório...</p>
                         ) : relatorioCliente ? (
                             <>
-                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', padding: '16px 24px 0' }}>
-                                    <button onClick={exportarRelatorioCsv} style={s.btnExportarCsv}>
+                                {/* Sem padding horizontal aqui de propósito — o modal (s.modal) já tem 30px de
+                                    padding nos 4 lados; somar mais 24px aqui só nesta linha estreitava demais
+                                    a área útil no mobile e espremia os botões de exportação um contra o outro. */}
+                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', paddingTop: '16px' }}>
+                                    <button onClick={exportarRelatorioCsv} style={{ ...s.btnExportarCsv, flex: '1 1 160px', justifyContent: 'center' }}>
                                         <Icons.Download color="#fff" /> Exportar Excel (CSV)
                                     </button>
-                                    <button onClick={exportarRelatorioPdf} style={s.btnExportarPdf}>
+                                    <button onClick={exportarRelatorioPdf} style={{ ...s.btnExportarPdf, flex: '1 1 160px', justifyContent: 'center' }}>
                                         <Icons.FileText color="#fff" /> Exportar PDF
                                     </button>
                                 </div>
 
-                                <div style={{ padding: '16px 24px 24px', maxHeight: '60vh', overflowY: 'auto' }}>
+                                <div style={{ paddingTop: '16px', maxHeight: '60vh', overflowY: 'auto' }}>
                                     <h4 style={{ margin: '10px 0', fontSize: '14px', color: '#111827' }}>Agendamentos</h4>
                                     {relatorioCliente.agendamentos.length === 0 ? (
                                         <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#9ca3af' }}>Nenhum agendamento registrado.</p>

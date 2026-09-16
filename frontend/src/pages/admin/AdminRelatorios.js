@@ -167,7 +167,7 @@ function AdminRelatorios({ empresaId }) {
   const salvarTaxas = async () => {
     const resumo = CAMPOS_TAXA.map((f) => `${f.rotulo} ${Number(taxas[f.chave] || 0)}%`).join(' · ');
     const ok = await confirmar('Salvar novas taxas de processamento?', {
-      detail: `${resumo}. Isso recalcula a receita líquida em TODOS os relatórios a partir de agora — inclusive de períodos já fechados, já que a taxa não fica presa a cada pagamento antigo.`,
+      detail: `${resumo}. Isso recalcula a receita líquida em TODOS os relatórios a partir de agora, inclusive de períodos já fechados, já que a taxa não fica presa a cada pagamento antigo.`,
       confirmText: 'Salvar taxas',
       danger: true
     });
@@ -889,7 +889,7 @@ function AdminRelatorios({ empresaId }) {
             <p style={styles.avisoSensivel}>
               <Icons.AlertTriangle color="#f59e0b" />
               Percentual descontado por forma de pagamento pra calcular a receita líquida dos relatórios. Não muda o valor cobrado do cliente, mas recalcula
-              a receita líquida de TODOS os períodos a partir de agora — inclusive meses já fechados, já que a taxa cadastrada aqui não fica presa a cada pagamento antigo.
+              a receita líquida de TODOS os períodos a partir de agora, inclusive meses já fechados, já que a taxa cadastrada aqui não fica presa a cada pagamento antigo.
             </p>
             <div style={styles.gridTaxas}>
               {CAMPOS_TAXA.map((f) => (
