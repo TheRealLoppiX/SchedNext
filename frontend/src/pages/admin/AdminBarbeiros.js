@@ -519,41 +519,34 @@ function AdminBarbeiros({ empresaId }) {
                         {bloqueando && (
                             <>
                                 <h3 style={styles.modalTitle}>Bloquear Horário: {bloqueando.nome}</h3>
-                                {/* Forçar os dois campos numa linha só (sem wrap) foi o que causava a
-                                    sobreposição: o input[type=date] nativo, em vários navegadores Android, tem
-                                    uma largura mínima de renderização que ignora `width` do CSS — menor que
-                                    45% do modal, ele simplesmente desenhava por cima do campo vizinho. Com
-                                    flexWrap de volta, cada campo cabe lado a lado quando há espaço, ou quebra
-                                    pra sua própria linha (ocupando 100% dela, por causa do flex-grow) quando
-                                    não há — nunca sobrepõe. marginBottom (em vez de depender só do `gap`) dá o
-                                    respiro entre as duas linhas mesmo em motores mais antigos sem suporte a
-                                    gap multi-linha em flexbox. */}
+                                {/* O print mandado pelo usuário mostrou a causa real: não é a conta do flexbox
+                                    (De/Até já empilhavam certinho, um embaixo do outro) — é o input[type=date/time]
+                                    no Safari/iOS que renderiza um pouco mais largo do que a caixa pedida via CSS,
+                                    ignorando padding-box e vazando pra direita, pra fora do padding do modal
+                                    (só do lado direito, por isso a assimetria). overflow:hidden no wrapper corta
+                                    esse vazamento; WebkitAppearance:none tira o estilo nativo do iOS que causa
+                                    esse comportamento em primeiro lugar. */}
                                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                    <div style={{ flex: '1 1 150px', minWidth: 0, marginBottom: '4px' }}>
+                                    <div style={{ flex: '1 1 150px', minWidth: 0, marginBottom: '4px', overflow: 'hidden' }}>
                                         <label style={styles.label}>De:</label>
-                                        <input type="date" style={styles.inputModal} value={dadosBloqueio.data} onChange={e => setDadosBloqueio({...dadosBloqueio, data: e.target.value})} />
+                                        <input type="date" style={styles.inputData} value={dadosBloqueio.data} onChange={e => setDadosBloqueio({...dadosBloqueio, data: e.target.value})} />
                                     </div>
-                                    <div style={{ flex: '1 1 150px', minWidth: 0, marginBottom: '4px' }}>
+                                    <div style={{ flex: '1 1 150px', minWidth: 0, marginBottom: '4px', overflow: 'hidden' }}>
                                         <label style={styles.label}>Até (opcional):</label>
-                                        <input type="date" style={styles.inputModal} min={dadosBloqueio.data || undefined} value={dadosBloqueio.dataFim} onChange={e => setDadosBloqueio({...dadosBloqueio, dataFim: e.target.value})} />
+                                        <input type="date" style={styles.inputData} min={dadosBloqueio.data || undefined} value={dadosBloqueio.dataFim} onChange={e => setDadosBloqueio({...dadosBloqueio, dataFim: e.target.value})} />
                                     </div>
                                 </div>
                                 <small style={{ display: 'block', marginTop: '4px', fontSize: '11px', color: '#9ca3af' }}>
                                     Deixe "Até" em branco pra bloquear só o dia "De". Com um período, o horário abaixo (ou "Dia todo") vale pra todos os dias do período.
                                 </small>
-                                {/* Mesma sobreposição do campo de data acontecia aqui: basis de 110px cabia
-                                    na conta do flexbox (não quebrava linha), mas o input[type=time] nativo
-                                    de alguns navegadores Android renderiza mais largo que isso e ignorava o
-                                    CSS, desenhando por cima do campo vizinho. Basis maior (130px) faz o
-                                    flexbox quebrar linha antes de chegar nesse ponto. */}
                                 <div style={{ display: 'flex', gap: '10px', marginTop: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                                    <div style={{ flex: '1 1 130px', minWidth: 0, marginBottom: '4px' }}>
+                                    <div style={{ flex: '1 1 130px', minWidth: 0, marginBottom: '4px', overflow: 'hidden' }}>
                                         <label style={styles.label}>Hora Início:</label>
-                                        <input type="time" disabled={dadosBloqueio.diaTodo} style={{ ...styles.inputModal, opacity: dadosBloqueio.diaTodo ? 0.5 : 1 }} value={dadosBloqueio.inicio} onChange={e => setDadosBloqueio({...dadosBloqueio, inicio: e.target.value})} />
+                                        <input type="time" disabled={dadosBloqueio.diaTodo} style={{ ...styles.inputData, opacity: dadosBloqueio.diaTodo ? 0.5 : 1 }} value={dadosBloqueio.inicio} onChange={e => setDadosBloqueio({...dadosBloqueio, inicio: e.target.value})} />
                                     </div>
-                                    <div style={{ flex: '1 1 130px', minWidth: 0, marginBottom: '4px' }}>
+                                    <div style={{ flex: '1 1 130px', minWidth: 0, marginBottom: '4px', overflow: 'hidden' }}>
                                         <label style={styles.label}>Hora Fim:</label>
-                                        <input type="time" disabled={dadosBloqueio.diaTodo} style={{ ...styles.inputModal, opacity: dadosBloqueio.diaTodo ? 0.5 : 1 }} value={dadosBloqueio.fim} onChange={e => setDadosBloqueio({...dadosBloqueio, fim: e.target.value})} />
+                                        <input type="time" disabled={dadosBloqueio.diaTodo} style={{ ...styles.inputData, opacity: dadosBloqueio.diaTodo ? 0.5 : 1 }} value={dadosBloqueio.fim} onChange={e => setDadosBloqueio({...dadosBloqueio, fim: e.target.value})} />
                                     </div>
                                     <button
                                         type="button"
@@ -652,6 +645,11 @@ const styles = {
     modal: { backgroundColor: '#fff', padding: '30px', borderRadius: '15px', width: '90%', maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '15px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', boxSizing: 'border-box' },
     modalTitle: { margin: '0 0 10px 0', fontSize: '20px', color: '#111827', fontWeight: '800' },
     inputModal: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', width: '100%', boxSizing: 'border-box', fontSize: '14px', outline: 'none' },
+    // Variante só pra type="date"/type="time" — no Safari/iOS esses inputs renderizam um pouco
+    // mais largos que a caixa pedida (ignoram box-sizing:border-box nesse ponto e vazam pra
+    // direita, ver bloqueio de horário). WebkitAppearance:none tira o estilo nativo que causa
+    // isso; maxWidth:100% é reforço pro overflow:hidden do wrapper cortar sem esticar o layout.
+    inputData: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', width: '100%', maxWidth: '100%', boxSizing: 'border-box', fontSize: '14px', outline: 'none', WebkitAppearance: 'none', appearance: 'none' },
     btnUpload: { display: 'inline-block', padding: '8px 16px', backgroundColor: '#f3f4f6', color: '#4b5563', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', border: '1px solid #d1d5db' },
     listaServicosModal: { maxHeight: '300px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '5px' },
     itemServico: { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', borderRadius: '6px' },
