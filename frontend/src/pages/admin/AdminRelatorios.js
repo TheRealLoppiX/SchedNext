@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../../components/Toast';
+import { useConfirm } from '../../components/ConfirmDialog';
 import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
+
+const CAMPOS_TAXA = [
+  { chave: 'dinheiro', rotulo: 'Dinheiro' },
+  { chave: 'credito', rotulo: 'Crédito' },
+  { chave: 'debito', rotulo: 'Débito' },
+  { chave: 'pix', rotulo: 'Pix' }
+];
 
 function formatarDataLocal(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -50,6 +58,7 @@ function formatarRotuloPeriodo(data, agrupamento) {
 
 function AdminRelatorios({ empresaId }) {
   const toast = useToast();
+  const confirmar = useConfirm();
   const [carregando, setCarregando] = useState(true);
   const [gerando, setGerando] = useState(false);
   const [relatorio, setRelatorio] = useState(null);
@@ -88,6 +97,10 @@ function AdminRelatorios({ empresaId }) {
   // necessidade operacional básica de qualquer negócio com equipe (ver PENDENCIAS.md).
   const [taxas, setTaxas] = useState({ dinheiro: 0, credito: 0, debito: 0, pix: 0 });
   const [salvandoTaxas, setSalvandoTaxas] = useState(false);
+  // Fica fechado por padrão de propósito — é configuração financeira sensível (muda a receita
+  // líquida de todo relatório, inclusive períodos já fechados) e fica ao final da página, longe
+  // do fluxo comum de "ver relatório do dia a dia".
+  const [taxasExpandido, setTaxasExpandido] = useState(false);
   const [comissionamento, setComissionamento] = useState(null);
   const [carregandoComissao, setCarregandoComissao] = useState(true);
   const [profissionalExpandido, setProfissionalExpandido] = useState(null);
@@ -152,6 +165,14 @@ function AdminRelatorios({ empresaId }) {
   useEffect(() => { carregarTaxas(); }, [carregarTaxas]);
 
   const salvarTaxas = async () => {
+    const resumo = CAMPOS_TAXA.map((f) => `${f.rotulo} ${Number(taxas[f.chave] || 0)}%`).join(' · ');
+    const ok = await confirmar('Salvar novas taxas de processamento?', {
+      detail: `${resumo}. Isso recalcula a receita líquida em TODOS os relatórios a partir de agora — inclusive de períodos já fechados, já que a taxa não fica presa a cada pagamento antigo.`,
+      confirmText: 'Salvar taxas',
+      danger: true
+    });
+    if (!ok) return;
+
     setSalvandoTaxas(true);
     try {
       const res = await fetch(`${API_URL}/admin/taxas-pagamento`, {
@@ -549,30 +570,6 @@ function AdminRelatorios({ empresaId }) {
         )}
       </div>
 
-      <div style={styles.secao}>
-        <h3 style={styles.secaoTitulo}>Taxas de maquineta</h3>
-        <p style={{ ...styles.vazio, marginBottom: '14px' }}>Percentual descontado por forma de pagamento, usado só para calcular a receita líquida abaixo. Não muda o que o cliente paga.</p>
-        <div style={styles.gridTaxas}>
-          {[
-            { chave: 'dinheiro', rotulo: 'Dinheiro' },
-            { chave: 'credito', rotulo: 'Crédito' },
-            { chave: 'debito', rotulo: 'Débito' },
-            { chave: 'pix', rotulo: 'Pix' }
-          ].map((f) => (
-            <div key={f.chave}>
-              <label style={styles.label}>{f.rotulo} (%)</label>
-              <input
-                type="number" min="0" max="100" step="0.1"
-                style={styles.input}
-                value={taxas[f.chave] ?? 0}
-                onChange={(e) => setTaxas({ ...taxas, [f.chave]: e.target.value })}
-              />
-            </div>
-          ))}
-        </div>
-        <LoadingButton loading={salvandoTaxas} onClick={salvarTaxas} style={{ ...styles.btnGerar, marginTop: '14px' }}>Salvar taxas</LoadingButton>
-      </div>
-
       {mostrarComissionamentoAplicado && (
       <div style={styles.secao}>
         <h3 style={styles.secaoTitulo}>Comissionamento por profissional</h3>
@@ -866,6 +863,51 @@ function AdminRelatorios({ empresaId }) {
           )}
         </>
       )}
+
+      {/* Fica fechada por padrão e visualmente separada do resto (fundo escuro, cadeado) de
+          propósito — é configuração financeira sensível, não um filtro do dia a dia (ver
+          taxasExpandido acima). */}
+      <div style={styles.secaoSensivel}>
+        <button
+          type="button"
+          onClick={() => setTaxasExpandido((v) => !v)}
+          style={styles.secaoSensivelHeader}
+          aria-expanded={taxasExpandido}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Icons.Lock color="#9ca3af" />
+            <span>
+              <span style={styles.secaoSensivelTitulo}>Taxas de processamento</span>
+              <span style={styles.secaoSensivelBadge}>Configuração financeira</span>
+            </span>
+          </span>
+          <Icons.Chevron color="#9ca3af" aberto={taxasExpandido} />
+        </button>
+
+        {taxasExpandido && (
+          <div style={styles.secaoSensivelCorpo}>
+            <p style={styles.avisoSensivel}>
+              <Icons.AlertTriangle color="#f59e0b" />
+              Percentual descontado por forma de pagamento pra calcular a receita líquida dos relatórios. Não muda o valor cobrado do cliente, mas recalcula
+              a receita líquida de TODOS os períodos a partir de agora — inclusive meses já fechados, já que a taxa cadastrada aqui não fica presa a cada pagamento antigo.
+            </p>
+            <div style={styles.gridTaxas}>
+              {CAMPOS_TAXA.map((f) => (
+                <div key={f.chave}>
+                  <label style={styles.label}>{f.rotulo} (%)</label>
+                  <input
+                    type="number" min="0" max="100" step="0.1"
+                    style={styles.input}
+                    value={taxas[f.chave] ?? 0}
+                    onChange={(e) => setTaxas({ ...taxas, [f.chave]: e.target.value })}
+                  />
+                </div>
+              ))}
+            </div>
+            <LoadingButton loading={salvandoTaxas} onClick={salvarTaxas} style={{ ...styles.btnGerar, marginTop: '14px' }}>Salvar taxas</LoadingButton>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -874,6 +916,9 @@ const Icons = {
   BarChart: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>,
   Download: ({ color }) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'text-bottom' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
   FileText: ({ color }) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'text-bottom' }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>,
+  Lock: ({ color }) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
+  AlertTriangle: ({ color }) => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', flexShrink: 0, verticalAlign: 'text-top' }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>,
+  Chevron: ({ color, aberto }) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform 0.15s', transform: aberto ? 'rotate(180deg)' : 'none' }}><polyline points="6 9 12 15 18 9"></polyline></svg>,
 };
 
 const styles = {
@@ -905,6 +950,14 @@ const styles = {
   cardVariacao: { fontSize: '12px', color: '#6b7280', fontWeight: '600' },
   secao: { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6', marginBottom: '20px' },
   secaoTitulo: { margin: '0 0 16px', fontSize: '16px', color: '#111827' },
+  // Visualmente à parte do resto da página (fundo escuro em vez do branco usado em `secao`) —
+  // de propósito, pra marcar que é uma configuração financeira, não um cartão de relatório comum.
+  secaoSensivel: { backgroundColor: '#111827', borderRadius: '12px', marginTop: '36px', overflow: 'hidden', border: '1px solid #1f2937' },
+  secaoSensivelHeader: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' },
+  secaoSensivelTitulo: { color: '#e5e7eb', fontSize: '14px', fontWeight: '700', marginRight: '10px' },
+  secaoSensivelBadge: { display: 'inline-block', padding: '2px 8px', borderRadius: '999px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px' },
+  secaoSensivelCorpo: { padding: '0 20px 20px', borderTop: '1px solid #1f2937' },
+  avisoSensivel: { display: 'flex', alignItems: 'flex-start', color: '#d1d5db', fontSize: '12.5px', lineHeight: '1.6', margin: '16px 0', padding: '10px 12px', background: 'rgba(245,158,11,0.08)', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.25)' },
   vazio: { color: '#9ca3af', fontSize: '13px', margin: 0 },
   grafico: { display: 'flex', alignItems: 'flex-end', gap: '6px', height: '150px', overflowX: 'auto', paddingTop: '10px' },
   barraColuna: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', minWidth: '26px' },
