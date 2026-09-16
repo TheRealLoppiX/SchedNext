@@ -519,15 +519,19 @@ function AdminBarbeiros({ empresaId }) {
                         {bloqueando && (
                             <>
                                 <h3 style={styles.modalTitle}>Bloquear Horário: {bloqueando.nome}</h3>
-                                {/* flexWrap + minWidth:0 de propósito — input[type=date] no Safari/iOS tem uma
-                                    largura mínima nativa que ignora flex-shrink sem minWidth:0, e sem wrap os dois
-                                    campos ficavam espremidos/cortados em telas estreitas (ex: iPhone SE). */}
-                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                    <div style={{ flex: '1 1 130px', minWidth: 0 }}>
+                                {/* flex-basis em % (não px) de propósito — a decisão de quebrar linha no
+                                    flexbox soma o flex-basis "cheio" de cada item ANTES do shrink, então uma
+                                    base fixa em px (ex: 130px) ainda estourava a largura real em telas mais
+                                    estreitas (~360px) e empilhava os dois campos. Com 45%+45% a soma nunca
+                                    passa de 100%, então não quebra linha — minWidth:0 continua garantindo que
+                                    o input[type=date] (que no Safari/iOS tem largura mínima própria) encolha
+                                    até caber. */}
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <div style={{ flex: '1 1 45%', minWidth: 0 }}>
                                         <label style={styles.label}>De:</label>
                                         <input type="date" style={styles.inputModal} value={dadosBloqueio.data} onChange={e => setDadosBloqueio({...dadosBloqueio, data: e.target.value})} />
                                     </div>
-                                    <div style={{ flex: '1 1 130px', minWidth: 0 }}>
+                                    <div style={{ flex: '1 1 45%', minWidth: 0 }}>
                                         <label style={styles.label}>Até (opcional):</label>
                                         <input type="date" style={styles.inputModal} min={dadosBloqueio.data || undefined} value={dadosBloqueio.dataFim} onChange={e => setDadosBloqueio({...dadosBloqueio, dataFim: e.target.value})} />
                                     </div>
