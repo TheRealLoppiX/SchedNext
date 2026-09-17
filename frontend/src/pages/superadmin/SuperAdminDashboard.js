@@ -49,6 +49,13 @@ function formatarDataHoraLocal(iso) {
 
 const ROTULO_TIPO_RECEITA = { assinatura_plataforma: 'Assinatura de empresa', taxa_marketplace: 'Taxa de marketplace' };
 
+// Nome de empresa vem de cadastro livre — sem escapar, uma empresa com "<script>" no nome
+// executaria dentro da janela de impressão do PDF (mesmo cuidado do relatório do admin de
+// empresa, ver pages/admin/AdminRelatorios.js).
+function escaparHtml(v) {
+  return String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 // Não existe um campo "forma de pagamento" salvo pra assinatura da plataforma (diferente da
 // assinatura do cliente final, que tem assinatura_forma_pagamento pix/cartão) — a plataforma só
 // cobra por cartão via preapproval do Mercado Pago (ver backend/src/services/pagamento.js), e os
@@ -316,6 +323,95 @@ function AbaFinanceiro({ toast }) {
     URL.revokeObjectURL(link.href);
   };
 
+  // Mesmo padrão de pages/admin/AdminRelatorios.js: escreve um HTML inline-estilizado numa
+  // janela nova e usa a impressão nativa do navegador (Ctrl+P -> Salvar como PDF), sem
+  // biblioteca de geração de PDF nenhuma.
+  const exportarPdf = () => {
+    if (!financeiro) return;
+    const janela = window.open('', '_blank');
+    if (!janela) {
+      toast.error('O navegador bloqueou a janela de impressão. Permita pop-ups para este site e tente novamente.');
+      return;
+    }
+
+    const periodo = `${new Date(`${financeiro.periodo.inicio}T00:00:00`).toLocaleDateString('pt-BR')} a ${new Date(`${financeiro.periodo.fim}T00:00:00`).toLocaleDateString('pt-BR')}`;
+
+    const cards = [
+      ['Faturamento bruto', formatarMoeda(financeiro.resumo.faturamento_bruto)],
+      ['Receita líquida', formatarMoeda(financeiro.resumo.receita_liquida)],
+      ['Descontos e taxas', `${financeiro.resumo.descontos_pct}% (${formatarMoeda(financeiro.resumo.descontos_valor)})`],
+      ['Transações no período', financeiro.resumo.quantidade_transacoes],
+      ['Assinatura de empresas', formatarMoeda(financeiro.resumo.por_tipo.assinatura_plataforma.bruto)],
+      ['Taxa de marketplace', formatarMoeda(financeiro.resumo.por_tipo.taxa_marketplace.bruto)]
+    ];
+    const cardsHtml = cards.map(([label, valor]) => (
+      `<div class='card'><span class='card-label'>${escaparHtml(label)}</span><span class='card-valor'>${escaparHtml(valor)}</span></div>`
+    )).join('');
+
+    const tabela = (titulo, cabecalhos, linhas) => {
+      if (!linhas.length) return '';
+      const thead = cabecalhos.map((c) => `<th>${escaparHtml(c)}</th>`).join('');
+      const tbody = linhas.map((l) => `<tr>${l.map((v) => `<td>${escaparHtml(v)}</td>`).join('')}</tr>`).join('');
+      return `<h2>${escaparHtml(titulo)}</h2><table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>`;
+    };
+
+    const faturamentoPorPeriodoHtml = tabela(
+      'Faturamento por período',
+      ['Período', 'Bruto', 'Líquido', 'Qtd'],
+      financeiro.serie_periodo.map((s) => [s.periodo, formatarMoeda(s.bruto), formatarMoeda(s.liquido), s.qtd])
+    );
+
+    const topEmpresasHtml = tabela(
+      'Empresas que mais geraram receita',
+      ['Empresa', 'Bruto', 'Líquido', 'Qtd'],
+      financeiro.top_empresas.map((e) => [e.empresa, formatarMoeda(e.bruto), formatarMoeda(e.liquido), e.qtd])
+    );
+
+    const detalhamentoHtml = tabela(
+      'Detalhamento',
+      ['Data', 'Empresa', 'Tipo', 'Forma', 'Bruto', 'Líquido'],
+      financeiro.detalhamento.map((d) => [
+        formatarDataHoraLocal(d.criado_em),
+        d.empresa,
+        ROTULO_TIPO_RECEITA[d.tipo] || d.tipo,
+        d.forma_pagamento || '-',
+        formatarMoeda(d.valor_bruto),
+        formatarMoeda(d.valor_liquido)
+      ])
+    );
+
+    janela.document.write(`<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Financeiro da plataforma - ${escaparHtml(periodo)}</title><style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#111827}
+      h1{font-size:22px;font-weight:800;margin-bottom:4px}
+      .sub{font-size:13px;color:#6b7280;margin-bottom:14px}
+      .periodo{display:inline-block;background:#f3f4f6;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;color:#374151;margin-bottom:22px}
+      .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:26px}
+      .card{border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px}
+      .card-label{display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+      .card-valor{display:block;font-size:16px;font-weight:800;color:#111827}
+      h2{font-size:14px;margin:22px 0 10px;color:#111827}
+      table{width:100%;border-collapse:collapse;margin-bottom:6px}
+      thead tr{background:#111827}
+      th{padding:9px 10px;text-align:left;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.4px}
+      td{padding:8px 10px;font-size:12px;color:#374151;border-bottom:1px solid #f3f4f6}
+      tr:nth-child(even) td{background:#f9fafb}
+      .footer{margin-top:24px;font-size:11px;color:#9ca3af;text-align:right}
+      @media print{@page{margin:16mm}}
+    </style></head><body>
+      <h1>Financeiro da plataforma</h1>
+      <p class='sub'>Faturamento, receita líquida e taxas da SchedNext.</p>
+      <span class='periodo'>Período: ${escaparHtml(periodo)}</span>
+      <div class='cards'>${cardsHtml}</div>
+      ${faturamentoPorPeriodoHtml}
+      ${topEmpresasHtml}
+      ${detalhamentoHtml}
+      <div class='footer'>Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+    </body></html>`);
+    janela.document.close();
+    setTimeout(() => { janela.print(); }, 400);
+  };
+
   return (
     <div>
       <div style={s.barraTop}>
@@ -329,7 +425,10 @@ function AbaFinanceiro({ toast }) {
             <option value="ano">Por ano</option>
           </select>
         </div>
-        <button onClick={exportarCsv} style={s.btnOutline} disabled={!financeiro}>Exportar CSV</button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={exportarCsv} style={s.btnOutline} disabled={!financeiro}>Exportar CSV</button>
+          <button onClick={exportarPdf} style={s.btnOutline} disabled={!financeiro}>Exportar PDF</button>
+        </div>
       </div>
 
       {carregando ? <p style={s.textoCarregando}>Carregando...</p> : !financeiro ? (
