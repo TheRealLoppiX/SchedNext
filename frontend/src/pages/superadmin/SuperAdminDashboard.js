@@ -985,31 +985,46 @@ function redimensionarImagem(arquivo) {
   });
 }
 
+const EDICAO_VAZIA = { email: '', novaSenha: '', senha_atual: '', foto_url: '' };
+
 function AbaSuperAdmins({ toast, confirmar }) {
   const [lista, setLista] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [criandoModal, setCriandoModal] = useState(false);
   const [form, setForm] = useState({ ...SUPER_ADMIN_VAZIO });
   const [salvando, setSalvando] = useState(false);
+  const [meuId, setMeuId] = useState(null);
+  const [editandoModal, setEditandoModal] = useState(false);
+  const [formEdicao, setFormEdicao] = useState({ ...EDICAO_VAZIA });
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   useEscToClose(criandoModal, () => setCriandoModal(false));
+  useEscToClose(editandoModal, () => setEditandoModal(false));
 
-  const aoEscolherFoto = async (e) => {
+  // Handler de foto genérico (reaproveitado no formulário de criação e no de edição), já que a
+  // única diferença entre os dois é qual state atualizar.
+  const criarHandlerFoto = (setEstado) => async (e) => {
     const arquivo = e.target.files[0];
     if (!arquivo) return;
     try {
       const dataUri = await redimensionarImagem(arquivo);
-      setForm((f) => ({ ...f, foto_url: dataUri }));
+      setEstado((f) => ({ ...f, foto_url: dataUri }));
     } catch (err) {
       toast.error('Não foi possível ler essa imagem.');
     }
   };
+  const aoEscolherFoto = criarHandlerFoto(setForm);
+  const aoEscolherFotoEdicao = criarHandlerFoto(setFormEdicao);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
     try {
-      const res = await fetch(`${API_URL}/super-admin/super-admins`);
-      const data = await res.json();
+      const [resLista, resMe] = await Promise.all([
+        fetch(`${API_URL}/super-admin/super-admins`),
+        fetch(`${API_URL}/super-admin/me`)
+      ]);
+      const data = await resLista.json();
       setLista(Array.isArray(data) ? data : []);
+      if (resMe.ok) setMeuId((await resMe.json()).id);
     } catch (err) {
       toast.error('Erro ao carregar super admins.');
     } finally {
@@ -1019,6 +1034,43 @@ function AbaSuperAdmins({ toast, confirmar }) {
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  const abrirEdicao = (sa) => {
+    setFormEdicao({ email: sa.email, novaSenha: '', senha_atual: '', foto_url: sa.foto_url || '' });
+    setEditandoModal(true);
+  };
+
+  const salvarEdicao = async () => {
+    if (!formEdicao.senha_atual) { toast.error('Confirme sua senha atual para continuar.'); return; }
+
+    setSalvandoEdicao(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/super-admins/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formEdicao.email,
+          ...(formEdicao.novaSenha ? { senha: formEdicao.novaSenha } : {}),
+          senha_atual: formEdicao.senha_atual,
+          foto_url: formEdicao.foto_url || null
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Perfil atualizado!');
+        setEditandoModal(false);
+        setFormEdicao({ ...EDICAO_VAZIA });
+        carregar();
+      } else {
+        toast.error(data.detalhes?.[0]?.mensagem || data.error || 'Não foi possível atualizar seu perfil.');
+        setFormEdicao((f) => ({ ...f, senha_atual: '' }));
+      }
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setSalvandoEdicao(false);
+    }
+  };
 
   const criar = async () => {
     if (!form.email || !form.senha) { toast.error('Preencha o e-mail e a senha do novo acesso.'); return; }
@@ -1090,7 +1142,10 @@ function AbaSuperAdmins({ toast, confirmar }) {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ ...s.badge, background: status.bg, color: status.fg }}>{status.label}</span>
-                  {sa.ativo && (
+                  {sa.id === meuId && (
+                    <button onClick={() => abrirEdicao(sa)} style={s.btnOutline}>Editar</button>
+                  )}
+                  {sa.ativo && sa.id !== meuId && (
                     <button onClick={() => remover(sa)} style={{ ...s.btnOutline, ...s.btnOutlineVermelho }}>Remover</button>
                   )}
                 </div>
@@ -1138,6 +1193,49 @@ function AbaSuperAdmins({ toast, confirmar }) {
             <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
               <button onClick={() => { setCriandoModal(false); setForm({ ...SUPER_ADMIN_VAZIO }); }} style={{ ...s.btnOutline, flex: 1 }}>Cancelar</button>
               <LoadingButton loading={salvando} onClick={criar} style={{ ...s.btnPrimario, flex: 2 }}>Criar super admin</LoadingButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editandoModal && (
+        <div style={s.overlay} onClick={() => setEditandoModal(false)}>
+          <div style={{ ...s.modal, maxWidth: '440px' }} onClick={(ev) => ev.stopPropagation()}>
+            <div style={s.modalHeader}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}><Icons.Shield color="#111827" /> Editar meu perfil</h3>
+              <button onClick={() => setEditandoModal(false)} style={s.btnFechar}><Icons.Close /></button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '4px' }}>
+              <div style={s.avatarCirculo}>
+                {formEdicao.foto_url ? <img src={formEdicao.foto_url} alt="Preview" style={s.avatarImg} /> : iniciaisEmail(formEdicao.email)}
+              </div>
+              <div>
+                <label style={{ ...s.label, marginTop: 0 }}>Foto</label>
+                <input type="file" accept="image/*" onChange={aoEscolherFotoEdicao} style={{ fontSize: '12.5px' }} />
+              </div>
+            </div>
+
+            <label style={s.label}>E-mail (precisa ser @schednext.com.br)</label>
+            <input style={s.input} value={formEdicao.email} onChange={(e) => setFormEdicao({ ...formEdicao, email: e.target.value })} autoComplete="off" />
+
+            <label style={s.label}>Nova senha (deixe em branco para manter a atual)</label>
+            <input type="password" style={s.input} value={formEdicao.novaSenha} onChange={(e) => setFormEdicao({ ...formEdicao, novaSenha: e.target.value })} autoComplete="new-password" placeholder="Mínimo 8 caracteres" />
+
+            <div style={s.avisoSeguranca}>
+              <Icons.Lock color="#92400e" />
+              <div>
+                <strong style={{ display: 'block', fontSize: '13px', color: '#92400e' }}>Confirme que é você</strong>
+                <span style={{ fontSize: '12.5px', color: '#92400e' }}>Por segurança, digite a SUA senha atual para salvar qualquer alteração no seu perfil.</span>
+              </div>
+            </div>
+
+            <label style={s.label}>Sua senha atual</label>
+            <input type="password" style={s.input} value={formEdicao.senha_atual} onChange={(e) => setFormEdicao({ ...formEdicao, senha_atual: e.target.value })} autoComplete="current-password" />
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
+              <button onClick={() => setEditandoModal(false)} style={{ ...s.btnOutline, flex: 1 }}>Cancelar</button>
+              <LoadingButton loading={salvandoEdicao} onClick={salvarEdicao} style={{ ...s.btnPrimario, flex: 2 }}>Salvar alterações</LoadingButton>
             </div>
           </div>
         </div>
