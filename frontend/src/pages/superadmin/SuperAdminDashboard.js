@@ -952,12 +952,21 @@ function AbaLeads({ toast, confirmar }) {
 // Gestão dos donos da plataforma (tabela `super_admins`, ver backend/src/routes/superAdmin.js).
 // Só existe quem já é super admin pra criar outro, e só com e-mail @schednext.com.br — o
 // backend valida isso de novo (nunca confiar só na validação do front).
+const SUPER_ADMIN_VAZIO = { email: '', senha: '', senha_atual: '' };
+
+// Iniciais pro avatar circular da lista (ex: "rafael@schednext.com.br" -> "RA").
+function iniciaisEmail(email) {
+  const nomeParte = (email || '').split('@')[0] || '?';
+  return nomeParte.slice(0, 2).toUpperCase();
+}
+
 function AbaSuperAdmins({ toast, confirmar }) {
   const [lista, setLista] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const [novoEmail, setNovoEmail] = useState('');
-  const [novaSenha, setNovaSenha] = useState('');
-  const [criando, setCriando] = useState(false);
+  const [criandoModal, setCriandoModal] = useState(false);
+  const [form, setForm] = useState({ ...SUPER_ADMIN_VAZIO });
+  const [salvando, setSalvando] = useState(false);
+  useEscToClose(criandoModal, () => setCriandoModal(false));
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -976,26 +985,32 @@ function AbaSuperAdmins({ toast, confirmar }) {
   useEffect(() => { carregar(); }, [carregar]);
 
   const criar = async () => {
-    setCriando(true);
+    if (!form.email || !form.senha) { toast.error('Preencha o e-mail e a senha do novo acesso.'); return; }
+    if (!form.senha_atual) { toast.error('Confirme sua senha atual para continuar.'); return; }
+
+    setSalvando(true);
     try {
       const res = await fetch(`${API_URL}/super-admin/super-admins`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: novoEmail, senha: novaSenha })
+        body: JSON.stringify({ email: form.email, senha: form.senha, senha_atual: form.senha_atual })
       });
       const data = await res.json();
       if (res.ok) {
         toast.success('Super admin criado!');
-        setNovoEmail('');
-        setNovaSenha('');
+        setForm({ ...SUPER_ADMIN_VAZIO });
+        setCriandoModal(false);
         carregar();
       } else {
+        // Só limpa a senha atual (não o e-mail/senha do novo acesso já digitados) — assim quem
+        // errou a própria senha só precisa tentar de novo esse campo, não redigitar tudo.
         toast.error(data.detalhes?.[0]?.mensagem || data.error || 'Não foi possível criar o super admin.');
+        setForm((f) => ({ ...f, senha_atual: '' }));
       }
     } catch (err) {
       toast.error('Erro de conexão.');
     } finally {
-      setCriando(false);
+      setSalvando(false);
     }
   };
 
@@ -1017,28 +1032,66 @@ function AbaSuperAdmins({ toast, confirmar }) {
 
   return (
     <div>
-      <div style={{ ...s.card, marginBottom: '20px', maxWidth: '420px' }}>
-        <h3 style={s.cardTitulo}>Criar novo super admin</h3>
-        <label style={s.label}>E-mail (precisa ser @schednext.com.br)</label>
-        <input style={s.input} value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)} placeholder="nome@schednext.com.br" />
-        <label style={s.label}>Senha (mínimo 8 caracteres)</label>
-        <input type="password" style={s.input} value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} />
-        <LoadingButton loading={criando} onClick={criar} style={{ ...s.btnPrimario, marginTop: '6px' }}>Criar super admin</LoadingButton>
+      <div style={s.barraTop}>
+        <span />
+        <button onClick={() => setCriandoModal(true)} style={s.btnPrimario}>+ Novo super admin</button>
       </div>
 
       {carregando ? <p style={s.textoCarregando}>Carregando...</p> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {lista.map((sa) => (
-            <div key={sa.id} style={{ ...s.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <div>
-                <strong style={{ color: '#111827' }}>{sa.email}</strong>
-                <div style={s.subTexto}>{sa.ativo ? 'Ativo' : 'Removido'} · criado em {formatarData(sa.criado_em)}</div>
+          {lista.map((sa) => {
+            const status = sa.ativo ? { label: 'Ativo', bg: '#d1fae5', fg: '#065f46' } : { label: 'Removido', bg: '#f3f4f6', fg: '#6b7280' };
+            return (
+              <div key={sa.id} style={{ ...s.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={s.avatarCirculo}>{iniciaisEmail(sa.email)}</div>
+                  <div>
+                    <strong style={{ color: '#111827', fontSize: '14px' }}>{sa.email}</strong>
+                    <div style={s.subTexto}>criado em {formatarData(sa.criado_em)}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ ...s.badge, background: status.bg, color: status.fg }}>{status.label}</span>
+                  {sa.ativo && (
+                    <button onClick={() => remover(sa)} style={{ ...s.btnOutline, ...s.btnOutlineVermelho }}>Remover</button>
+                  )}
+                </div>
               </div>
-              {sa.ativo && (
-                <button onClick={() => remover(sa)} style={{ ...s.btnOutline, ...s.btnOutlineVermelho }}>Remover</button>
-              )}
+            );
+          })}
+        </div>
+      )}
+
+      {criandoModal && (
+        <div style={s.overlay} onClick={() => setCriandoModal(false)}>
+          <div style={{ ...s.modal, maxWidth: '440px' }} onClick={(ev) => ev.stopPropagation()}>
+            <div style={s.modalHeader}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}><Icons.Shield color="#111827" /> Novo super admin</h3>
+              <button onClick={() => setCriandoModal(false)} style={s.btnFechar}><Icons.Close /></button>
             </div>
-          ))}
+
+            <label style={s.label}>E-mail (precisa ser @schednext.com.br)</label>
+            <input style={s.input} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="nome@schednext.com.br" autoComplete="off" />
+
+            <label style={s.label}>Senha do novo acesso (mínimo 8 caracteres)</label>
+            <input type="password" style={s.input} value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} autoComplete="new-password" />
+
+            <div style={s.avisoSeguranca}>
+              <Icons.Lock color="#92400e" />
+              <div>
+                <strong style={{ display: 'block', fontSize: '13px', color: '#92400e' }}>Confirme que é você</strong>
+                <span style={{ fontSize: '12.5px', color: '#92400e' }}>Por segurança, digite a SUA senha atual para autorizar a criação deste novo acesso.</span>
+              </div>
+            </div>
+
+            <label style={s.label}>Sua senha atual</label>
+            <input type="password" style={s.input} value={form.senha_atual} onChange={(e) => setForm({ ...form, senha_atual: e.target.value })} autoComplete="current-password" />
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
+              <button onClick={() => { setCriandoModal(false); setForm({ ...SUPER_ADMIN_VAZIO }); }} style={{ ...s.btnOutline, flex: 1 }}>Cancelar</button>
+              <LoadingButton loading={salvando} onClick={criar} style={{ ...s.btnPrimario, flex: 2 }}>Criar super admin</LoadingButton>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -1054,7 +1107,8 @@ const Icons = {
   Mail: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>,
   Shield: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>,
   LogOut: ({ color = 'currentColor' }) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>,
-  Close: ({ color = '#9ca3af', size = 18 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+  Close: ({ color = '#9ca3af', size = 18 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+  Lock: ({ color = 'currentColor' }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
 };
 
 const s = {
@@ -1099,6 +1153,9 @@ const s = {
   btnOutlineVermelho: { color: '#dc2626', borderColor: '#fecaca', background: '#fef2f2' },
   btnOutlineVerde: { color: '#059669', borderColor: '#a7f3d0', background: '#ecfdf5' },
   btnLink: { background: 'none', border: 'none', color: '#2554eb', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', padding: 0 },
+
+  avatarCirculo: { width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, flexShrink: 0 },
+  avisoSeguranca: { display: 'flex', gap: '10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', marginTop: '16px', marginBottom: '4px' },
 
   overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(17,24,39,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000, padding: '20px' },
   modal: { background: '#fff', padding: '28px', borderRadius: '14px', width: '100%', maxWidth: '520px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', boxSizing: 'border-box' },
