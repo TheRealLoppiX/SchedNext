@@ -8,6 +8,22 @@ import { API_URL } from '../../services/api';
 const STATUS_LABEL = { novo: 'Novo', contatado: 'Contatado', fechado: 'Fechado' };
 const STATUS_COR = { novo: '#2563eb', contatado: '#d97706', fechado: '#059669' };
 
+// Status da assinatura DA EMPRESA na plataforma (empresas.status_assinatura, ver
+// sql/2026_status_assinatura_suspensa.sql pros valores válidos) — não confundir com o
+// status_assinatura de cliente final da própria barbearia.
+const STATUS_EMPRESA_LABEL = { trial: 'Em teste', ativa: 'Em dia', inadimplente: 'Inadimplente', suspensa: 'Suspensa', cancelada: 'Cancelada' };
+const STATUS_EMPRESA_COR = { trial: '#2563eb', ativa: '#059669', inadimplente: '#dc2626', suspensa: '#dc2626', cancelada: '#6b7280' };
+
+function formatarData(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('pt-BR');
+}
+
+function formatarPreco(preco) {
+  if (preco == null) return 'Sob consulta';
+  return Number(preco) === 0 ? 'Grátis' : `R$ ${Number(preco).toFixed(2)}/mês`;
+}
+
 const FLAGS_PLANO = [
   ['permite_paleta_customizada', 'Paleta customizada'],
   ['permite_whatsapp_bot', 'Bot de WhatsApp'],
@@ -142,12 +158,17 @@ function CardMetrica({ label, valor }) {
 function AbaEmpresas({ toast, confirmar }) {
   const [empresas, setEmpresas] = useState([]);
   const [busca, setBusca] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState('');
   const [carregando, setCarregando] = useState(true);
+  const [detalheId, setDetalheId] = useState(null);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
     try {
-      const res = await fetch(`${API_URL}/super-admin/empresas${busca ? `?busca=${encodeURIComponent(busca)}` : ''}`);
+      const params = new URLSearchParams();
+      if (busca) params.set('busca', busca);
+      if (statusFiltro) params.set('status', statusFiltro);
+      const res = await fetch(`${API_URL}/super-admin/empresas${params.toString() ? `?${params.toString()}` : ''}`);
       const data = await res.json();
       setEmpresas(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -156,7 +177,7 @@ function AbaEmpresas({ toast, confirmar }) {
       setCarregando(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busca]);
+  }, [busca, statusFiltro]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -177,51 +198,182 @@ function AbaEmpresas({ toast, confirmar }) {
     } catch (err) { toast.error('Erro de conexão. Tente novamente.'); }
   };
 
+  const statusInfo = (e) => {
+    const rotulo = STATUS_EMPRESA_LABEL[e.status_assinatura] || e.status_assinatura || '—';
+    const cor = STATUS_EMPRESA_COR[e.status_assinatura] || '#9ca3af';
+    if (e.status_assinatura === 'ativa' && e.cancelamento_agendado && e.proxima_cobranca_em) {
+      return { rotulo: `Cancelamento agendado p/ ${formatarData(e.proxima_cobranca_em)}`, cor: '#d97706' };
+    }
+    return { rotulo, cor };
+  };
+
   return (
     <div>
-      <input
-        placeholder="Buscar por nome, slug ou e-mail..."
-        value={busca}
-        onChange={(e) => setBusca(e.target.value)}
-        style={{ ...inputEstilo, marginBottom: '16px', maxWidth: '360px' }}
-      />
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        <input
+          placeholder="Buscar por nome, slug ou e-mail..."
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          style={{ ...inputEstilo, marginBottom: 0, maxWidth: '320px' }}
+        />
+        <select value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)} style={{ ...inputEstilo, marginBottom: 0, maxWidth: '200px' }}>
+          <option value="">Todos os status</option>
+          {Object.entries(STATUS_EMPRESA_LABEL).map(([valor, rotulo]) => (
+            <option key={valor} value={valor}>{rotulo}</option>
+          ))}
+        </select>
+      </div>
 
       {carregando ? <p>Carregando...</p> : empresas.length === 0 ? (
         <p style={{ color: '#9ca3af' }}>Nenhuma empresa encontrada.</p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '700px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '820px' }}>
             <thead>
               <tr>
-                {['Nome', 'Slug', 'E-mail', 'Plano', 'Status', ''].map((h) => (
+                {['Empresa', 'E-mail', 'Cadastro', 'Plano', 'Status', ''].map((h) => (
                   <th key={h} style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #262b34', color: '#9ca3af' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {empresas.map((e) => (
-                <tr key={e.id}>
-                  <td style={tdEstilo}>{e.nome}</td>
-                  <td style={tdEstilo}>{e.slug}</td>
-                  <td style={tdEstilo}>{e.email}</td>
-                  <td style={tdEstilo}>{e.plano_plataforma?.nome || '—'}</td>
-                  <td style={tdEstilo}>
-                    <span style={{ color: e.status_assinatura === 'suspensa' ? '#ef4444' : '#9ca3af' }}>{e.status_assinatura || '—'}</span>
-                  </td>
-                  <td style={tdEstilo}>
-                    <button
-                      onClick={() => alternarSuspensao(e)}
-                      style={{ ...btnSecundario, color: e.status_assinatura === 'suspensa' ? '#059669' : '#ef4444', borderColor: e.status_assinatura === 'suspensa' ? '#059669' : '#ef4444' }}
-                    >
-                      {e.status_assinatura === 'suspensa' ? 'Reativar' : 'Suspender'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {empresas.map((e) => {
+                const status = statusInfo(e);
+                return (
+                  <tr key={e.id}>
+                    <td style={tdEstilo}>
+                      <strong>{e.nome}</strong>
+                      <div style={{ fontSize: '11px', color: '#6b7280' }}>{e.slug}</div>
+                    </td>
+                    <td style={tdEstilo}>{e.email}</td>
+                    <td style={tdEstilo}>{formatarData(e.criado_em)}</td>
+                    <td style={tdEstilo}>
+                      {e.plano_plataforma?.nome || '—'}
+                      {e.plano_plataforma_pendente_id && (
+                        <div style={{ fontSize: '11px', color: '#d97706' }}>trocando p/ {e.plano_plataforma_pendente?.nome}</div>
+                      )}
+                    </td>
+                    <td style={tdEstilo}>
+                      <span style={{ color: status.cor, fontWeight: 600 }}>{status.rotulo}</span>
+                    </td>
+                    <td style={tdEstilo}>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button onClick={() => setDetalheId(e.id)} style={btnSecundario}>Detalhes</button>
+                        <button
+                          onClick={() => alternarSuspensao(e)}
+                          style={{ ...btnSecundario, color: e.status_assinatura === 'suspensa' ? '#059669' : '#ef4444', borderColor: e.status_assinatura === 'suspensa' ? '#059669' : '#ef4444' }}
+                        >
+                          {e.status_assinatura === 'suspensa' ? 'Reativar' : 'Suspender'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
+
+      {detalheId && <DetalheEmpresaModal id={detalheId} onFechar={() => setDetalheId(null)} toast={toast} />}
+    </div>
+  );
+}
+
+// Barra "X / limite" que mostra o consumo atual de barbeiros/agendamentos do plano — fica
+// amarela perto do limite (>=80%) e vermelha no limite ou acima, pra saltar aos olhos do admin
+// absoluto antes que o cliente reclame de não conseguir cadastrar mais nada.
+function BarraUso({ label, usado, limite }) {
+  const ilimitado = limite == null;
+  const percentual = ilimitado ? 0 : Math.min(100, Math.round((usado / limite) * 100));
+  const cor = ilimitado ? '#374151' : percentual >= 100 ? '#dc2626' : percentual >= 80 ? '#d97706' : '#2563eb';
+
+  return (
+    <div style={{ marginBottom: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>
+        <span>{label}</span>
+        <span>{ilimitado ? `${usado} (ilimitado)` : `${usado} / ${limite}`}</span>
+      </div>
+      <div style={{ background: '#0f1115', border: '1px solid #262b34', borderRadius: '6px', height: '8px', overflow: 'hidden' }}>
+        {!ilimitado && <div style={{ width: `${percentual}%`, background: cor, height: '100%' }} />}
+      </div>
+    </div>
+  );
+}
+
+function DetalheEmpresaModal({ id, onFechar, toast }) {
+  const [empresa, setEmpresa] = useState(null);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    setCarregando(true);
+    fetch(`${API_URL}/super-admin/empresas/${id}`)
+      .then((r) => r.json())
+      .then(setEmpresa)
+      .catch(() => toast.error('Erro ao carregar detalhes da empresa.'))
+      .finally(() => setCarregando(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const status = empresa ? (STATUS_EMPRESA_LABEL[empresa.status_assinatura] || empresa.status_assinatura) : '';
+  const corStatus = empresa ? (STATUS_EMPRESA_COR[empresa.status_assinatura] || '#9ca3af') : '#9ca3af';
+
+  return (
+    <div style={overlayEstilo} onClick={onFechar}>
+      <div style={{ ...cardEstilo, maxWidth: '520px', width: '90%', maxHeight: '85vh', overflowY: 'auto' }} onClick={(ev) => ev.stopPropagation()}>
+        {carregando ? <p>Carregando...</p> : !empresa ? (
+          <p style={{ color: '#9ca3af' }}>Não foi possível carregar os detalhes.</p>
+        ) : (
+          <>
+            <h3 style={{ margin: '0 0 4px' }}>{empresa.nome}</h3>
+            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '16px' }}>{empresa.slug} · {empresa.email}</div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', marginBottom: '18px' }}>
+              <InfoItem label="Cadastrada em" valor={formatarData(empresa.criado_em)} />
+              <InfoItem label="Vertical" valor={empresa.vertical || '—'} />
+              <InfoItem label="CPF/CNPJ" valor={empresa.cpf_cnpj || '—'} />
+              <InfoItem label="Status da assinatura" valor={status} cor={corStatus} />
+              <InfoItem label="Plano atual" valor={`${empresa.plano_plataforma?.nome || '—'} · ${formatarPreco(empresa.plano_plataforma?.preco_mensal)}`} />
+              {empresa.plano_plataforma_pendente_id && (
+                <InfoItem label="Trocando para" valor={`${empresa.plano_plataforma_pendente?.nome} · ${formatarPreco(empresa.plano_plataforma_pendente?.preco_mensal)} (aguardando confirmação de pagamento)`} />
+              )}
+              {empresa.plano_plataforma?.preco_mensal > 0 && (
+                <InfoItem
+                  label="Próxima cobrança"
+                  valor={empresa.proxima_cobranca_em ? formatarData(empresa.proxima_cobranca_em) : 'sem cobrança recorrente ativa'}
+                  cor={empresa.cancelamento_agendado ? '#d97706' : undefined}
+                />
+              )}
+              {empresa.cancelamento_agendado && (
+                <InfoItem label="Cancelamento" valor="Agendado, cai pro plano Grátis na próxima cobrança" cor="#d97706" />
+              )}
+              {empresa.chave_ativacao_expira_em && (
+                <InfoItem label="Plano por chave promocional" valor={`expira em ${formatarData(empresa.chave_ativacao_expira_em)}`} cor="#d97706" />
+              )}
+              {empresa.dominio_customizado && (
+                <InfoItem label="Domínio próprio" valor={`${empresa.dominio_customizado} ${empresa.dominio_verificado ? '(verificado)' : '(não verificado)'}`} />
+              )}
+            </div>
+
+            <h4 style={{ margin: '0 0 10px', fontSize: '13px', color: '#e5e7eb' }}>Consumo do plano</h4>
+            <BarraUso label="Barbeiros/profissionais cadastrados" usado={empresa.uso.barbeiros} limite={empresa.plano_plataforma?.limite_profissionais ?? null} />
+            <BarraUso label="Agendamentos neste mês" usado={empresa.uso.agendamentos_mes} limite={empresa.plano_plataforma?.limite_agendamentos_mes ?? null} />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+              <button onClick={onFechar} style={btnSecundario}>Fechar</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InfoItem({ label, valor, cor }) {
+  return (
+    <div>
+      <div style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</div>
+      <div style={{ color: cor || '#e5e7eb', fontWeight: cor ? 600 : 400 }}>{valor}</div>
     </div>
   );
 }
