@@ -143,47 +143,96 @@ function SuperAdminDashboard() {
   );
 }
 
+const NOMES_MES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const PRIMEIRO_ANO_APP = 2024;
+
+// Mesmo filtro Ano/Mês do dashboard do admin de empresa (ver pages/admin/AdminDashboard.js) —
+// sem filtro nenhum (primeira carga), cai no ano corrente ("filtro macro" pedido pro admin
+// absoluto: nada selecionado = ano vigente).
 function AbaMetricas({ toast }) {
+  const hoje = new Date();
+  const [filtroPeriodo, setFiltroPeriodo] = useState('ano');
+  const [anoSelecionado, setAnoSelecionado] = useState(hoje.getFullYear());
+  const [mesSelecionado, setMesSelecionado] = useState(hoje.getMonth());
   const [metricas, setMetricas] = useState(null);
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_URL}/super-admin/metricas`)
+    setCarregando(true);
+    const params = new URLSearchParams({ periodo: filtroPeriodo, ano: anoSelecionado });
+    if (filtroPeriodo === 'mes') params.set('mes', mesSelecionado);
+
+    fetch(`${API_URL}/super-admin/metricas?${params.toString()}`)
       .then((r) => r.json())
       .then(setMetricas)
       .catch(() => toast.error('Erro ao carregar métricas.'))
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [filtroPeriodo, anoSelecionado, mesSelecionado]);
 
-  if (carregando) return <p style={s.textoCarregando}>Carregando...</p>;
-  if (!metricas) return <p style={s.textoVazio}>Não foi possível carregar as métricas.</p>;
+  const anosDisponiveis = Array.from({ length: hoje.getFullYear() - PRIMEIRO_ANO_APP + 1 }, (_, i) => PRIMEIRO_ANO_APP + i).reverse();
+  const rotuloPeriodo = filtroPeriodo === 'mes' ? `${NOMES_MES[mesSelecionado]}/${anoSelecionado}` : `ano de ${anoSelecionado}`;
 
   return (
     <div>
-      <div style={s.statsGrid}>
-        <StatCard label="Empresas na plataforma" valor={metricas.total_empresas} cor="#2563eb" icon="Building" />
-        <StatCard label="MRR (planos pagos ativos)" valor={metricas.mrr.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} cor="#059669" icon="TrendingUp" />
+      <div style={{ ...s.barraTop, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {['ano', 'mes'].map((periodo) => (
+            <button
+              key={periodo}
+              onClick={() => setFiltroPeriodo(periodo)}
+              style={{ ...s.btnOutline, ...(filtroPeriodo === periodo ? s.tabAtivo : {}) }}
+            >
+              {periodo === 'mes' ? 'Mês' : 'Ano'}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {filtroPeriodo === 'mes' && (
+            <select style={s.selectFiltro} value={mesSelecionado} onChange={(e) => setMesSelecionado(Number(e.target.value))}>
+              {NOMES_MES.map((nome, i) => <option key={nome} value={i}>{nome}</option>)}
+            </select>
+          )}
+          <select style={s.selectFiltro} value={anoSelecionado} onChange={(e) => setAnoSelecionado(Number(e.target.value))}>
+            {anosDisponiveis.map((ano) => <option key={ano} value={ano}>{ano}</option>)}
+          </select>
+        </div>
       </div>
 
-      <div style={s.gridDuasColunas}>
-        <div style={s.card}>
-          <h3 style={s.cardTitulo}>Empresas por status</h3>
-          {Object.entries(metricas.empresas_por_status).map(([status, qtd]) => (
-            <div key={status} style={s.linhaLista}>
-              <span>{status}</span><strong>{qtd}</strong>
+      {carregando ? <p style={s.textoCarregando}>Carregando...</p> : !metricas ? (
+        <p style={s.textoVazio}>Não foi possível carregar as métricas.</p>
+      ) : (
+        <div>
+          <div style={s.statsGrid}>
+            <StatCard label="Empresas na plataforma (hoje)" valor={metricas.total_empresas} cor="#2563eb" icon="Building" />
+            <StatCard label="MRR atual (planos pagos ativos)" valor={metricas.mrr.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} cor="#059669" icon="TrendingUp" />
+            <StatCard label={`Cadastradas em ${rotuloPeriodo}`} valor={metricas.cadastradas_no_periodo} cor="#7c3aed" icon="Building" />
+            <StatCard label={`A receber em ${rotuloPeriodo}`} valor={metricas.a_receber_no_periodo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} cor="#d97706" icon="TrendingUp" />
+          </div>
+          <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '-8px', marginBottom: '20px' }}>
+            "Empresas na plataforma" e "MRR atual" são sempre um retrato de agora. "Cadastradas" e "A receber" seguem o período selecionado acima, e "a receber" reflete só a próxima cobrança agendada de cada empresa, não uma projeção do ano inteiro.
+          </p>
+
+          <div style={s.gridDuasColunas}>
+            <div style={s.card}>
+              <h3 style={s.cardTitulo}>Empresas por status (hoje)</h3>
+              {Object.entries(metricas.empresas_por_status).map(([status, qtd]) => (
+                <div key={status} style={s.linhaLista}>
+                  <span>{status}</span><strong>{qtd}</strong>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div style={s.card}>
-          <h3 style={s.cardTitulo}>Empresas por plano</h3>
-          {Object.entries(metricas.empresas_por_plano).map(([plano, qtd]) => (
-            <div key={plano} style={s.linhaLista}>
-              <span>{plano}</span><strong>{qtd}</strong>
+            <div style={s.card}>
+              <h3 style={s.cardTitulo}>Empresas por plano (hoje)</h3>
+              {Object.entries(metricas.empresas_por_plano).map(([plano, qtd]) => (
+                <div key={plano} style={s.linhaLista}>
+                  <span>{plano}</span><strong>{qtd}</strong>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
