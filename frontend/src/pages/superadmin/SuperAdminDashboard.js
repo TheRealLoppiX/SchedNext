@@ -39,6 +39,31 @@ function formatarPreco(preco) {
   return Number(preco) === 0 ? 'Grátis' : `R$ ${Number(preco).toFixed(2)}/mês`;
 }
 
+// Não existe um campo "forma de pagamento" salvo pra assinatura da plataforma (diferente da
+// assinatura do cliente final, que tem assinatura_forma_pagamento pix/cartão) — a plataforma só
+// cobra por cartão via preapproval do Mercado Pago (ver backend/src/services/pagamento.js), e os
+// outros casos (chave promocional, Enterprise negociado à parte) nunca passam pelo gateway. Esta
+// função deriva um rótulo legível a partir dos campos que já existem.
+function infoFormaPagamento(empresa) {
+  if (!empresa.plano_plataforma || Number(empresa.plano_plataforma.preco_mensal) === 0) {
+    return 'Plano gratuito, sem cobrança';
+  }
+  if (empresa.chave_ativacao_expira_em) {
+    return 'Cortesia por chave de ativação, sem cobrança automática';
+  }
+  if (empresa.gateway_subscription_id) {
+    return 'Cartão de crédito, recorrência automática via Mercado Pago';
+  }
+  if (empresa.plano_plataforma.preco_mensal == null) {
+    return 'Negociado manualmente (Enterprise), sem cobrança automática no sistema';
+  }
+  return 'Sem cobrança automática configurada';
+}
+
+function paraInputData(iso) {
+  return iso ? new Date(iso).toISOString().slice(0, 10) : '';
+}
+
 const FLAGS_PLANO = [
   ['permite_paleta_customizada', 'Paleta customizada'],
   ['permite_whatsapp_bot', 'Bot de WhatsApp'],
@@ -291,7 +316,15 @@ function AbaEmpresas({ toast, confirmar }) {
         </div>
       )}
 
-      {detalheId && <DetalheEmpresaModal id={detalheId} onFechar={() => setDetalheId(null)} toast={toast} />}
+      {detalheId && (
+        <DetalheEmpresaModal
+          id={detalheId}
+          onFechar={() => setDetalheId(null)}
+          toast={toast}
+          confirmar={confirmar}
+          aoAtualizar={carregar}
+        />
+      )}
     </div>
   );
 }
@@ -317,20 +350,91 @@ function BarraUso({ label, usado, limite }) {
   );
 }
 
-function DetalheEmpresaModal({ id, onFechar, toast }) {
+function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
   const [empresa, setEmpresa] = useState(null);
+  const [planos, setPlanos] = useState([]);
   const [carregando, setCarregando] = useState(true);
+  const [editandoPlano, setEditandoPlano] = useState(false);
+  const [novoPlanoId, setNovoPlanoId] = useState('');
+  const [salvandoPlano, setSalvandoPlano] = useState(false);
+  const [editandoVencimento, setEditandoVencimento] = useState(false);
+  const [novoVencimento, setNovoVencimento] = useState('');
+  const [salvandoVencimento, setSalvandoVencimento] = useState(false);
   useEscToClose(true, onFechar);
 
-  useEffect(() => {
+  const carregar = useCallback(async () => {
     setCarregando(true);
-    fetch(`${API_URL}/super-admin/empresas/${id}`)
-      .then((r) => r.json())
-      .then(setEmpresa)
-      .catch(() => toast.error('Erro ao carregar detalhes da empresa.'))
-      .finally(() => setCarregando(false));
+    try {
+      const [resEmpresa, resPlanos] = await Promise.all([
+        fetch(`${API_URL}/super-admin/empresas/${id}`),
+        fetch(`${API_URL}/super-admin/planos`)
+      ]);
+      setEmpresa(await resEmpresa.json());
+      const dadosPlanos = await resPlanos.json();
+      setPlanos(Array.isArray(dadosPlanos) ? dadosPlanos : []);
+    } catch (err) {
+      toast.error('Erro ao carregar detalhes da empresa.');
+    } finally {
+      setCarregando(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const salvarPlano = async () => {
+    const planoEscolhido = planos.find((p) => String(p.id) === String(novoPlanoId));
+    if (!planoEscolhido || String(novoPlanoId) === String(empresa.plano_plataforma_id)) { setEditandoPlano(false); return; }
+
+    const ok = await confirmar(`Trocar o plano de "${empresa.nome}" para ${planoEscolhido.nome}?`, {
+      detail: 'Se havia uma cobrança recorrente ativa no Mercado Pago, ela é cancelada nessa troca. A empresa passa a valer o novo plano imediatamente.',
+      confirmText: 'Trocar plano'
+    });
+    if (!ok) return;
+
+    setSalvandoPlano(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/empresas/${id}/plano`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plano_plataforma_id: novoPlanoId })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message);
+        setEditandoPlano(false);
+        carregar();
+        aoAtualizar?.();
+      } else toast.error(data.error || 'Não foi possível trocar o plano.');
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setSalvandoPlano(false);
+    }
+  };
+
+  const salvarVencimento = async () => {
+    if (!novoVencimento) { toast.error('Escolha uma data.'); return; }
+    setSalvandoVencimento(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/empresas/${id}/vencimento`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proxima_cobranca_em: novoVencimento })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message);
+        setEditandoVencimento(false);
+        carregar();
+        aoAtualizar?.();
+      } else toast.error(data.error || 'Não foi possível atualizar a data.');
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setSalvandoVencimento(false);
+    }
+  };
 
   const status = empresa ? infoStatusEmpresa(empresa) : null;
 
@@ -354,16 +458,52 @@ function DetalheEmpresaModal({ id, onFechar, toast }) {
               <InfoItem label="Vertical" valor={empresa.vertical || '-'} />
               <InfoItem label="CPF/CNPJ" valor={empresa.cpf_cnpj || '-'} />
               <InfoItem label="Status da assinatura" badge={status} />
-              <InfoItem label="Plano atual" valor={`${empresa.plano_plataforma?.nome || '-'} · ${formatarPreco(empresa.plano_plataforma?.preco_mensal)}`} />
+
+              <div>
+                <div style={s.infoLabel}>Plano atual</div>
+                {!editandoPlano ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '14px', color: '#111827' }}>{empresa.plano_plataforma?.nome || '-'} · {formatarPreco(empresa.plano_plataforma?.preco_mensal)}</span>
+                    <button onClick={() => { setNovoPlanoId(String(empresa.plano_plataforma_id || '')); setEditandoPlano(true); }} style={s.btnLink}>Trocar</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <select style={s.selectFiltro} value={novoPlanoId} onChange={(e) => setNovoPlanoId(e.target.value)}>
+                      {planos.map((p) => <option key={p.id} value={p.id}>{p.nome} · {formatarPreco(p.preco_mensal)}</option>)}
+                    </select>
+                    <LoadingButton loading={salvandoPlano} onClick={salvarPlano} style={s.btnPrimario}>Salvar</LoadingButton>
+                    <button onClick={() => setEditandoPlano(false)} style={s.btnOutline}>Cancelar</button>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div style={s.infoLabel}>Forma de pagamento</div>
+                <div style={{ fontSize: '14px', color: '#111827' }}>{infoFormaPagamento(empresa)}</div>
+              </div>
+
+              {empresa.plano_plataforma?.preco_mensal > 0 && (
+                <div>
+                  <div style={s.infoLabel}>Próxima cobrança</div>
+                  {!editandoVencimento ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '14px', fontWeight: empresa.cancelamento_agendado ? 700 : 400, color: empresa.cancelamento_agendado ? '#92400e' : '#111827' }}>
+                        {empresa.proxima_cobranca_em ? formatarData(empresa.proxima_cobranca_em) : 'sem cobrança recorrente ativa'}
+                      </span>
+                      <button onClick={() => { setNovoVencimento(paraInputData(empresa.proxima_cobranca_em)); setEditandoVencimento(true); }} style={s.btnLink}>Alterar</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <input type="date" style={s.selectFiltro} value={novoVencimento} onChange={(e) => setNovoVencimento(e.target.value)} />
+                      <LoadingButton loading={salvandoVencimento} onClick={salvarVencimento} style={s.btnPrimario}>Salvar</LoadingButton>
+                      <button onClick={() => setEditandoVencimento(false)} style={s.btnOutline}>Cancelar</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {empresa.plano_plataforma_pendente_id && (
                 <InfoItem label="Trocando para" valor={`${empresa.plano_plataforma_pendente?.nome} · ${formatarPreco(empresa.plano_plataforma_pendente?.preco_mensal)} (aguardando confirmação de pagamento)`} cor="#92400e" />
-              )}
-              {empresa.plano_plataforma?.preco_mensal > 0 && (
-                <InfoItem
-                  label="Próxima cobrança"
-                  valor={empresa.proxima_cobranca_em ? formatarData(empresa.proxima_cobranca_em) : 'sem cobrança recorrente ativa'}
-                  cor={empresa.cancelamento_agendado ? '#92400e' : undefined}
-                />
               )}
               {empresa.cancelamento_agendado && (
                 <InfoItem label="Cancelamento" valor="Agendado, cai pro plano Grátis na próxima cobrança" cor="#92400e" />
@@ -374,6 +514,8 @@ function DetalheEmpresaModal({ id, onFechar, toast }) {
               {empresa.dominio_customizado && (
                 <InfoItem label="Domínio próprio" valor={`${empresa.dominio_customizado} ${empresa.dominio_verificado ? '(verificado)' : '(não verificado)'}`} />
               )}
+              <InfoItem label="Clientes cadastrados" valor={empresa.uso.clientes} />
+              {empresa.uso.unidades > 0 && <InfoItem label="Unidades cadastradas" valor={empresa.uso.unidades} />}
             </div>
 
             <div style={s.card}>
@@ -956,6 +1098,7 @@ const s = {
   btnOutline: { background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: '8px', padding: '7px 13px', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' },
   btnOutlineVermelho: { color: '#dc2626', borderColor: '#fecaca', background: '#fef2f2' },
   btnOutlineVerde: { color: '#059669', borderColor: '#a7f3d0', background: '#ecfdf5' },
+  btnLink: { background: 'none', border: 'none', color: '#2554eb', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', padding: 0 },
 
   overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(17,24,39,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000, padding: '20px' },
   modal: { background: '#fff', padding: '28px', borderRadius: '14px', width: '100%', maxWidth: '520px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', boxSizing: 'border-box' },
