@@ -952,12 +952,37 @@ function AbaLeads({ toast, confirmar }) {
 // Gestão dos donos da plataforma (tabela `super_admins`, ver backend/src/routes/superAdmin.js).
 // Só existe quem já é super admin pra criar outro, e só com e-mail @schednext.com.br — o
 // backend valida isso de novo (nunca confiar só na validação do front).
-const SUPER_ADMIN_VAZIO = { email: '', senha: '', senha_atual: '' };
+const SUPER_ADMIN_VAZIO = { email: '', senha: '', senha_atual: '', foto_url: '' };
 
 // Iniciais pro avatar circular da lista (ex: "rafael@schednext.com.br" -> "RA").
 function iniciaisEmail(email) {
   const nomeParte = (email || '').split('@')[0] || '?';
   return nomeParte.slice(0, 2).toUpperCase();
+}
+
+// Mesmo padrão de foto usado em barbeiros/clientes (ver AdminBarbeiros.js): redimensiona no
+// navegador antes de mandar pro backend, pra não guardar fotos gigantes num campo de texto
+// (a coluna vira um data URI base64, sem upload pra nenhum storage externo).
+function redimensionarImagem(arquivo) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onloadend = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const MAX_WIDTH = 400;
+        const escala = MAX_WIDTH / img.width;
+        const canvas = document.createElement('canvas');
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * escala;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(arquivo);
+  });
 }
 
 function AbaSuperAdmins({ toast, confirmar }) {
@@ -967,6 +992,17 @@ function AbaSuperAdmins({ toast, confirmar }) {
   const [form, setForm] = useState({ ...SUPER_ADMIN_VAZIO });
   const [salvando, setSalvando] = useState(false);
   useEscToClose(criandoModal, () => setCriandoModal(false));
+
+  const aoEscolherFoto = async (e) => {
+    const arquivo = e.target.files[0];
+    if (!arquivo) return;
+    try {
+      const dataUri = await redimensionarImagem(arquivo);
+      setForm((f) => ({ ...f, foto_url: dataUri }));
+    } catch (err) {
+      toast.error('Não foi possível ler essa imagem.');
+    }
+  };
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -993,7 +1029,7 @@ function AbaSuperAdmins({ toast, confirmar }) {
       const res = await fetch(`${API_URL}/super-admin/super-admins`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, senha: form.senha, senha_atual: form.senha_atual })
+        body: JSON.stringify({ email: form.email, senha: form.senha, senha_atual: form.senha_atual, foto_url: form.foto_url || null })
       });
       const data = await res.json();
       if (res.ok) {
@@ -1044,7 +1080,9 @@ function AbaSuperAdmins({ toast, confirmar }) {
             return (
               <div key={sa.id} style={{ ...s.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={s.avatarCirculo}>{iniciaisEmail(sa.email)}</div>
+                  <div style={s.avatarCirculo}>
+                    {sa.foto_url ? <img src={sa.foto_url} alt={sa.email} style={s.avatarImg} /> : iniciaisEmail(sa.email)}
+                  </div>
                   <div>
                     <strong style={{ color: '#111827', fontSize: '14px' }}>{sa.email}</strong>
                     <div style={s.subTexto}>criado em {formatarData(sa.criado_em)}</div>
@@ -1068,6 +1106,16 @@ function AbaSuperAdmins({ toast, confirmar }) {
             <div style={s.modalHeader}>
               <h3 style={{ margin: 0, fontSize: '18px', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}><Icons.Shield color="#111827" /> Novo super admin</h3>
               <button onClick={() => setCriandoModal(false)} style={s.btnFechar}><Icons.Close /></button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '4px' }}>
+              <div style={s.avatarCirculo}>
+                {form.foto_url ? <img src={form.foto_url} alt="Preview" style={s.avatarImg} /> : iniciaisEmail(form.email)}
+              </div>
+              <div>
+                <label style={{ ...s.label, marginTop: 0 }}>Foto (opcional)</label>
+                <input type="file" accept="image/*" onChange={aoEscolherFoto} style={{ fontSize: '12.5px' }} />
+              </div>
             </div>
 
             <label style={s.label}>E-mail (precisa ser @schednext.com.br)</label>
@@ -1154,7 +1202,8 @@ const s = {
   btnOutlineVerde: { color: '#059669', borderColor: '#a7f3d0', background: '#ecfdf5' },
   btnLink: { background: 'none', border: 'none', color: '#2554eb', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', padding: 0 },
 
-  avatarCirculo: { width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, flexShrink: 0 },
+  avatarCirculo: { width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, flexShrink: 0, overflow: 'hidden' },
+  avatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
   avisoSeguranca: { display: 'flex', gap: '10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', marginTop: '16px', marginBottom: '4px' },
 
   overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(17,24,39,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000, padding: '20px' },
