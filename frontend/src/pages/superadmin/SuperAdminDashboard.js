@@ -39,6 +39,16 @@ function formatarPreco(preco) {
   return Number(preco) === 0 ? 'Grátis' : `R$ ${Number(preco).toFixed(2)}/mês`;
 }
 
+function formatarMoeda(valor) {
+  return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function formatarDataHoraLocal(iso) {
+  return new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+}
+
+const ROTULO_TIPO_RECEITA = { assinatura_plataforma: 'Assinatura de empresa', taxa_marketplace: 'Taxa de marketplace' };
+
 // Não existe um campo "forma de pagamento" salvo pra assinatura da plataforma (diferente da
 // assinatura do cliente final, que tem assinatura_forma_pagamento pix/cartão) — a plataforma só
 // cobra por cartão via preapproval do Mercado Pago (ver backend/src/services/pagamento.js), e os
@@ -84,6 +94,7 @@ const PLANO_VAZIO = {
 
 const ABAS = [
   { valor: 'metricas', label: 'Métricas', icon: 'BarChart' },
+  { valor: 'financeiro', label: 'Financeiro', icon: 'DollarSign' },
   { valor: 'empresas', label: 'Empresas', icon: 'Building' },
   { valor: 'planos', label: 'Planos', icon: 'Tag' },
   { valor: 'chaves', label: 'Chaves de Ativação', icon: 'Key' },
@@ -133,6 +144,7 @@ function SuperAdminDashboard() {
         </div>
 
         {aba === 'metricas' && <AbaMetricas toast={toast} />}
+        {aba === 'financeiro' && <AbaFinanceiro toast={toast} />}
         {aba === 'empresas' && <AbaEmpresas toast={toast} confirmar={confirmar} />}
         {aba === 'planos' && <AbaPlanos toast={toast} />}
         {aba === 'chaves' && <AbaChaves toast={toast} confirmar={confirmar} />}
@@ -246,6 +258,198 @@ function StatCard({ label, valor, cor, icon }) {
         <Icone color={cor} />
       </div>
       <div style={{ ...s.statNumero, color: cor }}>{valor}</div>
+    </div>
+  );
+}
+
+function inicioDoMesLocal() {
+  const hoje = new Date();
+  return new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);
+}
+
+// Financeiro DA PLATAFORMA (faturamento/receita líquida/taxas da SchedNext, ver
+// GET /super-admin/financeiro e sql/2026_plataforma_receitas.sql) — mesmo espírito do relatório
+// financeiro do admin de empresa (pages/admin/AdminRelatorios.js: resumo + faturamento por
+// período + detalhamento + exportação), mas só existe dado a partir do dia em que o livro-caixa
+// da plataforma passou a ser alimentado; períodos anteriores a isso vêm vazios.
+function AbaFinanceiro({ toast }) {
+  const [dataInicio, setDataInicio] = useState(inicioDoMesLocal());
+  const [dataFim, setDataFim] = useState(new Date().toISOString().slice(0, 10));
+  const [agrupamento, setAgrupamento] = useState('dia');
+  const [financeiro, setFinanceiro] = useState(null);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    setCarregando(true);
+    const params = new URLSearchParams({ dataInicio, dataFim, agrupamento });
+    fetch(`${API_URL}/super-admin/financeiro?${params.toString()}`)
+      .then((r) => r.json())
+      .then(setFinanceiro)
+      .catch(() => toast.error('Erro ao carregar o financeiro.'))
+      .finally(() => setCarregando(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataInicio, dataFim, agrupamento]);
+
+  const exportarCsv = () => {
+    if (!financeiro) return;
+    const linhas = [
+      ['Resumo do período', financeiro.periodo.inicio, 'a', financeiro.periodo.fim],
+      ['Faturamento bruto', financeiro.resumo.faturamento_bruto],
+      ['Receita líquida', financeiro.resumo.receita_liquida],
+      ['Descontos e taxas', financeiro.resumo.descontos_valor, `${financeiro.resumo.descontos_pct}%`],
+      ['Transações', financeiro.resumo.quantidade_transacoes],
+      [],
+      ['Faturamento por período'],
+      ['Período', 'Bruto', 'Líquido', 'Qtd'],
+      ...financeiro.serie_periodo.map((s) => [s.periodo, s.bruto, s.liquido, s.qtd]),
+      [],
+      ['Detalhamento'],
+      ['Data', 'Empresa', 'Tipo', 'Forma de pagamento', 'Bruto', 'Líquido'],
+      ...financeiro.detalhamento.map((d) => [formatarDataHoraLocal(d.criado_em), d.empresa, ROTULO_TIPO_RECEITA[d.tipo] || d.tipo, d.forma_pagamento || '-', d.valor_bruto, d.valor_liquido])
+    ];
+    const csv = linhas.map((l) => l.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+    const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `financeiro-plataforma-${financeiro.periodo.inicio}-a-${financeiro.periodo.fim}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
+  return (
+    <div>
+      <div style={s.barraTop}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
+          <span style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
+          <input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+          <select style={s.selectFiltro} value={agrupamento} onChange={(e) => setAgrupamento(e.target.value)}>
+            <option value="dia">Por dia</option>
+            <option value="mes">Por mês</option>
+            <option value="ano">Por ano</option>
+          </select>
+        </div>
+        <button onClick={exportarCsv} style={s.btnOutline} disabled={!financeiro}>Exportar CSV</button>
+      </div>
+
+      {carregando ? <p style={s.textoCarregando}>Carregando...</p> : !financeiro ? (
+        <p style={s.textoVazio}>Não foi possível carregar o financeiro.</p>
+      ) : (
+        <div>
+          <div style={s.statsGrid}>
+            <StatCard label="Faturamento bruto" valor={formatarMoeda(financeiro.resumo.faturamento_bruto)} cor="#2563eb" icon="DollarSign" />
+            <StatCard label="Receita líquida" valor={formatarMoeda(financeiro.resumo.receita_liquida)} cor="#059669" icon="TrendingUp" />
+            <StatCard label="Descontos e taxas" valor={`${formatarMoeda(financeiro.resumo.descontos_valor)} (${financeiro.resumo.descontos_pct}%)`} cor="#d97706" icon="Tag" />
+            <StatCard label="Transações no período" valor={financeiro.resumo.quantidade_transacoes} cor="#6d28d9" icon="BarChart" />
+          </div>
+
+          <div style={s.gridDuasColunas}>
+            <div style={s.card}>
+              <h3 style={s.cardTitulo}>Assinatura de empresas</h3>
+              <div style={s.linhaLista}><span>Bruto</span><strong>{formatarMoeda(financeiro.resumo.por_tipo.assinatura_plataforma.bruto)}</strong></div>
+              <div style={s.linhaLista}><span>Líquido</span><strong>{formatarMoeda(financeiro.resumo.por_tipo.assinatura_plataforma.liquido)}</strong></div>
+              <div style={s.linhaLista}><span>Cobranças</span><strong>{financeiro.resumo.por_tipo.assinatura_plataforma.qtd}</strong></div>
+            </div>
+            <div style={s.card}>
+              <h3 style={s.cardTitulo}>Taxa de marketplace</h3>
+              <div style={s.linhaLista}><span>Bruto</span><strong>{formatarMoeda(financeiro.resumo.por_tipo.taxa_marketplace.bruto)}</strong></div>
+              <div style={s.linhaLista}><span>Líquido</span><strong>{formatarMoeda(financeiro.resumo.por_tipo.taxa_marketplace.liquido)}</strong></div>
+              <div style={s.linhaLista}><span>Transações</span><strong>{financeiro.resumo.por_tipo.taxa_marketplace.qtd}</strong></div>
+            </div>
+          </div>
+
+          <div style={{ ...s.card, marginTop: '16px' }}>
+            <h3 style={s.cardTitulo}>Faturamento por período</h3>
+            {financeiro.serie_periodo.length === 0 ? <p style={s.textoVazio}>Nenhuma receita registrada nesse período.</p> : (
+              <>
+                <BarraGrafico dados={financeiro.serie_periodo} />
+                <div style={{ overflowX: 'auto', marginTop: '14px' }}>
+                  <table style={s.table}>
+                    <thead>
+                      <tr>{['Período', 'Bruto', 'Líquido', 'Qtd'].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {financeiro.serie_periodo.map((s2) => (
+                        <tr key={s2.periodo} style={s.tr}>
+                          <td style={s.td}>{s2.periodo}</td>
+                          <td style={s.td}>{formatarMoeda(s2.bruto)}</td>
+                          <td style={s.td}>{formatarMoeda(s2.liquido)}</td>
+                          <td style={s.td}>{s2.qtd}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+
+          {financeiro.top_empresas.length > 0 && (
+            <div style={{ ...s.card, marginTop: '16px' }}>
+              <h3 style={s.cardTitulo}>Empresas que mais geraram receita</h3>
+              {financeiro.top_empresas.map((e) => (
+                <BarraRanking key={e.empresa} label={e.empresa} valor={e.bruto} maximo={financeiro.top_empresas[0].bruto} sufixo={formatarMoeda(e.bruto)} />
+              ))}
+            </div>
+          )}
+
+          <div style={{ ...s.card, marginTop: '16px' }}>
+            <h3 style={s.cardTitulo}>Detalhamento</h3>
+            {financeiro.detalhamento.length === 0 ? <p style={s.textoVazio}>Nenhuma transação nesse período.</p> : (
+              <div style={{ overflowX: 'auto', maxHeight: '360px', overflowY: 'auto' }}>
+                <table style={s.table}>
+                  <thead>
+                    <tr>{['Data', 'Empresa', 'Tipo', 'Forma', 'Bruto', 'Líquido'].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {financeiro.detalhamento.map((d, i) => (
+                      <tr key={i} style={s.tr}>
+                        <td style={s.td}>{formatarDataHoraLocal(d.criado_em)}</td>
+                        <td style={s.td}>{d.empresa}</td>
+                        <td style={s.td}>{ROTULO_TIPO_RECEITA[d.tipo] || d.tipo}</td>
+                        <td style={s.td}>{d.forma_pagamento || '-'}</td>
+                        <td style={s.td}>{formatarMoeda(d.valor_bruto)}</td>
+                        <td style={s.td}>{formatarMoeda(d.valor_liquido)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Barra de faturamento por período — sem biblioteca de gráfico (mesmo padrão hand-rolled de
+// pages/admin/AdminRelatorios.js), só divs com altura proporcional ao maior valor da série.
+function BarraGrafico({ dados }) {
+  const maximo = Math.max(...dados.map((d) => d.bruto), 1);
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '140px', overflowX: 'auto', paddingBottom: '4px' }}>
+      {dados.map((d) => (
+        <div key={d.periodo} title={`${d.periodo}: ${formatarMoeda(d.bruto)}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '28px', flex: '1 0 auto' }}>
+          <div style={{ width: '100%', maxWidth: '28px', height: `${Math.max((d.bruto / maximo) * 120, 2)}px`, background: 'linear-gradient(180deg, #4c74f0, #2554eb)', borderRadius: '4px 4px 0 0' }} />
+          <span style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px', whiteSpace: 'nowrap' }}>{d.periodo.slice(5) || d.periodo}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Ranking horizontal (mesmo padrão de top_servicos/top_profissionais em AdminRelatorios.js).
+function BarraRanking({ label, valor, maximo, sufixo }) {
+  const percentual = maximo > 0 ? Math.max((valor / maximo) * 100, 2) : 0;
+  return (
+    <div style={{ marginBottom: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#374151', marginBottom: '4px' }}>
+        <span>{label}</span><strong>{sufixo}</strong>
+      </div>
+      <div style={{ background: '#f3f4f6', borderRadius: '6px', height: '8px', overflow: 'hidden' }}>
+        <div style={{ width: `${percentual}%`, background: 'linear-gradient(90deg, #4c74f0, #2554eb)', height: '100%', borderRadius: '6px' }} />
+      </div>
     </div>
   );
 }
@@ -1303,7 +1507,8 @@ const Icons = {
   Shield: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>,
   LogOut: ({ color = 'currentColor' }) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>,
   Close: ({ color = '#9ca3af', size = 18 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
-  Lock: ({ color = 'currentColor' }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+  Lock: ({ color = 'currentColor' }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
+  DollarSign: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
 };
 
 const s = {
