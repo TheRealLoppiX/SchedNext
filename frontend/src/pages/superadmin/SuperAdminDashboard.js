@@ -670,6 +670,8 @@ function AbaContas({ toast, confirmar }) {
 
   return (
     <div>
+      <ConfiguracoesPlataforma toast={toast} />
+
       <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
         {[['pagar', 'Contas a Pagar'], ['receber', 'Contas a Receber']].map(([valor, label]) => (
           <button
@@ -682,6 +684,58 @@ function AbaContas({ toast, confirmar }) {
         ))}
       </div>
       {subAba === 'pagar' ? <ContasPagarPainel toast={toast} confirmar={confirmar} /> : <ContasReceberPainel toast={toast} confirmar={confirmar} />}
+    </div>
+  );
+}
+
+// Cadastro genérico de configurações da plataforma (ver GET/PUT /super-admin/configuracoes e
+// sql/2026_plataforma_configuracoes.sql) — hoje só o número de WhatsApp próprio da SchedNext
+// (pra cobrança/avisos às empresas), mas a tabela é chave/valor livre pra qualquer outro dado de
+// contato/serviço que surgir depois. Envio automático por WhatsApp ainda não existe — isso é só
+// o cadastro do número, pra quando essa instância for provisionada.
+function ConfiguracoesPlataforma({ toast }) {
+  const [valor, setValor] = useState('');
+  const [carregando, setCarregando] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => {
+    fetch(`${API_URL}/super-admin/configuracoes`)
+      .then((r) => r.json())
+      .then((data) => setValor(data.whatsapp_numero_cobranca || ''))
+      .catch(() => toast.error('Erro ao carregar configurações da plataforma.'))
+      .finally(() => setCarregando(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const salvar = async () => {
+    setSalvando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/configuracoes`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chave: 'whatsapp_numero_cobranca', valor })
+      });
+      const data = await res.json();
+      if (res.ok) toast.success('Configuração salva.'); else toast.error(data.error || 'Não foi possível salvar.');
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  if (carregando) return null;
+
+  return (
+    <div style={{ ...s.card, marginBottom: '16px' }}>
+      <h3 style={s.cardTitulo}>Contato da SchedNext</h3>
+      <p style={{ ...s.subTexto, marginBottom: '10px' }}>
+        Número próprio da plataforma pra cobrança/avisos via WhatsApp às empresas — cadastro pra quando essa instância for provisionada (envio automático ainda não está ativo, só o e-mail está).
+      </p>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <input style={{ ...s.input, maxWidth: '260px', marginTop: 0 }} placeholder="Ex: 5511999999999" value={valor} onChange={(e) => setValor(e.target.value)} />
+        <LoadingButton loading={salvando} onClick={salvar} style={s.btnPrimario}>Salvar</LoadingButton>
+      </div>
     </div>
   );
 }
@@ -1006,6 +1060,7 @@ function ContasReceberPainel({ toast, confirmar }) {
   const [modalAberto, setModalAberto] = useState(false);
   const [editando, setEditando] = useState(null);
   const [empresaPreSelecionada, setEmpresaPreSelecionada] = useState(null);
+  const [contaBoleto, setContaBoleto] = useState(null);
   useEscToClose(modalAberto, () => setModalAberto(false));
 
   const carregar = useCallback(async () => {
@@ -1053,6 +1108,17 @@ function ContasReceberPainel({ toast, confirmar }) {
       const res = await fetch(`${API_URL}/super-admin/contas-receber/${conta.id}/cancelar`, { method: 'PUT' });
       const data = await res.json();
       if (res.ok) { toast.success(data.message); carregar(); } else toast.error(data.error || 'Não foi possível cancelar.');
+    } catch (err) { toast.error('Erro de conexão.'); }
+  };
+
+  const enviarCobranca = async (conta) => {
+    if (!conta.pagador_email) { toast.error('Preencha o e-mail do pagador (Editar) antes de enviar a cobrança.'); return; }
+    const ok = await confirmar(`Enviar cobrança por e-mail para ${conta.pagador_email}?`, { confirmText: 'Enviar' });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/contas-receber/${conta.id}/enviar-cobranca`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregar(); } else toast.error(data.error || 'Não foi possível enviar a cobrança.');
     } catch (err) { toast.error('Erro de conexão.'); }
   };
 
@@ -1151,7 +1217,7 @@ function ContasReceberPainel({ toast, confirmar }) {
           <div style={{ overflowX: 'auto' }}>
             <table style={s.table}>
               <thead>
-                <tr>{['Competência', 'Previsão', 'Pagador', 'Empresa', 'Descrição', 'Forma', 'Valor', 'Status', 'Ações'].map((h) => (
+                <tr>{['Competência', 'Previsão', 'Pagador', 'Empresa', 'Descrição', 'Valor', 'Status', 'Cobrança', 'Ações'].map((h) => (
                   <th key={h} style={{ ...s.th, ...(h === 'Ações' ? { textAlign: 'right' } : {}) }}>{h}</th>
                 ))}</tr>
               </thead>
@@ -1160,16 +1226,27 @@ function ContasReceberPainel({ toast, confirmar }) {
                   <tr key={c.id} style={s.tr}>
                     <td style={s.td}>{formatarCompetencia(c.competencia)}</td>
                     <td style={s.td}>{formatarDataSemFuso(c.data_prevista)}</td>
-                    <td style={s.td}>{c.pagador_nome}</td>
+                    <td style={s.td}>
+                      {c.pagador_nome}
+                      {c.pagador_email && <div style={s.subTexto}>{c.pagador_email}</div>}
+                    </td>
                     <td style={s.td}>{c.empresa_nome || '-'}</td>
                     <td style={s.td}>{c.descricao}</td>
-                    <td style={s.td}>{FORMA_PAGAMENTO_OPCOES.find((f) => f.value === c.forma_pagamento)?.label || '-'}</td>
                     <td style={s.td}>{formatarMoeda(c.valor)}</td>
                     <td style={s.td}><BadgeStatusConta status={c.status_efetivo} /></td>
+                    <td style={s.td}>
+                      {c.boleto_url && <div><a href={c.boleto_url} target="_blank" rel="noreferrer" style={s.btnLink}>Ver boleto</a></div>}
+                      {c.cobranca_enviada_em && <div style={s.subTexto}>E-mail enviado {formatarDataHoraLocal(c.cobranca_enviada_em)}</div>}
+                      {!c.boleto_url && !c.cobranca_enviada_em && '-'}
+                    </td>
                     <td style={{ ...s.td, textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                         {(c.status_efetivo === 'pendente' || c.status_efetivo === 'atrasado') && (
-                          <button onClick={() => marcarRecebida(c)} style={{ ...s.btnOutline, ...s.btnOutlineVerde }}>Receber</button>
+                          <>
+                            <button onClick={() => marcarRecebida(c)} style={{ ...s.btnOutline, ...s.btnOutlineVerde }}>Receber</button>
+                            <button onClick={() => setContaBoleto(c)} style={s.btnOutline}>{c.boleto_url ? 'Reemitir boleto' : 'Gerar boleto'}</button>
+                            <button onClick={() => enviarCobranca(c)} style={s.btnOutline}>Enviar cobrança</button>
+                          </>
                         )}
                         <button onClick={() => { setEditando(c); setEmpresaPreSelecionada(null); setModalAberto(true); }} style={s.btnOutline}>Editar</button>
                         {(c.status_efetivo === 'pendente' || c.status_efetivo === 'atrasado') && (
@@ -1184,6 +1261,15 @@ function ContasReceberPainel({ toast, confirmar }) {
             </table>
           </div>
         </div>
+      )}
+
+      {contaBoleto && (
+        <ModalGerarBoleto
+          conta={contaBoleto}
+          onFechar={() => setContaBoleto(null)}
+          onSalvo={() => { setContaBoleto(null); carregar(); }}
+          toast={toast}
+        />
       )}
 
       {modalAberto && (
@@ -1204,6 +1290,7 @@ function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, on
   const [form, setForm] = useState(() => ({
     empresa_id: conta?.empresa_id || empresaPreSelecionada?.id || '',
     pagador_nome: conta?.pagador_nome || empresaPreSelecionada?.nome || '',
+    pagador_email: conta?.pagador_email || empresaPreSelecionada?.email || '',
     descricao: conta?.descricao || (empresaPreSelecionada ? `Assinatura de plataforma - ${empresaPreSelecionada.plano_plataforma?.nome || ''}` : ''),
     valor: conta?.valor ?? empresaPreSelecionada?.plano_plataforma?.preco_mensal ?? '',
     competencia: paraCompetenciaInput(conta?.competencia) || paraCompetenciaInput(empresaPreSelecionada?.proxima_cobranca_em) || competenciaAtual(),
@@ -1222,6 +1309,7 @@ function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, on
       ...f,
       empresa_id: empresaId,
       pagador_nome: empresa ? empresa.nome : f.pagador_nome,
+      pagador_email: empresa ? (empresa.email || f.pagador_email) : f.pagador_email,
       descricao: empresa ? `Assinatura de plataforma - ${empresa.plano_plataforma?.nome || ''}` : f.descricao,
       valor: empresa ? (empresa.plano_plataforma?.preco_mensal ?? f.valor) : f.valor,
       competencia: empresa ? (paraCompetenciaInput(empresa.proxima_cobranca_em) || f.competencia) : f.competencia,
@@ -1268,6 +1356,9 @@ function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, on
         <label style={s.label}>Nome do pagador *</label>
         <input style={s.input} value={form.pagador_nome} onChange={campo('pagador_nome')} />
 
+        <label style={s.label} title="Necessário pra gerar boleto ou enviar a cobrança por e-mail">E-mail do pagador</label>
+        <input type="email" style={s.input} value={form.pagador_email} onChange={campo('pagador_email')} placeholder="Pra gerar boleto/enviar cobrança" />
+
         <label style={s.label}>Descrição *</label>
         <input style={s.input} value={form.descricao} onChange={campo('descricao')} />
 
@@ -1297,6 +1388,101 @@ function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, on
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
           <button onClick={onFechar} style={s.btnOutline}>Cancelar</button>
           <LoadingButton loading={salvando} onClick={salvar} style={s.btnPrimario}>Salvar</LoadingButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Dados de identificação/endereço exigidos pela API de boleto do Mercado Pago (ver
+// services/mercadopago.js:criarPagamentoBoleto) — ficam salvos na própria conta a receber depois
+// da primeira emissão, então reabrir esse modal já vem pré-preenchido.
+function ModalGerarBoleto({ conta, onFechar, onSalvo, toast }) {
+  const [form, setForm] = useState({
+    pagador_documento: conta.pagador_documento || '',
+    pagador_cep: conta.pagador_cep || '',
+    pagador_endereco: conta.pagador_endereco || '',
+    pagador_numero: conta.pagador_numero || '',
+    pagador_bairro: conta.pagador_bairro || '',
+    pagador_cidade: conta.pagador_cidade || '',
+    pagador_uf: conta.pagador_uf || ''
+  });
+  const [salvando, setSalvando] = useState(false);
+  useEscToClose(true, onFechar);
+
+  const campo = (chave) => (e) => setForm((f) => ({ ...f, [chave]: e.target.value }));
+
+  const gerar = async () => {
+    if (Object.values(form).some((v) => !String(v).trim())) {
+      toast.error('Preencha todos os campos pra gerar o boleto.');
+      return;
+    }
+    setSalvando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/contas-receber/${conta.id}/gerar-boleto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          pagador_documento: form.pagador_documento.replace(/\D/g, ''),
+          pagador_cep: form.pagador_cep.replace(/\D/g, ''),
+          pagador_uf: form.pagador_uf.toUpperCase()
+        })
+      });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); onSalvo(); } else toast.error(data.error || 'Não foi possível gerar o boleto.');
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <div style={s.overlay} onClick={onFechar}>
+      <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
+        <div style={s.modalHeader}>
+          <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>Gerar boleto</h3>
+          <button onClick={onFechar} style={s.btnFechar}><Icons.Close /></button>
+        </div>
+        <p style={{ ...s.subTexto, marginBottom: '4px' }}>{conta.descricao} · {formatarMoeda(conta.valor)} · vence {formatarDataSemFuso(conta.data_prevista)}</p>
+        <p style={s.subTexto}>Dados exigidos pelo Mercado Pago pra emitir o boleto. Ficam salvos nessa conta pra não pedir de novo.</p>
+
+        <label style={s.label}>CPF/CNPJ do pagador *</label>
+        <input style={s.input} value={form.pagador_documento} onChange={campo('pagador_documento')} placeholder="Só números" />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+          <div>
+            <label style={s.label}>CEP *</label>
+            <input style={s.input} value={form.pagador_cep} onChange={campo('pagador_cep')} placeholder="Só números" />
+          </div>
+          <div>
+            <label style={s.label}>Endereço *</label>
+            <input style={s.input} value={form.pagador_endereco} onChange={campo('pagador_endereco')} />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', gap: '12px' }}>
+          <div>
+            <label style={s.label}>Número *</label>
+            <input style={s.input} value={form.pagador_numero} onChange={campo('pagador_numero')} />
+          </div>
+          <div>
+            <label style={s.label}>Bairro *</label>
+            <input style={s.input} value={form.pagador_bairro} onChange={campo('pagador_bairro')} />
+          </div>
+          <div>
+            <label style={s.label}>UF *</label>
+            <input style={s.input} maxLength={2} value={form.pagador_uf} onChange={campo('pagador_uf')} />
+          </div>
+        </div>
+
+        <label style={s.label}>Cidade *</label>
+        <input style={s.input} value={form.pagador_cidade} onChange={campo('pagador_cidade')} />
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
+          <button onClick={onFechar} style={s.btnOutline}>Cancelar</button>
+          <LoadingButton loading={salvando} onClick={gerar} style={s.btnPrimario}>Gerar boleto</LoadingButton>
         </div>
       </div>
     </div>
