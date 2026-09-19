@@ -33,10 +33,14 @@ jobs:
         run: npm test --workspace=frontend -- --watchAll=false
 
       # Build de produção de verdade — também é o jeito mais barato de pegar erro de import/JSX
-      # quebrado que só aparece na hora de compilar. De propósito NÃO roda com CI=true (o Create
-      # React App passa a tratar todo warning do ESLint como erro nesse modo): o projeto nunca foi
-      # checado contra isso, então ligar agora podia quebrar o CI em warnings pré-existentes sem
-      # relação com o que motivou este workflow. Dá pra apertar isso depois, de propósito, quando
-      # o código já estiver limpo sob esse modo.
+      # quebrado que só aparece na hora de compilar. CI=false sobrescrevendo de propósito: o
+      # runner do GitHub Actions seta CI=true globalmente sozinho (não é algo que a gente liga
+      # aqui), e o Create React App passa a tratar todo warning do ESLint como erro nesse modo —
+      # o projeto tem warnings pré-existentes (eqeqeq, react-hooks/exhaustive-deps, no-unused-vars
+      # em telas que não têm nada a ver com este workflow) que quebrariam o build na primeira
+      # execução. Dá pra apertar isso depois, de propósito, quando o código já estiver limpo sob
+      # esse modo — remover essa env var faz o build voltar a tratar warning como erro.
       - name: Build de produção
+        env:
+          CI: false
         run: npm run build:frontend
