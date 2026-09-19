@@ -1,0 +1,42 @@
+name: CI
+
+# Roda em todo push e pull request pras branches que importam (main e dev) — não em qualquer
+# branch de rascunho, pra não gastar minuto de Actions à toa.
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  frontend:
+    name: Frontend — testes e build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # O frontend é um workspace npm deste repo raiz (ver "workspaces" no package.json) — o
+      # lockfile fica aqui na raiz, não dentro de frontend/, então "npm ci" roda daqui mesmo.
+      - name: Instalar dependências
+        run: npm ci
+
+      # --watchAll=false é obrigatório: sem isso o Jest do Create React App entra em modo watch
+      # (interativo) e o job nunca termina sozinho.
+      - name: Rodar testes (Jest)
+        run: npm test --workspace=frontend -- --watchAll=false
+
+      # Build de produção de verdade — também é o jeito mais barato de pegar erro de import/JSX
+      # quebrado que só aparece na hora de compilar. De propósito NÃO roda com CI=true (o Create
+      # React App passa a tratar todo warning do ESLint como erro nesse modo): o projeto nunca foi
+      # checado contra isso, então ligar agora podia quebrar o CI em warnings pré-existentes sem
+      # relação com o que motivou este workflow. Dá pra apertar isso depois, de propósito, quando
+      # o código já estiver limpo sob esse modo.
+      - name: Build de produção
+        run: npm run build:frontend
