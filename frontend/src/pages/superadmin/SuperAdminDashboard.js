@@ -5,7 +5,7 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import useEscToClose from '../../hooks/useEscToClose';
 import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
-import { formatarDataSemFuso } from '../../utils/dataSemFuso';
+import { formatarDataSemFuso, partesDataSemFuso } from '../../utils/dataSemFuso';
 
 const STATUS_LEAD_INFO = {
   novo: { label: 'Novo', bg: '#dbeafe', fg: '#1e40af' },
@@ -574,6 +574,27 @@ const FORMA_PAGAMENTO_OPCOES = [
   { value: 'outro', label: 'Outro' }
 ];
 
+// Competência = mês/ano de referência financeira (regime de competência), separado da data de
+// vencimento/pagamento (regime de caixa) — ver sql/2026_contas_competencia.sql. Guardada no
+// banco como DATE no dia 1 do mês; aqui só convertemos pra/de "AAAA-MM" (valor nativo de
+// <input type="month">) e pro rótulo "Mês/Ano" exibido na tabela.
+function paraCompetenciaInput(dataStr) {
+  if (!dataStr) return '';
+  const { ano, mes } = partesDataSemFuso(dataStr);
+  return `${ano}-${String(mes).padStart(2, '0')}`;
+}
+
+function formatarCompetencia(dataStr) {
+  if (!dataStr) return '-';
+  const { ano, mes } = partesDataSemFuso(dataStr);
+  return `${NOMES_MES[mes - 1]}/${ano}`;
+}
+
+function competenciaAtual() {
+  const hoje = new Date();
+  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+}
+
 function BadgeStatusConta({ status }) {
   const info = STATUS_CONTA_INFO[status] || { label: status, bg: '#f3f4f6', fg: '#6b7280' };
   return <span style={{ ...s.badge, background: info.bg, color: info.fg }}>{info.label}</span>;
@@ -671,6 +692,7 @@ function ContasPagarPainel({ toast, confirmar }) {
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState('');
   const [statusFiltro, setStatusFiltro] = useState('');
+  const [competenciaFiltro, setCompetenciaFiltro] = useState('');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
@@ -683,6 +705,7 @@ function ContasPagarPainel({ toast, confirmar }) {
       const params = new URLSearchParams();
       if (busca) params.set('busca', busca);
       if (statusFiltro) params.set('status', statusFiltro);
+      if (competenciaFiltro) params.set('competencia', competenciaFiltro);
       if (dataInicio) params.set('dataInicio', dataInicio);
       if (dataFim) params.set('dataFim', dataFim);
       const res = await fetch(`${API_URL}/super-admin/contas-pagar${params.toString() ? `?${params.toString()}` : ''}`);
@@ -695,7 +718,7 @@ function ContasPagarPainel({ toast, confirmar }) {
       setCarregando(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busca, statusFiltro, dataInicio, dataFim]);
+  }, [busca, statusFiltro, competenciaFiltro, dataInicio, dataFim]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -734,8 +757,8 @@ function ContasPagarPainel({ toast, confirmar }) {
     const linhas = [
       ['Resumo', `Pendente: ${formatarMoeda(resumo.pendente.valor)}`, `Atrasado: ${formatarMoeda(resumo.atrasado.valor)}`, `Pago: ${formatarMoeda(resumo.concluido.valor)}`, `Total: ${formatarMoeda(resumo.valor_total)}`],
       [],
-      ['Vencimento', 'Beneficiário', 'Documento', 'Descrição', 'Categoria', 'Forma', 'Status', 'Valor', 'Pago em'],
-      ...itens.map((c) => [formatarDataSemFuso(c.data_vencimento), c.beneficiario_nome, c.beneficiario_documento || '-', c.descricao, c.categoria || '-', c.forma_pagamento || '-', STATUS_CONTA_INFO[c.status_efetivo]?.label || c.status_efetivo, c.valor, c.data_pagamento ? formatarDataSemFuso(c.data_pagamento) : '-'])
+      ['Competência', 'Vencimento', 'Beneficiário', 'Documento', 'Descrição', 'Categoria', 'Forma', 'Status', 'Valor', 'Pago em'],
+      ...itens.map((c) => [formatarCompetencia(c.competencia), formatarDataSemFuso(c.data_vencimento), c.beneficiario_nome, c.beneficiario_documento || '-', c.descricao, c.categoria || '-', c.forma_pagamento || '-', STATUS_CONTA_INFO[c.status_efetivo]?.label || c.status_efetivo, c.valor, c.data_pagamento ? formatarDataSemFuso(c.data_pagamento) : '-'])
     ];
     exportarContasCsv(`contas-a-pagar-${new Date().toISOString().slice(0, 10)}.csv`, linhas);
   };
@@ -754,8 +777,8 @@ function ContasPagarPainel({ toast, confirmar }) {
       ],
       tabelas: [{
         titulo: 'Detalhamento',
-        cabecalhos: ['Vencimento', 'Beneficiário', 'Descrição', 'Categoria', 'Forma', 'Status', 'Valor'],
-        linhas: itens.map((c) => [formatarDataSemFuso(c.data_vencimento), c.beneficiario_nome, c.descricao, c.categoria || '-', c.forma_pagamento || '-', STATUS_CONTA_INFO[c.status_efetivo]?.label || c.status_efetivo, formatarMoeda(c.valor)])
+        cabecalhos: ['Competência', 'Vencimento', 'Beneficiário', 'Descrição', 'Categoria', 'Forma', 'Status', 'Valor'],
+        linhas: itens.map((c) => [formatarCompetencia(c.competencia), formatarDataSemFuso(c.data_vencimento), c.beneficiario_nome, c.descricao, c.categoria || '-', c.forma_pagamento || '-', STATUS_CONTA_INFO[c.status_efetivo]?.label || c.status_efetivo, formatarMoeda(c.valor)])
       }],
       toast
     });
@@ -773,6 +796,7 @@ function ContasPagarPainel({ toast, confirmar }) {
             <option value="pago">Pago</option>
             <option value="cancelado">Cancelado</option>
           </select>
+          <input type="month" title="Filtrar por competência" style={s.selectFiltro} value={competenciaFiltro} onChange={(e) => setCompetenciaFiltro(e.target.value)} />
           <input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
           <span style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
           <input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
@@ -800,13 +824,14 @@ function ContasPagarPainel({ toast, confirmar }) {
           <div style={{ overflowX: 'auto' }}>
             <table style={s.table}>
               <thead>
-                <tr>{['Vencimento', 'Beneficiário', 'Descrição', 'Categoria', 'Forma', 'Valor', 'Status', 'Ações'].map((h) => (
+                <tr>{['Competência', 'Vencimento', 'Beneficiário', 'Descrição', 'Categoria', 'Forma', 'Valor', 'Status', 'Ações'].map((h) => (
                   <th key={h} style={{ ...s.th, ...(h === 'Ações' ? { textAlign: 'right' } : {}) }}>{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
                 {itens.map((c) => (
                   <tr key={c.id} style={s.tr}>
+                    <td style={s.td}>{formatarCompetencia(c.competencia)}</td>
                     <td style={s.td}>{formatarDataSemFuso(c.data_vencimento)}</td>
                     <td style={s.td}>
                       <strong style={{ color: '#111827' }}>{c.beneficiario_nome}</strong>
@@ -861,6 +886,7 @@ function ModalContaPagar({ conta, onFechar, onSalvo, toast }) {
     agencia: conta?.agencia || '',
     conta: conta?.conta || '',
     valor: conta?.valor ?? '',
+    competencia: paraCompetenciaInput(conta?.competencia) || competenciaAtual(),
     data_vencimento: conta?.data_vencimento || '',
     observacoes: conta?.observacoes || ''
   }));
@@ -870,8 +896,8 @@ function ModalContaPagar({ conta, onFechar, onSalvo, toast }) {
   const campo = (chave) => (e) => setForm((f) => ({ ...f, [chave]: e.target.value }));
 
   const salvar = async () => {
-    if (!form.descricao.trim() || !form.beneficiario_nome.trim() || !form.valor || !form.data_vencimento) {
-      toast.error('Preencha descrição, beneficiário, valor e vencimento.');
+    if (!form.descricao.trim() || !form.beneficiario_nome.trim() || !form.valor || !form.competencia || !form.data_vencimento) {
+      toast.error('Preencha descrição, beneficiário, valor, competência e vencimento.');
       return;
     }
     setSalvando(true);
@@ -905,10 +931,14 @@ function ModalContaPagar({ conta, onFechar, onSalvo, toast }) {
         <label style={s.label}>Categoria</label>
         <input style={s.input} value={form.categoria} onChange={campo('categoria')} placeholder="Ex: infraestrutura, marketing, folha, impostos..." />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
           <div>
             <label style={s.label}>Valor (R$) *</label>
             <input type="number" min="0" step="0.01" style={s.input} value={form.valor} onChange={campo('valor')} />
+          </div>
+          <div>
+            <label style={s.label} title="Mês/ano a que essa despesa se refere, independente de quando é paga">Competência *</label>
+            <input type="month" style={s.input} value={form.competencia} onChange={campo('competencia')} />
           </div>
           <div>
             <label style={s.label}>Vencimento *</label>
@@ -969,6 +999,7 @@ function ContasReceberPainel({ toast, confirmar }) {
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState('');
   const [statusFiltro, setStatusFiltro] = useState('');
+  const [competenciaFiltro, setCompetenciaFiltro] = useState('');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [empresasSugeridas, setEmpresasSugeridas] = useState([]);
@@ -983,6 +1014,7 @@ function ContasReceberPainel({ toast, confirmar }) {
       const params = new URLSearchParams();
       if (busca) params.set('busca', busca);
       if (statusFiltro) params.set('status', statusFiltro);
+      if (competenciaFiltro) params.set('competencia', competenciaFiltro);
       if (dataInicio) params.set('dataInicio', dataInicio);
       if (dataFim) params.set('dataFim', dataFim);
       const [resItens, resEmpresas] = await Promise.all([
@@ -1000,7 +1032,7 @@ function ContasReceberPainel({ toast, confirmar }) {
       setCarregando(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busca, statusFiltro, dataInicio, dataFim]);
+  }, [busca, statusFiltro, competenciaFiltro, dataInicio, dataFim]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -1039,8 +1071,8 @@ function ContasReceberPainel({ toast, confirmar }) {
     const linhas = [
       ['Resumo', `Pendente: ${formatarMoeda(resumo.pendente.valor)}`, `Atrasado: ${formatarMoeda(resumo.atrasado.valor)}`, `Recebido: ${formatarMoeda(resumo.concluido.valor)}`, `Total: ${formatarMoeda(resumo.valor_total)}`],
       [],
-      ['Previsão', 'Pagador', 'Empresa vinculada', 'Descrição', 'Forma', 'Status', 'Valor', 'Recebido em'],
-      ...itens.map((c) => [formatarDataSemFuso(c.data_prevista), c.pagador_nome, c.empresa_nome || '-', c.descricao, c.forma_pagamento || '-', STATUS_CONTA_INFO[c.status_efetivo]?.label || c.status_efetivo, c.valor, c.data_recebimento ? formatarDataSemFuso(c.data_recebimento) : '-'])
+      ['Competência', 'Previsão', 'Pagador', 'Empresa vinculada', 'Descrição', 'Forma', 'Status', 'Valor', 'Recebido em'],
+      ...itens.map((c) => [formatarCompetencia(c.competencia), formatarDataSemFuso(c.data_prevista), c.pagador_nome, c.empresa_nome || '-', c.descricao, c.forma_pagamento || '-', STATUS_CONTA_INFO[c.status_efetivo]?.label || c.status_efetivo, c.valor, c.data_recebimento ? formatarDataSemFuso(c.data_recebimento) : '-'])
     ];
     exportarContasCsv(`contas-a-receber-${new Date().toISOString().slice(0, 10)}.csv`, linhas);
   };
@@ -1059,8 +1091,8 @@ function ContasReceberPainel({ toast, confirmar }) {
       ],
       tabelas: [{
         titulo: 'Detalhamento',
-        cabecalhos: ['Previsão', 'Pagador', 'Empresa', 'Descrição', 'Status', 'Valor'],
-        linhas: itens.map((c) => [formatarDataSemFuso(c.data_prevista), c.pagador_nome, c.empresa_nome || '-', c.descricao, STATUS_CONTA_INFO[c.status_efetivo]?.label || c.status_efetivo, formatarMoeda(c.valor)])
+        cabecalhos: ['Competência', 'Previsão', 'Pagador', 'Empresa', 'Descrição', 'Status', 'Valor'],
+        linhas: itens.map((c) => [formatarCompetencia(c.competencia), formatarDataSemFuso(c.data_prevista), c.pagador_nome, c.empresa_nome || '-', c.descricao, STATUS_CONTA_INFO[c.status_efetivo]?.label || c.status_efetivo, formatarMoeda(c.valor)])
       }],
       toast
     });
@@ -1091,6 +1123,7 @@ function ContasReceberPainel({ toast, confirmar }) {
             <option value="recebido">Recebido</option>
             <option value="cancelado">Cancelado</option>
           </select>
+          <input type="month" title="Filtrar por competência" style={s.selectFiltro} value={competenciaFiltro} onChange={(e) => setCompetenciaFiltro(e.target.value)} />
           <input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
           <span style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
           <input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
@@ -1118,13 +1151,14 @@ function ContasReceberPainel({ toast, confirmar }) {
           <div style={{ overflowX: 'auto' }}>
             <table style={s.table}>
               <thead>
-                <tr>{['Previsão', 'Pagador', 'Empresa', 'Descrição', 'Forma', 'Valor', 'Status', 'Ações'].map((h) => (
+                <tr>{['Competência', 'Previsão', 'Pagador', 'Empresa', 'Descrição', 'Forma', 'Valor', 'Status', 'Ações'].map((h) => (
                   <th key={h} style={{ ...s.th, ...(h === 'Ações' ? { textAlign: 'right' } : {}) }}>{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
                 {itens.map((c) => (
                   <tr key={c.id} style={s.tr}>
+                    <td style={s.td}>{formatarCompetencia(c.competencia)}</td>
                     <td style={s.td}>{formatarDataSemFuso(c.data_prevista)}</td>
                     <td style={s.td}>{c.pagador_nome}</td>
                     <td style={s.td}>{c.empresa_nome || '-'}</td>
@@ -1172,6 +1206,7 @@ function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, on
     pagador_nome: conta?.pagador_nome || empresaPreSelecionada?.nome || '',
     descricao: conta?.descricao || (empresaPreSelecionada ? `Assinatura de plataforma - ${empresaPreSelecionada.plano_plataforma?.nome || ''}` : ''),
     valor: conta?.valor ?? empresaPreSelecionada?.plano_plataforma?.preco_mensal ?? '',
+    competencia: paraCompetenciaInput(conta?.competencia) || paraCompetenciaInput(empresaPreSelecionada?.proxima_cobranca_em) || competenciaAtual(),
     data_prevista: conta?.data_prevista || paraInputData(empresaPreSelecionada?.proxima_cobranca_em) || '',
     forma_pagamento: conta?.forma_pagamento || '',
     observacoes: conta?.observacoes || ''
@@ -1189,13 +1224,14 @@ function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, on
       pagador_nome: empresa ? empresa.nome : f.pagador_nome,
       descricao: empresa ? `Assinatura de plataforma - ${empresa.plano_plataforma?.nome || ''}` : f.descricao,
       valor: empresa ? (empresa.plano_plataforma?.preco_mensal ?? f.valor) : f.valor,
+      competencia: empresa ? (paraCompetenciaInput(empresa.proxima_cobranca_em) || f.competencia) : f.competencia,
       data_prevista: empresa ? (paraInputData(empresa.proxima_cobranca_em) || f.data_prevista) : f.data_prevista
     }));
   };
 
   const salvar = async () => {
-    if (!form.pagador_nome.trim() || !form.descricao.trim() || !form.valor || !form.data_prevista) {
-      toast.error('Preencha pagador, descrição, valor e data prevista.');
+    if (!form.pagador_nome.trim() || !form.descricao.trim() || !form.valor || !form.competencia || !form.data_prevista) {
+      toast.error('Preencha pagador, descrição, valor, competência e data prevista.');
       return;
     }
     setSalvando(true);
@@ -1235,10 +1271,14 @@ function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, on
         <label style={s.label}>Descrição *</label>
         <input style={s.input} value={form.descricao} onChange={campo('descricao')} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
           <div>
             <label style={s.label}>Valor (R$) *</label>
             <input type="number" min="0" step="0.01" style={s.input} value={form.valor} onChange={campo('valor')} />
+          </div>
+          <div>
+            <label style={s.label} title="Mês/ano a que esse recebimento se refere, independente de quando é recebido">Competência *</label>
+            <input type="month" style={s.input} value={form.competencia} onChange={campo('competencia')} />
           </div>
           <div>
             <label style={s.label}>Data prevista *</label>
