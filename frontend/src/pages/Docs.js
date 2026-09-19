@@ -20,11 +20,13 @@ const INDICE = [
     itens: [
       { id: 'agenda', titulo: 'Agenda e atendimentos' },
       { id: 'equipe-servicos', titulo: 'Equipe e serviços' },
-      { id: 'clientes', titulo: 'Clientes e fidelidade' },
+      { id: 'clientes', titulo: 'Clientes' },
+      { id: 'assinatura-cliente', titulo: 'Assinatura do cliente final' },
       { id: 'estoque-pdv', titulo: 'Estoque e finalização de atendimento' },
       { id: 'pagamentos', titulo: 'Pagamentos e Pix' },
       { id: 'relatorios', titulo: 'Relatórios' },
-      { id: 'acoes-fidelidade', titulo: 'Ações e fidelidade' }
+      { id: 'acoes-fidelidade', titulo: 'Ações e fidelidade' },
+      { id: 'ia-painel', titulo: 'IA no painel administrativo' }
     ]
   },
   {
@@ -41,8 +43,18 @@ const INDICE = [
     grupo: 'Recursos avançados',
     itens: [
       { id: 'multiplas-unidades', titulo: 'Múltiplas unidades' },
-      { id: 'dominio-proprio', titulo: 'Domínio próprio' },
-      { id: 'api-publica', titulo: 'API pública' }
+      { id: 'dominio-proprio', titulo: 'Domínio próprio' }
+    ]
+  },
+  {
+    grupo: 'API pública',
+    itens: [
+      { id: 'api-visao-geral', titulo: 'Visão geral e autenticação' },
+      { id: 'api-profissionais', titulo: 'GET /profissionais' },
+      { id: 'api-servicos', titulo: 'GET /servicos' },
+      { id: 'api-disponibilidade', titulo: 'GET /disponibilidade' },
+      { id: 'api-agendamentos', titulo: 'POST /agendamentos' },
+      { id: 'api-erros', titulo: 'Erros e limites' }
     ]
   },
   {
@@ -186,30 +198,48 @@ function Docs() {
               <li>Ver o histórico de um cliente e seus agendamentos futuros.</li>
               <li>Registrar o motivo de um cancelamento (útil pra entender faltas e desistências ao longo do tempo).</li>
             </ul>
-            <p>O mesmo motor de disponibilidade (checar horário livre, evitar dois agendamentos no mesmo horário pro mesmo profissional) é usado tanto no site quanto no bot de WhatsApp. Não existem duas lógicas de agenda diferentes rodando em paralelo.</p>
+            <p>A disponibilidade considera três coisas ao mesmo tempo: o horário de funcionamento configurado pro dia da semana, o tamanho do bloco de cada serviço (dois serviços de durações diferentes não "colidem" só porque começam em horários próximos, é checada a sobreposição real dos intervalos) e o instante atual — um horário mais cedo do que agora, no dia de hoje, nunca aparece como disponível, mesmo que ainda esteja livre no papel.</p>
+            <p>O mesmo motor de disponibilidade (checar horário livre, respeitar o horário de funcionamento, evitar dois agendamentos que se sobrepõem pro mesmo profissional) é usado no site, no bot de WhatsApp e na <a href="#api-visao-geral">API pública</a>. Não existem lógicas de agenda diferentes rodando em paralelo entre esses canais.</p>
           </section>
 
           {/* ===================== EQUIPE E SERVIÇOS ===================== */}
           <section id="equipe-servicos" className="doc-secao">
             <h2>Equipe e serviços</h2>
             <p className="doc-intro">Cada profissional cadastrado tem sua própria agenda dentro do negócio, e cada serviço tem preço e duração próprios. A duração é o que define o tamanho do "bloco" reservado na agenda.</p>
-            <p>É possível ativar ou desativar um profissional ou serviço sem apagar o histórico de agendamentos já feitos com ele. Só deixa de aparecer como opção pra novos agendamentos.</p>
+            <p>É possível ativar ou desativar um profissional ou serviço a qualquer momento — enquanto inativo, ele só deixa de aparecer como opção pra novos agendamentos (site, bot e API pública), sem apagar nada do que já foi feito com ele.</p>
+            <p>Excluir de verdade (não apenas desativar) é bloqueado automaticamente pelo sistema quando o profissional ou serviço já tem algum agendamento no histórico — nesse caso o painel avisa e sugere desativar em vez de excluir, exatamente pra garantir que o histórico de atendimentos antigos (e os relatórios que dependem dele) nunca fique com uma referência quebrada.</p>
           </section>
 
           {/* ===================== CLIENTES ===================== */}
           <section id="clientes" className="doc-secao">
-            <h2>Clientes e fidelidade</h2>
+            <h2>Clientes</h2>
             <p className="doc-intro">Toda pessoa que agenda um horário (pelo site ou pelo WhatsApp) fica registrada como cliente do negócio, com histórico de atendimentos.</p>
-            <h3>Assinatura do cliente final <Badge tipo="none" /></h3>
-            <p>
-              Além do agendamento avulso, o admin pode oferecer planos de assinatura mensal pros próprios clientes (ex: "plano
-              ilimitado de cortes"). O cliente contrata, e a mensalidade pode ser cobrada automaticamente:
-            </p>
+            <p>No cadastro de um cliente, o admin pode:</p>
             <ul>
-              <li><strong>No cartão</strong>, via débito recorrente (o cliente autoriza uma vez, e a cobrança se repete sozinha todo mês).</li>
-              <li><strong>No Pix</strong>, gerado manualmente todo ciclo (Pix recorrente automático não existe no Mercado Pago). O admin gera e envia, ou o próprio cliente gera pelo site.</li>
+              <li>Editar nome, telefone, e-mail, data de nascimento e anotações internas.</li>
+              <li>Ver o extrato completo do cliente: todos os atendimentos e cobranças de assinatura, exportável.</li>
+              <li>Marcar manualmente como assinante de um plano, sem depender de o cliente contratar sozinho pelo site (ver <a href="#assinatura-cliente">Assinatura do cliente final</a>).</li>
+              <li>Excluir o cadastro por completo, se necessário.</li>
             </ul>
-            <p>O primeiro mês pode ser pago pessoalmente, sem precisar configurar cobrança automática. Se uma mensalidade não é confirmada, a conta entra em <strong>inadimplência</strong>: continua cadastrada, mas o preço/benefício de assinante fica suspenso até regularizar (via cobrança automática ou diretamente com o negócio). O checkout de atendimento volta a cobrar o valor cheio nesse período. Cancelar a cobrança automática não remove o plano do cliente; isso continua sob controle do admin.</p>
+            <h3>Risco de falta <Badge tipo="none" /></h3>
+            <p>Cada cliente com pelo menos 3 atendimentos no histórico ganha uma classificação automática de risco de não comparecer (baixo, médio ou alto), calculada pela proporção de atendimentos passados que foram cancelados ou nunca confirmados como concluídos. Sem histórico suficiente, a classificação fica como "indefinido" em vez de arriscar um chute. Não usa IA, é uma regra fixa sobre o histórico real.</p>
+            <h3>Reengajamento de clientes sumidos <Badge tipo="pro" /></h3>
+            <p>Pra negócios com IA liberada no plano, o painel de clientes ajuda a montar uma mensagem de "sentimos sua falta" personalizada pra um cliente que não aparece há um tempo, sugerida por IA a partir do histórico dele — o envio em si é sempre uma ação manual do admin, a IA só ajuda a escrever o texto.</p>
+          </section>
+
+          {/* ===================== ASSINATURA DO CLIENTE FINAL ===================== */}
+          <section id="assinatura-cliente" className="doc-secao">
+            <h2>Assinatura do cliente final</h2>
+            <p className="doc-intro">Além do agendamento avulso, o admin pode criar planos de assinatura mensal pros próprios clientes (ex: "plano ilimitado de cortes"), com nome, preço e uma lista de serviços cobertos — cada serviço pode ter um limite de usos por mês, ou ficar ilimitado dentro do plano.</p>
+            <p>Vincular um plano a um cliente (pelo próprio cliente no site, ou manualmente pelo admin) sempre começa com a assinatura no status <strong>pendente</strong> — ela nunca nasce "em dia" sozinha. Só vira <strong>em dia</strong> (o único status que libera o preço de assinante no checkout) depois de uma cobrança confirmada ou de uma baixa manual do admin. Não existe período de teste ou carência: o primeiro mês pode perfeitamente ser cobrado pessoalmente, sem nenhuma cobrança automática configurada.</p>
+            <h3>Cobrança automática</h3>
+            <ul>
+              <li><strong>No cartão</strong>: o cliente autoriza uma vez (preapproval do Mercado Pago) e a cobrança se repete sozinha todo ciclo, confirmada automaticamente.</li>
+              <li><strong>No Pix</strong>: gerado a cada ciclo (o Mercado Pago não tem Pix recorrente de verdade), pelo admin ou pelo próprio cliente no site.</li>
+            </ul>
+            <p>O ciclo de cobrança é ancorado na data em que o cliente assinou, não no calendário (o vencimento de quem assinou dia 8 continua caindo por volta do dia 8 todo mês). O admin pode reancorar manualmente o vencimento; se a cobrança for no cartão, isso exige cancelar a autorização antiga e mandar um novo link de autorização pro cliente, e a assinatura volta pra "pendente" até ele autorizar de novo.</p>
+            <h3>Inadimplência</h3>
+            <p>Se uma cobrança Pix vence sem pagamento, ou uma cobrança no cartão falha, a assinatura vira <strong>inadimplente</strong> automaticamente. O cadastro do cliente e o plano continuam intactos, mas o preço/benefício de assinante fica suspenso no checkout até regularizar (nova cobrança confirmada ou baixa manual) — o atendimento volta a ser cobrado no valor cheio nesse meio-tempo.</p>
           </section>
 
           {/* ===================== ESTOQUE E PDV ===================== */}
@@ -217,11 +247,15 @@ function Docs() {
             <h2>Estoque e finalização de atendimento</h2>
             <p className="doc-intro">Na hora de fechar um atendimento, o admin abre o painel "Vender produtos de estoque" e não fica limitado ao valor do serviço agendado.</p>
             <ul>
-              <li><strong>Produtos vendidos</strong>: o negócio mantém um estoque simples (ex: pomada, shampoo) e pode adicionar itens vendidos junto do atendimento. Entram automaticamente no valor final e dão baixa na quantidade em estoque.</li>
+              <li><strong>Produtos vendidos</strong>: o negócio mantém um estoque simples (nome, preço e quantidade — ex: pomada, shampoo) e pode adicionar itens vendidos junto do atendimento. Entram automaticamente no valor final e dão baixa na quantidade em estoque.</li>
               <li><strong>Serviços adicionais</strong>: serviços extras feitos na hora (não pré-agendados) também entram no fechamento.</li>
               <li><strong>Pagamento dividido</strong>: o valor final pode ser cobrado em até duas formas de pagamento na mesma finalização (ex: metade no dinheiro, metade no Pix). A soma das duas precisa bater exatamente com o total, e no máximo uma das duas pode ser Pix, que precisa já estar confirmado como aprovado antes de fechar o atendimento.</li>
             </ul>
             <p>O valor final é sempre recalculado no servidor no momento de fechar (nunca confia no valor que a tela envia), e qualquer Pix envolvido é reconfirmado direto com o Mercado Pago antes de aceitar. Evita a situação de cobrar um valor e fechar o caixa com outro.</p>
+            <h3>Movimentação de estoque</h3>
+            <p>Toda entrada ou saída de produto (venda, reposição, perda, ajuste) passa por um registro de movimentação com justificativa, processado de forma atômica no banco — duas vendas do mesmo produto ao mesmo tempo não causam contagem errada, e o sistema nunca deixa a quantidade em estoque ficar negativa: se não tem saldo suficiente, a saída é recusada. Existe um relatório de auditoria com todas as movimentações de um período, pra rastrear exatamente quando e por que o estoque de um item mudou.</p>
+            <h3>Login de balcão <Badge tipo="none" /></h3>
+            <p>Além do login de admin, é possível criar um acesso restrito só ao PDV (autenticado com senha própria, criado pelo admin) pra um colaborador de balcão fechar atendimentos e vender produtos sem enxergar o resto do painel administrativo — configurações, relatórios financeiros e as demais telas continuam fora do alcance desse login.</p>
           </section>
 
           {/* ===================== PAGAMENTOS ===================== */}
@@ -236,20 +270,51 @@ function Docs() {
             </ul>
             <h3>Taxa da plataforma</h3>
             <p>Uma pequena porcentagem de cada Pix cobrado fica retida automaticamente como taxa da SchedNext (a própria API do Mercado Pago desconta na hora, sem o negócio precisar repassar nada manualmente). O percentual varia por plano, planos superiores têm taxa menor ou zero.</p>
+            <h3>Taxa por forma de pagamento (maquininha)</h3>
+            <p>Em separado da taxa da plataforma, o admin pode configurar em <em>Admin → Taxas de pagamento</em> o percentual que a operadora de cartão (ou outra taxa qualquer) cobra em cima de cada forma de pagamento — dinheiro, crédito, débito e Pix. Isso não muda o que é cobrado do cliente: serve só pra calcular corretamente o <strong>faturamento líquido</strong> nos <a href="#relatorios">relatórios</a>.</p>
           </section>
 
           {/* ===================== RELATÓRIOS ===================== */}
           <section id="relatorios" className="doc-secao">
             <h2>Relatórios</h2>
-            <p className="doc-intro">O painel de relatórios dá visão financeira do negócio sem precisar de planilha paralela: faturamento total, faturamento líquido (já descontando a taxa da maquininha de cada forma de pagamento, configurável por método), ticket médio, atendimentos concluídos, taxa de cancelamento e variação em relação ao período anterior, além de um gráfico de faturamento por dia e o comissionamento por profissional (com visitas de assinantes rateadas proporcionalmente na comissão).</p>
-            <p>Com <Badge tipo="pro" /> os relatórios ganham uma camada avançada: serviços mais vendidos, profissionais com melhor desempenho e taxa de recorrência de clientes. Tudo pode ser exportado em CSV ou num PDF completo (as tabelas avançadas só entram no PDF pra quem tem esse recurso liberado).</p>
+            <p className="doc-intro">O painel de relatórios dá visão financeira do negócio sem precisar de planilha paralela, com filtro por período, por serviço e por tipo de cliente (assinante ou avulso), e agrupamento por dia, mês ou ano.</p>
+            <h3>Resumo do período</h3>
+            <ul>
+              <li><strong>Faturamento total</strong>: soma de atendimentos concluídos e mensalidades de assinatura pagas no período.</li>
+              <li><strong>Faturamento líquido</strong>: o mesmo total já descontando a taxa da maquininha configurada por forma de pagamento (ver <a href="#pagamentos">Pagamentos e Pix</a>). Um Pix cobrado pelo QR Code do SchedNext usa a taxa real registrada na confirmação do pagamento; um Pix marcado manualmente como "pago por fora" entra com taxa zero.</li>
+              <li><strong>Ticket médio</strong>, calculado só sobre atendimentos avulsos (mensalidades de assinatura não entram nessa média).</li>
+              <li><strong>Atendimentos concluídos</strong> e <strong>taxa de cancelamento</strong> do período.</li>
+              <li><strong>Descontos por taxa</strong>, o valor e o percentual que a maquininha reteve, como métrica separada.</li>
+              <li>Comparação com o período anterior de mesma duração, e um gráfico de faturamento por dia.</li>
+            </ul>
+            <h3>Comissionamento por profissional</h3>
+            <p>Disponível em qualquer plano pago, sem precisar de nenhum recurso avançado. Um atendimento avulso gera comissão sobre o valor efetivamente pago. Já um atendimento de cliente assinante, usando um serviço coberto pelo plano dele, gera comissão sobre uma <strong>fração proporcional da mensalidade</strong> — o preço do plano dividido pela quantidade de visitas cobertas naquele ciclo de cobrança do cliente — em vez de contar como "atendimento de graça" pro profissional.</p>
+            <h3>Camada avançada <Badge tipo="pro" /></h3>
+            <p>Serviços mais vendidos e profissionais com melhor desempenho (top 10 por faturamento no período), além da taxa de recorrência: o percentual de clientes atendidos no período que já tinham pelo menos um atendimento concluído antes dele começar.</p>
+            <p>Tudo pode ser exportado em CSV ou num PDF completo (as tabelas da camada avançada só entram no PDF pra quem tem esse recurso liberado no plano).</p>
           </section>
 
           {/* ===================== AÇÕES E FIDELIDADE ===================== */}
           <section id="acoes-fidelidade" className="doc-secao">
             <h2>Ações e fidelidade</h2>
-            <p className="doc-intro">Em <em>Admin → Ações</em>, o negócio cria campanhas de fidelidade com prazo definido: um nome, data de início e fim, uma meta (ex: "5 cortes no período"), um gasto mínimo opcional, e uma recompensa quando o cliente bate a meta, um serviço grátis, um produto grátis, ou um desconto em % ou em R$.</p>
-            <p>Campanhas podem ser pausadas, reativadas ou excluídas a qualquer momento. Negócios com IA liberada no plano <Badge tipo="pro" /> ainda contam com uma sugestão de campanha gerada automaticamente, baseada no faturamento e na frequência de atendimentos dos últimos 30 dias.</p>
+            <p className="doc-intro">Em <em>Admin → Ações</em>, o negócio cria campanhas de fidelidade com prazo definido: um nome, data de início e fim, uma meta de atendimentos concluídos no período (ex: "5 cortes"), um gasto mínimo opcional por atendimento pra ele contar pra meta, e uma recompensa (serviço grátis, produto grátis ou desconto — descrita em texto livre pelo admin, ex: "10% de desconto no próximo corte").</p>
+            <p><strong>Só uma campanha fica ativa por vez</strong>: criar ou reativar uma campanha desativa automaticamente qualquer outra que estivesse ativa. O progresso de cada cliente é contado a partir dos atendimentos concluídos dele dentro da janela da campanha que batem o gasto mínimo.</p>
+            <p>Quando um cliente bate a meta, a recompensa é liberada <strong>automaticamente</strong>, logo depois que o atendimento é fechado no caixa — o cliente é avisado por e-mail (e por WhatsApp, se o plano incluir o bot), sem o admin precisar acompanhar manualmente. Cada cliente só é avisado uma vez por campanha, mesmo que continue batendo a meta depois.</p>
+            <p>Campanhas podem ser pausadas, reativadas ou excluídas a qualquer momento. Negócios com IA liberada no plano <Badge tipo="pro" /> ainda contam com uma sugestão de campanha (nome, meta e recompensa) gerada a partir do faturamento e da frequência de atendimentos dos últimos 30 dias — a IA só preenche a sugestão, quem cria a campanha de fato é o admin.</p>
+          </section>
+
+          {/* ===================== IA NO PAINEL ===================== */}
+          <section id="ia-painel" className="doc-secao">
+            <h2>IA no painel administrativo <Badge tipo="pro" /></h2>
+            <p className="doc-intro">Além do bot de WhatsApp, negócios com IA liberada no plano (Profissional e Enterprise) contam com alguns atalhos de IA espalhados pelo painel, todos no mesmo espírito: economizar tempo de redação, nunca decidir algo no lugar do admin.</p>
+            <ul>
+              <li><strong>Resumo do dashboard</strong>: um parágrafo em texto corrido explicando como o negócio está indo, gerado a partir dos números reais do painel.</li>
+              <li><strong>Resumo de relatório</strong>: a mesma ideia aplicada a um período específico de relatório.</li>
+              <li><strong>Descrição de serviço</strong>: gera um texto de descrição a partir só do nome do serviço, na hora de cadastrar um novo.</li>
+              <li><strong>Sugestão de campanha de fidelidade</strong>, ver <a href="#acoes-fidelidade">Ações e fidelidade</a>.</li>
+              <li><strong>Mensagem de reengajamento</strong> pra um cliente sumido, ver <a href="#clientes">Clientes</a>.</li>
+            </ul>
+            <p>Em todos os casos, a IA só gera um rascunho de texto a partir de dados reais já existentes no sistema — o admin sempre revisa (e pode editar) antes de qualquer coisa ser usada ou enviada.</p>
           </section>
 
           {/* ===================== WHATSAPP: CONECTAR ===================== */}
@@ -349,21 +414,138 @@ function Docs() {
             <span className="doc-secao-eyebrow">Recursos avançados</span>
             <h2>Múltiplas unidades <Badge tipo="ent" /></h2>
             <p className="doc-intro">Negócios com mais de uma filial podem gerenciar todas dentro do mesmo painel, cada uma com sua própria agenda, equipe e horário de funcionamento.</p>
-            <p>O login principal escolhe qual unidade ver por um seletor, e é o único que acessa configurações que ficam sempre no nível do negócio como um todo (assinatura da plataforma, domínio próprio, bot de WhatsApp, conexão com o Mercado Pago e API pública). Já um <strong>login de admin de unidade</strong> é automaticamente restrito à agenda, equipe e estatísticas básicas daquela filial específica, sem seletor, porque só enxerga a própria unidade, e sem acesso às configurações do negócio como um todo.</p>
+            <p>Profissionais e horário de funcionamento pertencem a uma unidade específica. Já os clientes e os serviços cadastrados são do negócio como um todo, compartilhados entre todas as unidades — um cliente atendido numa filial não precisa ser recadastrado pra ser atendido em outra. Excluir uma unidade nunca apaga os profissionais ou os agendamentos que já passaram por ela, só desvincula a referência.</p>
+            <p>O login principal escolhe qual unidade ver por um seletor, e é o único que acessa configurações que ficam sempre no nível do negócio como um todo (assinatura da plataforma, domínio próprio, bot de WhatsApp, conexão com o Mercado Pago, API pública, e criar/editar/desativar profissionais). Já um <strong>login de admin de unidade</strong> é restrito, sem seletor, à agenda, aos atendimentos (checkout/PDV) e à busca de clientes daquela filial específica; ele consegue <em>ver</em> a equipe da própria unidade, mas não tem permissão para criar, editar ou desativar profissionais — isso continua sendo uma configuração do negócio como um todo, feita só pelo login principal.</p>
           </section>
 
           {/* ===================== DOMÍNIO PRÓPRIO ===================== */}
           <section id="dominio-proprio" className="doc-secao">
             <h2>Domínio próprio <Badge tipo="ent" /></h2>
             <p className="doc-intro">Em vez do subdomínio padrão (<code>seunegocio.schednext.com.br</code>), negócios no plano Enterprise podem usar um domínio totalmente próprio (ex: <code>agenda.seusite.com.br</code>).</p>
-            <p>O processo, feito em <em>Admin → Domínio</em>, envolve criar um registro CNAME (apontando o domínio pra SchedNext) direto no provedor onde o domínio foi comprado. O painel mostra exatamente qual registro cadastrar e confirma sozinho (botão "Verificar") assim que o DNS propagar, funcionando tanto com CNAME comum quanto com "CNAME flattening" (ex: Cloudflare). Enquanto não propaga, o status mostra "Aguardando verificação de DNS"; depois, "Verificado e ativo". O certificado de segurança (HTTPS) é emitido automaticamente, sem custo ou etapa manual adicional, e o domínio pode ser removido a qualquer momento.</p>
+            <p>O processo, feito em <em>Admin → Domínio</em>, envolve criar um registro CNAME apontando o domínio pra SchedNext direto no provedor onde o domínio foi comprado. A verificação (botão "Verificar") confere de fato se o DNS já resolve pro lugar certo, funcionando tanto com CNAME comum quanto com "CNAME flattening" (usado por provedores que não suportam CNAME na raiz do domínio, como o Cloudflare). Enquanto não propaga, o status mostra "Aguardando verificação de DNS"; depois, "Verificado e ativo". O certificado de segurança (HTTPS) é emitido automaticamente, sem custo ou etapa manual adicional, e o domínio pode ser removido a qualquer momento — o negócio volta a usar o subdomínio padrão na hora.</p>
           </section>
 
-          {/* ===================== API PÚBLICA ===================== */}
-          <section id="api-publica" className="doc-secao">
-            <h2>API pública <Badge tipo="ent" /></h2>
-            <p className="doc-intro">Negócios Enterprise podem gerar chaves de API (em <em>Admin → API</em>) pra integrar o SchedNext com outros sistemas, por exemplo, um site ou app próprio que agenda direto no SchedNext sem passar pela tela padrão.</p>
-            <p>A API permite listar profissionais e serviços ativos, checar os horários livres de um profissional num dia, e criar um agendamento, com a mesma validação contra horário duplicado e limite mensal do plano usada em qualquer outro canal. Cada chave é vinculada ao negócio que a gerou, mostrada só uma vez na criação, e pode ser revogada a qualquer momento pelo painel.</p>
+          {/* ===================== API: VISÃO GERAL ===================== */}
+          <section id="api-visao-geral" className="doc-secao">
+            <span className="doc-secao-eyebrow">API pública</span>
+            <h2>Visão geral e autenticação <Badge tipo="ent" /></h2>
+            <p className="doc-intro">Negócios Enterprise podem gerar chaves de API pra integrar o SchedNext com outros sistemas — por exemplo, um site institucional próprio ou um ERP que precisa consultar horários e criar agendamentos sem passar pela tela padrão do negócio.</p>
+            <p>Todos os endpoints abaixo ficam sob o prefixo <code>/api/v1</code>, na mesma URL base do restante da API do SchedNext:</p>
+            <div className="doc-code">https://schednextapi.onrender.com/api/v1</div>
+            <h3>Gerando uma chave</h3>
+            <p>Em <em>Admin → API pública</em>, dê um nome pra chave (ex: "Integração site institucional") e clique em <strong>Gerar chave</strong>. O valor completo só é exibido uma única vez, na hora da criação — guarde em local seguro, o SchedNext não consegue mostrar de novo depois. Uma chave pode ser revogada a qualquer momento pelo mesmo painel, o que derruba o acesso imediatamente.</p>
+            <h3>Autenticação</h3>
+            <p>Toda chamada precisa da chave no cabeçalho <code>Authorization</code>, no formato Bearer:</p>
+            <div className="doc-code">Authorization: Bearer SUA_CHAVE_DE_API</div>
+            <p>Sem esse cabeçalho (ou com uma chave inválida, revogada, ou de uma conta cujo plano não inclui API pública), toda rota responde <code>401</code> ou <code>403</code> antes mesmo de tentar processar o pedido — ver <a href="#api-erros">Erros e limites</a>.</p>
+            <p>Cada chave está sempre amarrada à empresa que a gerou: não existe (nem faz sentido pedir) um <code>empresa_id</code> em nenhum parâmetro — quem identifica a conta é a própria chave.</p>
+          </section>
+
+          {/* ===================== API: PROFISSIONAIS ===================== */}
+          <section id="api-profissionais" className="doc-secao">
+            <div className="doc-endpoint">
+              <span className="doc-metodo doc-metodo-get">GET</span>
+              <span className="doc-endpoint-path">/api/v1/profissionais</span>
+            </div>
+            <h2 style={{ marginTop: 0 }}>Listar profissionais</h2>
+            <p className="doc-intro">Devolve os profissionais ativos da conta, sem paginação nem parâmetros — sempre a lista inteira.</p>
+            <div className="doc-code">{`[
+  { "id": 12, "nome": "Carlos Andrade", "ativo": true, "unidade_id": null },
+  { "id": 13, "nome": "Marina Souza", "ativo": true, "unidade_id": 2 }
+]`}</div>
+            <p><code>unidade_id</code> só vem preenchido em negócios com <a href="#multiplas-unidades">múltiplas unidades</a>; do contrário é sempre <code>null</code>.</p>
+          </section>
+
+          {/* ===================== API: SERVIÇOS ===================== */}
+          <section id="api-servicos" className="doc-secao">
+            <div className="doc-endpoint">
+              <span className="doc-metodo doc-metodo-get">GET</span>
+              <span className="doc-endpoint-path">/api/v1/servicos</span>
+            </div>
+            <h2 style={{ marginTop: 0 }}>Listar serviços</h2>
+            <p className="doc-intro">Devolve os serviços ativos da conta, com preço e duração — mesma regra do endpoint de profissionais, sem parâmetros nem paginação.</p>
+            <div className="doc-code">{`[
+  { "id": 4, "nome": "Corte masculino", "duracao": 30, "valor": 45 },
+  { "id": 7, "nome": "Barba", "duracao": 20, "valor": 30 }
+]`}</div>
+            <p><code>duracao</code> vem em minutos, é o mesmo valor usado pra montar os blocos de horário em <a href="#api-disponibilidade">/disponibilidade</a> e pra calcular o horário de término de um agendamento criado por essa API.</p>
+          </section>
+
+          {/* ===================== API: DISPONIBILIDADE ===================== */}
+          <section id="api-disponibilidade" className="doc-secao">
+            <div className="doc-endpoint">
+              <span className="doc-metodo doc-metodo-get">GET</span>
+              <span className="doc-endpoint-path">/api/v1/disponibilidade</span>
+            </div>
+            <h2 style={{ marginTop: 0 }}>Horários livres de um profissional</h2>
+            <p className="doc-intro">Checa, pra um profissional e uma data específicos, quais horários de 30 em 30 minutos estão livres dentro do horário de funcionamento configurado — já descontando agendamentos existentes (pela duração real de cada um, não só o minuto de início) e, se a data for hoje, os horários que já passaram.</p>
+            <table className="doc-tabela" style={{ marginBottom: '16px' }}>
+              <thead><tr><th>Parâmetro</th><th>Tipo</th><th>Obrigatório</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td>profissional_id</td><td>query</td><td>Sim</td><td>Id de um profissional ativo desta conta.</td></tr>
+                <tr><td>data</td><td>query</td><td>Sim</td><td>Data no formato <code>AAAA-MM-DD</code>.</td></tr>
+              </tbody>
+            </table>
+            <div className="doc-code">GET /api/v1/disponibilidade?profissional_id=12&data=2026-09-22</div>
+            <div className="doc-code">{`{
+  "profissional_id": 12,
+  "data": "2026-09-22",
+  "horarios_disponiveis": ["09:00", "09:30", "10:30", "14:00"]
+}`}</div>
+            <p>Se o dia cair fora do horário de funcionamento (dia fechado), a resposta continua <code>200</code>, só que com <code>horarios_disponiveis</code> vazio — não é tratado como erro.</p>
+          </section>
+
+          {/* ===================== API: AGENDAMENTOS ===================== */}
+          <section id="api-agendamentos" className="doc-secao">
+            <div className="doc-endpoint">
+              <span className="doc-metodo doc-metodo-post">POST</span>
+              <span className="doc-endpoint-path">/api/v1/agendamentos</span>
+            </div>
+            <h2 style={{ marginTop: 0 }}>Criar um agendamento</h2>
+            <p className="doc-intro">Cria um agendamento confirmado, com a mesma checagem de conflito de horário, plano e validade de profissional/serviços usada em qualquer outro canal (site, bot, painel).</p>
+            <table className="doc-tabela" style={{ marginBottom: '16px' }}>
+              <thead><tr><th>Campo</th><th>Tipo</th><th>Obrigatório</th><th>Descrição</th></tr></thead>
+              <tbody>
+                <tr><td>profissional_id</td><td>número</td><td>Sim</td><td>Id de um profissional ativo desta conta.</td></tr>
+                <tr><td>data_hora</td><td>string (ISO)</td><td>Sim</td><td>Data e hora de início, ex: <code>2026-09-22T14:00:00</code>.</td></tr>
+                <tr><td>servicos_ids</td><td>lista de números</td><td>Sim</td><td>Um ou mais ids de serviços ativos desta conta. Duração e valor totais são somados automaticamente.</td></tr>
+                <tr><td>cliente_nome</td><td>string</td><td>Sim</td><td>Nome do cliente (até 150 caracteres). Esse endpoint não exige cadastro/login de cliente.</td></tr>
+              </tbody>
+            </table>
+            <div className="doc-code">{`POST /api/v1/agendamentos
+Content-Type: application/json
+
+{
+  "profissional_id": 12,
+  "data_hora": "2026-09-22T14:00:00",
+  "servicos_ids": [4, 7],
+  "cliente_nome": "Ana Paula Ribeiro"
+}`}</div>
+            <div className="doc-code">{`// 201 Created
+{ "id": 8831, "message": "Agendamento criado com sucesso." }`}</div>
+            <p>A duração usada pra checar sobreposição de horário é a soma da duração de todos os serviços informados — dois serviços de 20 e 30 minutos criam um bloco de 50 minutos a partir de <code>data_hora</code>, do mesmo jeito que aconteceria marcando pelo site.</p>
+          </section>
+
+          {/* ===================== API: ERROS E LIMITES ===================== */}
+          <section id="api-erros" className="doc-secao">
+            <h2>Erros e limites</h2>
+            <p className="doc-intro">Toda resposta de erro segue o mesmo formato: <code>{`{ "error": "mensagem" }`}</code>. Abaixo, os códigos que a API pode devolver e o que cada um significa.</p>
+            <div className="doc-tabela-wrap">
+              <table className="doc-tabela">
+                <thead><tr><th>Código</th><th>Quando acontece</th></tr></thead>
+                <tbody>
+                  <tr><td>400</td><td>Parâmetro obrigatório faltando, ou algum campo inválido no corpo da requisição (ex: <code>servicos_ids</code> vazio, serviço que não pertence a esta conta).</td></tr>
+                  <tr><td>401</td><td>Chave de API não enviada, inválida ou revogada.</td></tr>
+                  <tr><td>403</td><td>Chave válida, mas o plano atual da conta não inclui API pública, ou o limite de agendamentos do mês já foi atingido.</td></tr>
+                  <tr><td>404</td><td>O <code>profissional_id</code> informado não existe ou não pertence a esta conta.</td></tr>
+                  <tr><td>409</td><td>Conflito: esse profissional já tem um agendamento que se sobrepõe ao horário pedido.</td></tr>
+                  <tr><td>429</td><td>Muitas requisições em pouco tempo (ver limite abaixo). Aguarde e tente de novo.</td></tr>
+                  <tr><td>500</td><td>Erro interno inesperado. Se persistir, entre em contato com o suporte.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <h3>Limite de requisições</h3>
+            <p>A API pública aceita no máximo <strong>60 requisições por minuto</strong>. Ao passar do limite, a resposta vem com código <code>429</code> até a janela seguinte liberar. Esse limite é independente do limite mensal de agendamentos do plano (código <code>403</code> acima), que é uma regra de negócio, não de tráfego.</p>
           </section>
 
           {/* ===================== PLANOS ===================== */}
@@ -403,6 +585,7 @@ function Docs() {
               <li><strong>Senhas nunca em texto puro</strong>: todo login (admin, admin de unidade e cliente final) usa senha com hash.</li>
               <li><strong>Tráfego sempre criptografado</strong>: todo acesso ao SchedNext (painel, site do negócio, API) usa HTTPS.</li>
               <li><strong>Dinheiro nunca passa pela SchedNext</strong>: Pix e assinaturas via Mercado Pago caem direto na conta do negócio; a plataforma só recebe sua taxa, descontada automaticamente pelo próprio Mercado Pago.</li>
+              <li><strong>Chaves de API pública</strong> são mostradas em texto completo só uma vez, na criação; a partir daí ficam guardadas apenas de forma irreversível, e podem ser revogadas a qualquer momento (ver <a href="#api-visao-geral">API pública</a>).</li>
               <li><strong>Backups automáticos</strong> do banco de dados.</li>
             </ul>
           </section>

@@ -167,6 +167,46 @@
   font-weight: 700;
 }
 
+.doc-endpoint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 22px 0 10px;
+  flex-wrap: wrap;
+}
+.doc-metodo {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+.doc-metodo-get { background: rgba(74,222,128,0.15); color: #86efac; }
+.doc-metodo-post { background: rgba(76,116,240,0.18); color: #a8c0ff; }
+.doc-endpoint-path {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 14px;
+  color: #fff;
+  word-break: break-all;
+}
+
+.doc-code {
+  background: #0a0c18;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 12px 0 20px;
+  overflow-x: auto;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.85);
+  white-space: pre;
+}
+.doc-code .doc-code-comentario { color: rgba(255,255,255,0.4); }
+
 .doc-hero {
   text-align: center;
   padding: 90px 20px 20px;
