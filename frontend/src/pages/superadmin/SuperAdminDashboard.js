@@ -595,6 +595,19 @@ function competenciaAtual() {
   return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// Aplica o dia-âncora de uma empresa (dia do primeiro pagamento da assinatura, ver
+// dia_ancora em GET /super-admin/contas-receber/empresas-sugeridas) a uma competência
+// "AAAA-MM", grudando no último dia do mês quando o mês de destino é mais curto (ex: âncora
+// dia 31 numa competência de fevereiro vira 28/29). Mesma lógica de
+// dataPrevistaPorAncora em routes/superAdminFinanceiro.js.
+function dataPrevistaPorAncora(diaAncora, competenciaAnoMes) {
+  if (!diaAncora || !competenciaAnoMes) return '';
+  const [ano, mes] = competenciaAnoMes.split('-').map(Number);
+  const ultimoDiaDoMes = new Date(ano, mes, 0).getDate();
+  const dia = Math.min(diaAncora, ultimoDiaDoMes);
+  return `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+}
+
 function BadgeStatusConta({ status }) {
   const info = STATUS_CONTA_INFO[status] || { label: status, bg: '#f3f4f6', fg: '#6b7280' };
   return <span style={{ ...s.badge, background: info.bg, color: info.fg }}>{info.label}</span>;
@@ -1061,6 +1074,7 @@ function ContasReceberPainel({ toast, confirmar }) {
   const [editando, setEditando] = useState(null);
   const [empresaPreSelecionada, setEmpresaPreSelecionada] = useState(null);
   const [contaBoleto, setContaBoleto] = useState(null);
+  const [modalMassaAberto, setModalMassaAberto] = useState(false);
   useEscToClose(modalAberto, () => setModalAberto(false));
 
   const carregar = useCallback(async () => {
@@ -1197,6 +1211,7 @@ function ContasReceberPainel({ toast, confirmar }) {
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={exportarCsv} style={s.btnOutline} disabled={!itens.length}>Exportar CSV</button>
           <button onClick={exportarPdf} style={s.btnOutline} disabled={!itens.length}>Gerar relatório</button>
+          <button onClick={() => setModalMassaAberto(true)} style={s.btnOutline}>Lançamento em massa</button>
           <button onClick={() => { setEditando(null); setEmpresaPreSelecionada(null); setModalAberto(true); }} style={s.btnPrimario}>+ Nova conta a receber</button>
         </div>
       </div>
@@ -1272,6 +1287,14 @@ function ContasReceberPainel({ toast, confirmar }) {
         />
       )}
 
+      {modalMassaAberto && (
+        <ModalLancamentoEmMassa
+          onFechar={() => setModalMassaAberto(false)}
+          onSalvo={() => { setModalMassaAberto(false); carregar(); }}
+          toast={toast}
+        />
+      )}
+
       {modalAberto && (
         <ModalContaReceber
           conta={editando}
@@ -1287,17 +1310,23 @@ function ContasReceberPainel({ toast, confirmar }) {
 }
 
 function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, onFechar, onSalvo, toast }) {
-  const [form, setForm] = useState(() => ({
-    empresa_id: conta?.empresa_id || empresaPreSelecionada?.id || '',
-    pagador_nome: conta?.pagador_nome || empresaPreSelecionada?.nome || '',
-    pagador_email: conta?.pagador_email || empresaPreSelecionada?.email || '',
-    descricao: conta?.descricao || (empresaPreSelecionada ? `Assinatura de plataforma - ${empresaPreSelecionada.plano_plataforma?.nome || ''}` : ''),
-    valor: conta?.valor ?? empresaPreSelecionada?.plano_plataforma?.preco_mensal ?? '',
-    competencia: paraCompetenciaInput(conta?.competencia) || paraCompetenciaInput(empresaPreSelecionada?.proxima_cobranca_em) || competenciaAtual(),
-    data_prevista: conta?.data_prevista || paraInputData(empresaPreSelecionada?.proxima_cobranca_em) || '',
-    forma_pagamento: conta?.forma_pagamento || '',
-    observacoes: conta?.observacoes || ''
-  }));
+  const [form, setForm] = useState(() => {
+    const competenciaInicial = paraCompetenciaInput(conta?.competencia) || competenciaAtual();
+    return {
+      empresa_id: conta?.empresa_id || empresaPreSelecionada?.id || '',
+      pagador_nome: conta?.pagador_nome || empresaPreSelecionada?.nome || '',
+      pagador_email: conta?.pagador_email || empresaPreSelecionada?.email || '',
+      descricao: conta?.descricao || (empresaPreSelecionada ? `Assinatura de plataforma - ${empresaPreSelecionada.plano_plataforma?.nome || ''}` : ''),
+      valor: conta?.valor ?? empresaPreSelecionada?.plano_plataforma?.preco_mensal ?? '',
+      competencia: competenciaInicial,
+      // Data prevista segue o dia do PRIMEIRO pagamento da empresa (dia_ancora), não
+      // proxima_cobranca_em (que pode já ter sido alterado manualmente) — ver
+      // dataPrevistaPorAncora acima.
+      data_prevista: conta?.data_prevista || (empresaPreSelecionada ? dataPrevistaPorAncora(empresaPreSelecionada.dia_ancora, competenciaInicial) : ''),
+      forma_pagamento: conta?.forma_pagamento || '',
+      observacoes: conta?.observacoes || ''
+    };
+  });
   const [salvando, setSalvando] = useState(false);
   useEscToClose(true, onFechar);
 
@@ -1312,9 +1341,22 @@ function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, on
       pagador_email: empresa ? (empresa.email || f.pagador_email) : f.pagador_email,
       descricao: empresa ? `Assinatura de plataforma - ${empresa.plano_plataforma?.nome || ''}` : f.descricao,
       valor: empresa ? (empresa.plano_plataforma?.preco_mensal ?? f.valor) : f.valor,
-      competencia: empresa ? (paraCompetenciaInput(empresa.proxima_cobranca_em) || f.competencia) : f.competencia,
-      data_prevista: empresa ? (paraInputData(empresa.proxima_cobranca_em) || f.data_prevista) : f.data_prevista
+      data_prevista: empresa ? (dataPrevistaPorAncora(empresa.dia_ancora, f.competencia) || f.data_prevista) : f.data_prevista
     }));
+  };
+
+  // Trocar a competência com uma empresa já vinculada recalcula a data prevista pelo dia-âncora
+  // dela nesse novo mês, em vez de deixar a data prevista desalinhada da competência escolhida.
+  const alterarCompetencia = (e) => {
+    const novaCompetencia = e.target.value;
+    setForm((f) => {
+      const empresa = empresasSugeridas.find((emp) => String(emp.id) === String(f.empresa_id));
+      return {
+        ...f,
+        competencia: novaCompetencia,
+        data_prevista: empresa ? (dataPrevistaPorAncora(empresa.dia_ancora, novaCompetencia) || f.data_prevista) : f.data_prevista
+      };
+    });
   };
 
   const salvar = async () => {
@@ -1369,7 +1411,7 @@ function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, on
           </div>
           <div>
             <label style={s.label} title="Mês/ano a que esse recebimento se refere, independente de quando é recebido">Competência *</label>
-            <input type="month" style={s.input} value={form.competencia} onChange={campo('competencia')} />
+            <input type="month" style={s.input} value={form.competencia} onChange={alterarCompetencia} />
           </div>
           <div>
             <label style={s.label}>Data prevista *</label>
@@ -1483,6 +1525,54 @@ function ModalGerarBoleto({ conta, onFechar, onSalvo, toast }) {
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
           <button onClick={onFechar} style={s.btnOutline}>Cancelar</button>
           <LoadingButton loading={salvando} onClick={gerar} style={s.btnPrimario}>Gerar boleto</LoadingButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Cria uma conta a receber pra cada empresa com plano pago ativo que ainda não tem lançamento
+// nessa competência (ver POST /super-admin/contas-receber/lancamento-em-massa), evitando criar
+// uma por uma todo mês. Valor vem do plano da empresa e a data prevista segue o dia-âncora do
+// primeiro pagamento de cada uma (mesma lógica de dataPrevistaPorAncora usada no formulário
+// manual acima).
+function ModalLancamentoEmMassa({ onFechar, onSalvo, toast }) {
+  const [competencia, setCompetencia] = useState(competenciaAtual());
+  const [enviando, setEnviando] = useState(false);
+  useEscToClose(true, onFechar);
+
+  const lancar = async () => {
+    setEnviando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/contas-receber/lancamento-em-massa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ competencia })
+      });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); onSalvo(); } else toast.error(data.error || 'Não foi possível lançar em massa.');
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <div style={s.overlay} onClick={onFechar}>
+      <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
+        <div style={s.modalHeader}>
+          <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>Lançamento em massa</h3>
+          <button onClick={onFechar} style={s.btnFechar}><Icons.Close /></button>
+        </div>
+        <p style={s.subTexto}>
+          Cria automaticamente uma conta a receber pra cada empresa com plano pago ativo, com o valor do plano e a data prevista no mesmo dia do mês do primeiro pagamento de cada uma. Empresas que já têm lançamento nessa competência são ignoradas (não duplica).
+        </p>
+        <label style={s.label}>Competência</label>
+        <input type="month" style={s.input} value={competencia} onChange={(e) => setCompetencia(e.target.value)} />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
+          <button onClick={onFechar} style={s.btnOutline}>Cancelar</button>
+          <LoadingButton loading={enviando} onClick={lancar} style={s.btnPrimario}>Lançar</LoadingButton>
         </div>
       </div>
     </div>
