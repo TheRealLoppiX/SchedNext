@@ -184,7 +184,9 @@ function Landing() {
     const tentarTocar = () => {
       video.muted = true;
       video.defaultMuted = true;
-      video.play().catch(() => {});
+      // Encadeamento opcional: em ambiente sem play() de verdade (ex: JSDOM, usado pelos testes)
+      // o retorno é undefined em vez de Promise, e ".catch()" direto nisso quebra o teste.
+      video.play()?.catch(() => {});
     };
     tentarTocar();
     video.addEventListener('canplay', tentarTocar);
