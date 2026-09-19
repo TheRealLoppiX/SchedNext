@@ -5,6 +5,7 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import useEscToClose from '../../hooks/useEscToClose';
 import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
+import { formatarDataSemFuso } from '../../utils/dataSemFuso';
 
 const STATUS_LEAD_INFO = {
   novo: { label: 'Novo', bg: '#dbeafe', fg: '#1e40af' },
@@ -102,6 +103,7 @@ const PLANO_VAZIO = {
 const ABAS = [
   { valor: 'metricas', label: 'Métricas', icon: 'BarChart' },
   { valor: 'financeiro', label: 'Financeiro', icon: 'DollarSign' },
+  { valor: 'contas', label: 'Contas a Pagar/Receber', icon: 'Wallet' },
   { valor: 'empresas', label: 'Empresas', icon: 'Building' },
   { valor: 'planos', label: 'Planos', icon: 'Tag' },
   { valor: 'chaves', label: 'Chaves de Ativação', icon: 'Key' },
@@ -152,6 +154,7 @@ function SuperAdminDashboard() {
 
         {aba === 'metricas' && <AbaMetricas toast={toast} />}
         {aba === 'financeiro' && <AbaFinanceiro toast={toast} />}
+        {aba === 'contas' && <AbaContas toast={toast} confirmar={confirmar} />}
         {aba === 'empresas' && <AbaEmpresas toast={toast} confirmar={confirmar} />}
         {aba === 'planos' && <AbaPlanos toast={toast} />}
         {aba === 'chaves' && <AbaChaves toast={toast} confirmar={confirmar} />}
@@ -548,6 +551,713 @@ function BarraRanking({ label, valor, maximo, sufixo }) {
       </div>
       <div style={{ background: '#f3f4f6', borderRadius: '6px', height: '8px', overflow: 'hidden' }}>
         <div style={{ width: `${percentual}%`, background: 'linear-gradient(90deg, #4c74f0, #2554eb)', height: '100%', borderRadius: '6px' }} />
+      </div>
+    </div>
+  );
+}
+
+const STATUS_CONTA_INFO = {
+  pendente: { label: 'Pendente', bg: '#fef3c7', fg: '#92400e' },
+  atrasado: { label: 'Atrasado', bg: '#fee2e2', fg: '#991b1b' },
+  pago: { label: 'Pago', bg: '#d1fae5', fg: '#065f46' },
+  recebido: { label: 'Recebido', bg: '#d1fae5', fg: '#065f46' },
+  cancelado: { label: 'Cancelado', bg: '#f3f4f6', fg: '#374151' }
+};
+
+const FORMA_PAGAMENTO_OPCOES = [
+  { value: '', label: 'Não informado' },
+  { value: 'pix', label: 'Pix' },
+  { value: 'ted', label: 'TED/Transferência' },
+  { value: 'boleto', label: 'Boleto' },
+  { value: 'dinheiro', label: 'Dinheiro' },
+  { value: 'cartao', label: 'Cartão' },
+  { value: 'outro', label: 'Outro' }
+];
+
+function BadgeStatusConta({ status }) {
+  const info = STATUS_CONTA_INFO[status] || { label: status, bg: '#f3f4f6', fg: '#6b7280' };
+  return <span style={{ ...s.badge, background: info.bg, color: info.fg }}>{info.label}</span>;
+}
+
+function exportarContasCsv(nomeArquivo, blocos) {
+  const csv = blocos.map((l) => l.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+  const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = nomeArquivo;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+// Mesmo padrão de exportarPdf() de AbaFinanceiro (janela nova + impressão nativa do navegador),
+// generalizado pra servir tanto o relatório de contas a pagar quanto o de contas a receber.
+function exportarContasPdf({ titulo, subtitulo, periodoLabel, cards, tabelas, toast }) {
+  const janela = window.open('', '_blank');
+  if (!janela) {
+    toast.error('O navegador bloqueou a janela de impressão. Permita pop-ups para este site e tente novamente.');
+    return;
+  }
+
+  const cardsHtml = cards.map(([label, valor]) => (
+    `<div class='card'><span class='card-label'>${escaparHtml(label)}</span><span class='card-valor'>${escaparHtml(valor)}</span></div>`
+  )).join('');
+
+  const tabela = (tituloTab, cabecalhos, linhas) => {
+    if (!linhas.length) return '';
+    const thead = cabecalhos.map((c) => `<th>${escaparHtml(c)}</th>`).join('');
+    const tbody = linhas.map((l) => `<tr>${l.map((v) => `<td>${escaparHtml(v)}</td>`).join('')}</tr>`).join('');
+    return `<h2>${escaparHtml(tituloTab)}</h2><table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>`;
+  };
+  const tabelasHtml = tabelas.map((t) => tabela(t.titulo, t.cabecalhos, t.linhas)).join('');
+
+  janela.document.write(`<!DOCTYPE html><html><head><meta charset='UTF-8'><title>${escaparHtml(titulo)}</title><style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#111827}
+    h1{font-size:22px;font-weight:800;margin-bottom:4px}
+    .sub{font-size:13px;color:#6b7280;margin-bottom:14px}
+    .periodo{display:inline-block;background:#f3f4f6;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;color:#374151;margin-bottom:22px}
+    .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px}
+    .card{border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px}
+    .card-label{display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+    .card-valor{display:block;font-size:16px;font-weight:800;color:#111827}
+    h2{font-size:14px;margin:22px 0 10px;color:#111827}
+    table{width:100%;border-collapse:collapse;margin-bottom:6px}
+    thead tr{background:#111827}
+    th{padding:9px 10px;text-align:left;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.4px}
+    td{padding:8px 10px;font-size:12px;color:#374151;border-bottom:1px solid #f3f4f6}
+    tr:nth-child(even) td{background:#f9fafb}
+    .footer{margin-top:24px;font-size:11px;color:#9ca3af;text-align:right}
+    @media print{@page{margin:16mm}}
+  </style></head><body>
+    <h1>${escaparHtml(titulo)}</h1>
+    <p class='sub'>${escaparHtml(subtitulo)}</p>
+    <span class='periodo'>${escaparHtml(periodoLabel)}</span>
+    <div class='cards'>${cardsHtml}</div>
+    ${tabelasHtml}
+    <div class='footer'>Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+  </body></html>`);
+  janela.document.close();
+  setTimeout(() => { janela.print(); }, 400);
+}
+
+// Contas a Pagar/Receber DA PLATAFORMA — lançamento manual de despesas e valores previstos a
+// receber, complementar ao livro-caixa de receita já confirmada da aba Financeiro (ver
+// GET /super-admin/financeiro). "Atrasado" é sempre derivado pelo backend (status_efetivo), nunca
+// gravado, então basta re-filtrar a lista carregada, sem round-trip extra.
+function AbaContas({ toast, confirmar }) {
+  const [subAba, setSubAba] = useState('pagar');
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
+        {[['pagar', 'Contas a Pagar'], ['receber', 'Contas a Receber']].map(([valor, label]) => (
+          <button
+            key={valor}
+            onClick={() => setSubAba(valor)}
+            style={{ ...s.btnOutline, ...(subAba === valor ? s.tabAtivo : {}) }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {subAba === 'pagar' ? <ContasPagarPainel toast={toast} confirmar={confirmar} /> : <ContasReceberPainel toast={toast} confirmar={confirmar} />}
+    </div>
+  );
+}
+
+function ContasPagarPainel({ toast, confirmar }) {
+  const [itens, setItens] = useState([]);
+  const [resumo, setResumo] = useState(null);
+  const [carregando, setCarregando] = useState(true);
+  const [busca, setBusca] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState('');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
+  const [modalAberto, setModalAberto] = useState(false);
+  const [editando, setEditando] = useState(null);
+  useEscToClose(modalAberto, () => setModalAberto(false));
+
+  const carregar = useCallback(async () => {
+    setCarregando(true);
+    try {
+      const params = new URLSearchParams();
+      if (busca) params.set('busca', busca);
+      if (statusFiltro) params.set('status', statusFiltro);
+      if (dataInicio) params.set('dataInicio', dataInicio);
+      if (dataFim) params.set('dataFim', dataFim);
+      const res = await fetch(`${API_URL}/super-admin/contas-pagar${params.toString() ? `?${params.toString()}` : ''}`);
+      const data = await res.json();
+      setItens(Array.isArray(data.itens) ? data.itens : []);
+      setResumo(data.resumo || null);
+    } catch (err) {
+      toast.error('Erro ao carregar contas a pagar.');
+    } finally {
+      setCarregando(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busca, statusFiltro, dataInicio, dataFim]);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const marcarPaga = async (conta) => {
+    const ok = await confirmar(`Marcar "${conta.descricao}" como paga hoje?`, { confirmText: 'Marcar como paga' });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/contas-pagar/${conta.id}/pagar`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregar(); } else toast.error(data.error || 'Não foi possível dar baixa.');
+    } catch (err) { toast.error('Erro de conexão.'); }
+  };
+
+  const cancelar = async (conta) => {
+    const ok = await confirmar(`Cancelar a conta "${conta.descricao}"?`, { confirmText: 'Cancelar conta', danger: true });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/contas-pagar/${conta.id}/cancelar`, { method: 'PUT' });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregar(); } else toast.error(data.error || 'Não foi possível cancelar.');
+    } catch (err) { toast.error('Erro de conexão.'); }
+  };
+
+  const excluir = async (conta) => {
+    const ok = await confirmar(`Excluir definitivamente "${conta.descricao}"?`, { detail: 'Essa ação não pode ser desfeita.', confirmText: 'Excluir', danger: true });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/contas-pagar/${conta.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregar(); } else toast.error(data.error || 'Não foi possível excluir.');
+    } catch (err) { toast.error('Erro de conexão.'); }
+  };
+
+  const exportarCsv = () => {
+    if (!itens.length) return;
+    const linhas = [
+      ['Resumo', `Pendente: ${formatarMoeda(resumo.pendente.valor)}`, `Atrasado: ${formatarMoeda(resumo.atrasado.valor)}`, `Pago: ${formatarMoeda(resumo.concluido.valor)}`, `Total: ${formatarMoeda(resumo.valor_total)}`],
+      [],
+      ['Vencimento', 'Beneficiário', 'Documento', 'Descrição', 'Categoria', 'Forma', 'Status', 'Valor', 'Pago em'],
+      ...itens.map((c) => [formatarDataSemFuso(c.data_vencimento), c.beneficiario_nome, c.beneficiario_documento || '-', c.descricao, c.categoria || '-', c.forma_pagamento || '-', STATUS_CONTA_INFO[c.status_efetivo]?.label || c.status_efetivo, c.valor, c.data_pagamento ? formatarDataSemFuso(c.data_pagamento) : '-'])
+    ];
+    exportarContasCsv(`contas-a-pagar-${new Date().toISOString().slice(0, 10)}.csv`, linhas);
+  };
+
+  const exportarPdf = () => {
+    if (!itens.length || !resumo) return;
+    exportarContasPdf({
+      titulo: 'Contas a pagar',
+      subtitulo: 'Despesas lançadas manualmente pela plataforma SchedNext.',
+      periodoLabel: `${itens.length} conta(s) no filtro atual`,
+      cards: [
+        ['Pendente', formatarMoeda(resumo.pendente.valor)],
+        ['Atrasado', formatarMoeda(resumo.atrasado.valor)],
+        ['Pago', formatarMoeda(resumo.concluido.valor)],
+        ['Total lançado', formatarMoeda(resumo.valor_total)]
+      ],
+      tabelas: [{
+        titulo: 'Detalhamento',
+        cabecalhos: ['Vencimento', 'Beneficiário', 'Descrição', 'Categoria', 'Forma', 'Status', 'Valor'],
+        linhas: itens.map((c) => [formatarDataSemFuso(c.data_vencimento), c.beneficiario_nome, c.descricao, c.categoria || '-', c.forma_pagamento || '-', STATUS_CONTA_INFO[c.status_efetivo]?.label || c.status_efetivo, formatarMoeda(c.valor)])
+      }],
+      toast
+    });
+  };
+
+  return (
+    <div>
+      <div style={s.barraTop}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input placeholder="Buscar por descrição ou beneficiário..." value={busca} onChange={(e) => setBusca(e.target.value)} style={s.inputBusca} />
+          <select style={s.selectFiltro} value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)}>
+            <option value="">Todos os status</option>
+            <option value="pendente">Pendente</option>
+            <option value="atrasado">Atrasado</option>
+            <option value="pago">Pago</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
+          <span style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
+          <input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={exportarCsv} style={s.btnOutline} disabled={!itens.length}>Exportar CSV</button>
+          <button onClick={exportarPdf} style={s.btnOutline} disabled={!itens.length}>Gerar relatório</button>
+          <button onClick={() => { setEditando(null); setModalAberto(true); }} style={s.btnPrimario}>+ Nova conta a pagar</button>
+        </div>
+      </div>
+
+      {resumo && (
+        <div style={s.statsGrid}>
+          <StatCard label="Pendente" valor={formatarMoeda(resumo.pendente.valor)} cor="#d97706" icon="DollarSign" />
+          <StatCard label="Atrasado" valor={formatarMoeda(resumo.atrasado.valor)} cor="#dc2626" icon="DollarSign" />
+          <StatCard label="Pago" valor={formatarMoeda(resumo.concluido.valor)} cor="#059669" icon="DollarSign" />
+          <StatCard label="Total lançado" valor={formatarMoeda(resumo.valor_total)} cor="#2563eb" icon="Wallet" />
+        </div>
+      )}
+
+      {carregando ? <p style={s.textoCarregando}>Carregando...</p> : itens.length === 0 ? (
+        <p style={s.textoVazio}>Nenhuma conta a pagar encontrada com esse filtro.</p>
+      ) : (
+        <div style={s.cardTabela}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={s.table}>
+              <thead>
+                <tr>{['Vencimento', 'Beneficiário', 'Descrição', 'Categoria', 'Forma', 'Valor', 'Status', 'Ações'].map((h) => (
+                  <th key={h} style={{ ...s.th, ...(h === 'Ações' ? { textAlign: 'right' } : {}) }}>{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody>
+                {itens.map((c) => (
+                  <tr key={c.id} style={s.tr}>
+                    <td style={s.td}>{formatarDataSemFuso(c.data_vencimento)}</td>
+                    <td style={s.td}>
+                      <strong style={{ color: '#111827' }}>{c.beneficiario_nome}</strong>
+                      {c.beneficiario_documento && <div style={s.subTexto}>{c.beneficiario_documento}</div>}
+                    </td>
+                    <td style={s.td}>{c.descricao}</td>
+                    <td style={s.td}>{c.categoria || '-'}</td>
+                    <td style={s.td}>{FORMA_PAGAMENTO_OPCOES.find((f) => f.value === c.forma_pagamento)?.label || '-'}</td>
+                    <td style={s.td}>{formatarMoeda(c.valor)}</td>
+                    <td style={s.td}><BadgeStatusConta status={c.status_efetivo} /></td>
+                    <td style={{ ...s.td, textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        {(c.status_efetivo === 'pendente' || c.status_efetivo === 'atrasado') && (
+                          <button onClick={() => marcarPaga(c)} style={{ ...s.btnOutline, ...s.btnOutlineVerde }}>Pagar</button>
+                        )}
+                        <button onClick={() => { setEditando(c); setModalAberto(true); }} style={s.btnOutline}>Editar</button>
+                        {(c.status_efetivo === 'pendente' || c.status_efetivo === 'atrasado') && (
+                          <button onClick={() => cancelar(c)} style={{ ...s.btnOutline, ...s.btnOutlineVermelho }}>Cancelar</button>
+                        )}
+                        <button onClick={() => excluir(c)} style={{ ...s.btnOutline, ...s.btnOutlineVermelho }}>Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {modalAberto && (
+        <ModalContaPagar
+          conta={editando}
+          onFechar={() => setModalAberto(false)}
+          onSalvo={() => { setModalAberto(false); carregar(); }}
+          toast={toast}
+        />
+      )}
+    </div>
+  );
+}
+
+function ModalContaPagar({ conta, onFechar, onSalvo, toast }) {
+  const [form, setForm] = useState(() => ({
+    descricao: conta?.descricao || '',
+    categoria: conta?.categoria || '',
+    beneficiario_nome: conta?.beneficiario_nome || '',
+    beneficiario_documento: conta?.beneficiario_documento || '',
+    forma_pagamento: conta?.forma_pagamento || '',
+    chave_pix: conta?.chave_pix || '',
+    banco: conta?.banco || '',
+    agencia: conta?.agencia || '',
+    conta: conta?.conta || '',
+    valor: conta?.valor ?? '',
+    data_vencimento: conta?.data_vencimento || '',
+    observacoes: conta?.observacoes || ''
+  }));
+  const [salvando, setSalvando] = useState(false);
+  useEscToClose(true, onFechar);
+
+  const campo = (chave) => (e) => setForm((f) => ({ ...f, [chave]: e.target.value }));
+
+  const salvar = async () => {
+    if (!form.descricao.trim() || !form.beneficiario_nome.trim() || !form.valor || !form.data_vencimento) {
+      toast.error('Preencha descrição, beneficiário, valor e vencimento.');
+      return;
+    }
+    setSalvando(true);
+    try {
+      const url = conta ? `${API_URL}/super-admin/contas-pagar/${conta.id}` : `${API_URL}/super-admin/contas-pagar`;
+      const res = await fetch(url, {
+        method: conta ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); onSalvo(); } else toast.error(data.error || 'Não foi possível salvar.');
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <div style={s.overlay} onClick={onFechar}>
+      <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
+        <div style={s.modalHeader}>
+          <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{conta ? 'Editar conta a pagar' : 'Nova conta a pagar'}</h3>
+          <button onClick={onFechar} style={s.btnFechar}><Icons.Close /></button>
+        </div>
+
+        <label style={s.label}>Descrição *</label>
+        <input style={s.input} value={form.descricao} onChange={campo('descricao')} placeholder="Ex: Servidor AWS, folha de pagamento..." />
+
+        <label style={s.label}>Categoria</label>
+        <input style={s.input} value={form.categoria} onChange={campo('categoria')} placeholder="Ex: infraestrutura, marketing, folha, impostos..." />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div>
+            <label style={s.label}>Valor (R$) *</label>
+            <input type="number" min="0" step="0.01" style={s.input} value={form.valor} onChange={campo('valor')} />
+          </div>
+          <div>
+            <label style={s.label}>Vencimento *</label>
+            <input type="date" style={s.input} value={form.data_vencimento} onChange={campo('data_vencimento')} />
+          </div>
+        </div>
+
+        <label style={s.label}>Nome do beneficiário *</label>
+        <input style={s.input} value={form.beneficiario_nome} onChange={campo('beneficiario_nome')} placeholder="Quem vai receber o pagamento" />
+
+        <label style={s.label}>CPF/CNPJ do beneficiário</label>
+        <input style={s.input} value={form.beneficiario_documento} onChange={campo('beneficiario_documento')} />
+
+        <label style={s.label}>Forma de pagamento</label>
+        <select style={s.input} value={form.forma_pagamento} onChange={campo('forma_pagamento')}>
+          {FORMA_PAGAMENTO_OPCOES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+
+        {form.forma_pagamento === 'pix' && (
+          <>
+            <label style={s.label}>Chave Pix</label>
+            <input style={s.input} value={form.chave_pix} onChange={campo('chave_pix')} />
+          </>
+        )}
+
+        {(form.forma_pagamento === 'ted' || form.forma_pagamento === 'boleto') && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={s.label}>Banco</label>
+              <input style={s.input} value={form.banco} onChange={campo('banco')} />
+            </div>
+            <div>
+              <label style={s.label}>Agência</label>
+              <input style={s.input} value={form.agencia} onChange={campo('agencia')} />
+            </div>
+            <div>
+              <label style={s.label}>Conta</label>
+              <input style={s.input} value={form.conta} onChange={campo('conta')} />
+            </div>
+          </div>
+        )}
+
+        <label style={s.label}>Observações</label>
+        <textarea style={{ ...s.input, minHeight: '70px', resize: 'vertical' }} value={form.observacoes} onChange={campo('observacoes')} />
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
+          <button onClick={onFechar} style={s.btnOutline}>Cancelar</button>
+          <LoadingButton loading={salvando} onClick={salvar} style={s.btnPrimario}>Salvar</LoadingButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContasReceberPainel({ toast, confirmar }) {
+  const [itens, setItens] = useState([]);
+  const [resumo, setResumo] = useState(null);
+  const [carregando, setCarregando] = useState(true);
+  const [busca, setBusca] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState('');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
+  const [empresasSugeridas, setEmpresasSugeridas] = useState([]);
+  const [modalAberto, setModalAberto] = useState(false);
+  const [editando, setEditando] = useState(null);
+  const [empresaPreSelecionada, setEmpresaPreSelecionada] = useState(null);
+  useEscToClose(modalAberto, () => setModalAberto(false));
+
+  const carregar = useCallback(async () => {
+    setCarregando(true);
+    try {
+      const params = new URLSearchParams();
+      if (busca) params.set('busca', busca);
+      if (statusFiltro) params.set('status', statusFiltro);
+      if (dataInicio) params.set('dataInicio', dataInicio);
+      if (dataFim) params.set('dataFim', dataFim);
+      const [resItens, resEmpresas] = await Promise.all([
+        fetch(`${API_URL}/super-admin/contas-receber${params.toString() ? `?${params.toString()}` : ''}`),
+        fetch(`${API_URL}/super-admin/contas-receber/empresas-sugeridas`)
+      ]);
+      const data = await resItens.json();
+      setItens(Array.isArray(data.itens) ? data.itens : []);
+      setResumo(data.resumo || null);
+      const empresas = await resEmpresas.json();
+      setEmpresasSugeridas(Array.isArray(empresas) ? empresas : []);
+    } catch (err) {
+      toast.error('Erro ao carregar contas a receber.');
+    } finally {
+      setCarregando(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busca, statusFiltro, dataInicio, dataFim]);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const marcarRecebida = async (conta) => {
+    const ok = await confirmar(`Marcar "${conta.descricao}" como recebida hoje?`, { confirmText: 'Marcar como recebida' });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/contas-receber/${conta.id}/receber`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregar(); } else toast.error(data.error || 'Não foi possível dar baixa.');
+    } catch (err) { toast.error('Erro de conexão.'); }
+  };
+
+  const cancelar = async (conta) => {
+    const ok = await confirmar(`Cancelar a conta "${conta.descricao}"?`, { confirmText: 'Cancelar conta', danger: true });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/contas-receber/${conta.id}/cancelar`, { method: 'PUT' });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregar(); } else toast.error(data.error || 'Não foi possível cancelar.');
+    } catch (err) { toast.error('Erro de conexão.'); }
+  };
+
+  const excluir = async (conta) => {
+    const ok = await confirmar(`Excluir definitivamente "${conta.descricao}"?`, { detail: 'Essa ação não pode ser desfeita.', confirmText: 'Excluir', danger: true });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/contas-receber/${conta.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregar(); } else toast.error(data.error || 'Não foi possível excluir.');
+    } catch (err) { toast.error('Erro de conexão.'); }
+  };
+
+  const exportarCsv = () => {
+    if (!itens.length) return;
+    const linhas = [
+      ['Resumo', `Pendente: ${formatarMoeda(resumo.pendente.valor)}`, `Atrasado: ${formatarMoeda(resumo.atrasado.valor)}`, `Recebido: ${formatarMoeda(resumo.concluido.valor)}`, `Total: ${formatarMoeda(resumo.valor_total)}`],
+      [],
+      ['Previsão', 'Pagador', 'Empresa vinculada', 'Descrição', 'Forma', 'Status', 'Valor', 'Recebido em'],
+      ...itens.map((c) => [formatarDataSemFuso(c.data_prevista), c.pagador_nome, c.empresa_nome || '-', c.descricao, c.forma_pagamento || '-', STATUS_CONTA_INFO[c.status_efetivo]?.label || c.status_efetivo, c.valor, c.data_recebimento ? formatarDataSemFuso(c.data_recebimento) : '-'])
+    ];
+    exportarContasCsv(`contas-a-receber-${new Date().toISOString().slice(0, 10)}.csv`, linhas);
+  };
+
+  const exportarPdf = () => {
+    if (!itens.length || !resumo) return;
+    exportarContasPdf({
+      titulo: 'Contas a receber',
+      subtitulo: 'Valores previstos a receber pela plataforma SchedNext.',
+      periodoLabel: `${itens.length} conta(s) no filtro atual`,
+      cards: [
+        ['Pendente', formatarMoeda(resumo.pendente.valor)],
+        ['Atrasado', formatarMoeda(resumo.atrasado.valor)],
+        ['Recebido', formatarMoeda(resumo.concluido.valor)],
+        ['Total lançado', formatarMoeda(resumo.valor_total)]
+      ],
+      tabelas: [{
+        titulo: 'Detalhamento',
+        cabecalhos: ['Previsão', 'Pagador', 'Empresa', 'Descrição', 'Status', 'Valor'],
+        linhas: itens.map((c) => [formatarDataSemFuso(c.data_prevista), c.pagador_nome, c.empresa_nome || '-', c.descricao, STATUS_CONTA_INFO[c.status_efetivo]?.label || c.status_efetivo, formatarMoeda(c.valor)])
+      }],
+      toast
+    });
+  };
+
+  return (
+    <div>
+      {empresasSugeridas.length > 0 && (
+        <div style={{ ...s.card, marginBottom: '16px' }}>
+          <h3 style={s.cardTitulo}>Empresas com cobrança de plataforma prevista</h3>
+          <p style={{ ...s.subTexto, marginBottom: '10px' }}>Lance direto a partir da próxima cobrança já agendada de cada empresa (empresas.proxima_cobranca_em).</p>
+          {empresasSugeridas.map((e) => (
+            <div key={e.id} style={s.linhaLista}>
+              <span>{e.nome} · {e.plano_plataforma?.nome} · {formatarMoeda(e.plano_plataforma?.preco_mensal)} · prevista p/ {e.proxima_cobranca_em ? formatarData(e.proxima_cobranca_em) : '-'}</span>
+              <button onClick={() => { setEditando(null); setEmpresaPreSelecionada(e); setModalAberto(true); }} style={s.btnLink}>Lançar</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={s.barraTop}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input placeholder="Buscar por descrição ou pagador..." value={busca} onChange={(e) => setBusca(e.target.value)} style={s.inputBusca} />
+          <select style={s.selectFiltro} value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)}>
+            <option value="">Todos os status</option>
+            <option value="pendente">Pendente</option>
+            <option value="atrasado">Atrasado</option>
+            <option value="recebido">Recebido</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
+          <span style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
+          <input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={exportarCsv} style={s.btnOutline} disabled={!itens.length}>Exportar CSV</button>
+          <button onClick={exportarPdf} style={s.btnOutline} disabled={!itens.length}>Gerar relatório</button>
+          <button onClick={() => { setEditando(null); setEmpresaPreSelecionada(null); setModalAberto(true); }} style={s.btnPrimario}>+ Nova conta a receber</button>
+        </div>
+      </div>
+
+      {resumo && (
+        <div style={s.statsGrid}>
+          <StatCard label="Pendente" valor={formatarMoeda(resumo.pendente.valor)} cor="#d97706" icon="DollarSign" />
+          <StatCard label="Atrasado" valor={formatarMoeda(resumo.atrasado.valor)} cor="#dc2626" icon="DollarSign" />
+          <StatCard label="Recebido" valor={formatarMoeda(resumo.concluido.valor)} cor="#059669" icon="DollarSign" />
+          <StatCard label="Total lançado" valor={formatarMoeda(resumo.valor_total)} cor="#2563eb" icon="Wallet" />
+        </div>
+      )}
+
+      {carregando ? <p style={s.textoCarregando}>Carregando...</p> : itens.length === 0 ? (
+        <p style={s.textoVazio}>Nenhuma conta a receber encontrada com esse filtro.</p>
+      ) : (
+        <div style={s.cardTabela}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={s.table}>
+              <thead>
+                <tr>{['Previsão', 'Pagador', 'Empresa', 'Descrição', 'Forma', 'Valor', 'Status', 'Ações'].map((h) => (
+                  <th key={h} style={{ ...s.th, ...(h === 'Ações' ? { textAlign: 'right' } : {}) }}>{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody>
+                {itens.map((c) => (
+                  <tr key={c.id} style={s.tr}>
+                    <td style={s.td}>{formatarDataSemFuso(c.data_prevista)}</td>
+                    <td style={s.td}>{c.pagador_nome}</td>
+                    <td style={s.td}>{c.empresa_nome || '-'}</td>
+                    <td style={s.td}>{c.descricao}</td>
+                    <td style={s.td}>{FORMA_PAGAMENTO_OPCOES.find((f) => f.value === c.forma_pagamento)?.label || '-'}</td>
+                    <td style={s.td}>{formatarMoeda(c.valor)}</td>
+                    <td style={s.td}><BadgeStatusConta status={c.status_efetivo} /></td>
+                    <td style={{ ...s.td, textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        {(c.status_efetivo === 'pendente' || c.status_efetivo === 'atrasado') && (
+                          <button onClick={() => marcarRecebida(c)} style={{ ...s.btnOutline, ...s.btnOutlineVerde }}>Receber</button>
+                        )}
+                        <button onClick={() => { setEditando(c); setEmpresaPreSelecionada(null); setModalAberto(true); }} style={s.btnOutline}>Editar</button>
+                        {(c.status_efetivo === 'pendente' || c.status_efetivo === 'atrasado') && (
+                          <button onClick={() => cancelar(c)} style={{ ...s.btnOutline, ...s.btnOutlineVermelho }}>Cancelar</button>
+                        )}
+                        <button onClick={() => excluir(c)} style={{ ...s.btnOutline, ...s.btnOutlineVermelho }}>Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {modalAberto && (
+        <ModalContaReceber
+          conta={editando}
+          empresaPreSelecionada={empresaPreSelecionada}
+          empresasSugeridas={empresasSugeridas}
+          onFechar={() => setModalAberto(false)}
+          onSalvo={() => { setModalAberto(false); carregar(); }}
+          toast={toast}
+        />
+      )}
+    </div>
+  );
+}
+
+function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, onFechar, onSalvo, toast }) {
+  const [form, setForm] = useState(() => ({
+    empresa_id: conta?.empresa_id || empresaPreSelecionada?.id || '',
+    pagador_nome: conta?.pagador_nome || empresaPreSelecionada?.nome || '',
+    descricao: conta?.descricao || (empresaPreSelecionada ? `Assinatura de plataforma - ${empresaPreSelecionada.plano_plataforma?.nome || ''}` : ''),
+    valor: conta?.valor ?? empresaPreSelecionada?.plano_plataforma?.preco_mensal ?? '',
+    data_prevista: conta?.data_prevista || paraInputData(empresaPreSelecionada?.proxima_cobranca_em) || '',
+    forma_pagamento: conta?.forma_pagamento || '',
+    observacoes: conta?.observacoes || ''
+  }));
+  const [salvando, setSalvando] = useState(false);
+  useEscToClose(true, onFechar);
+
+  const campo = (chave) => (e) => setForm((f) => ({ ...f, [chave]: e.target.value }));
+
+  const selecionarEmpresa = (empresaId) => {
+    const empresa = empresasSugeridas.find((e) => String(e.id) === String(empresaId));
+    setForm((f) => ({
+      ...f,
+      empresa_id: empresaId,
+      pagador_nome: empresa ? empresa.nome : f.pagador_nome,
+      descricao: empresa ? `Assinatura de plataforma - ${empresa.plano_plataforma?.nome || ''}` : f.descricao,
+      valor: empresa ? (empresa.plano_plataforma?.preco_mensal ?? f.valor) : f.valor,
+      data_prevista: empresa ? (paraInputData(empresa.proxima_cobranca_em) || f.data_prevista) : f.data_prevista
+    }));
+  };
+
+  const salvar = async () => {
+    if (!form.pagador_nome.trim() || !form.descricao.trim() || !form.valor || !form.data_prevista) {
+      toast.error('Preencha pagador, descrição, valor e data prevista.');
+      return;
+    }
+    setSalvando(true);
+    try {
+      const url = conta ? `${API_URL}/super-admin/contas-receber/${conta.id}` : `${API_URL}/super-admin/contas-receber`;
+      const res = await fetch(url, {
+        method: conta ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, empresa_id: form.empresa_id || null })
+      });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); onSalvo(); } else toast.error(data.error || 'Não foi possível salvar.');
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <div style={s.overlay} onClick={onFechar}>
+      <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
+        <div style={s.modalHeader}>
+          <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{conta ? 'Editar conta a receber' : 'Nova conta a receber'}</h3>
+          <button onClick={onFechar} style={s.btnFechar}><Icons.Close /></button>
+        </div>
+
+        <label style={s.label}>Vincular a uma empresa cadastrada</label>
+        <select style={s.input} value={form.empresa_id} onChange={(e) => selecionarEmpresa(e.target.value)}>
+          <option value="">Avulso (sem vínculo com empresa)</option>
+          {empresasSugeridas.map((e) => <option key={e.id} value={e.id}>{e.nome} · {e.plano_plataforma?.nome}</option>)}
+        </select>
+
+        <label style={s.label}>Nome do pagador *</label>
+        <input style={s.input} value={form.pagador_nome} onChange={campo('pagador_nome')} />
+
+        <label style={s.label}>Descrição *</label>
+        <input style={s.input} value={form.descricao} onChange={campo('descricao')} />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div>
+            <label style={s.label}>Valor (R$) *</label>
+            <input type="number" min="0" step="0.01" style={s.input} value={form.valor} onChange={campo('valor')} />
+          </div>
+          <div>
+            <label style={s.label}>Data prevista *</label>
+            <input type="date" style={s.input} value={form.data_prevista} onChange={campo('data_prevista')} />
+          </div>
+        </div>
+
+        <label style={s.label}>Forma de pagamento</label>
+        <select style={s.input} value={form.forma_pagamento} onChange={campo('forma_pagamento')}>
+          {FORMA_PAGAMENTO_OPCOES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+
+        <label style={s.label}>Observações</label>
+        <textarea style={{ ...s.input, minHeight: '70px', resize: 'vertical' }} value={form.observacoes} onChange={campo('observacoes')} />
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
+          <button onClick={onFechar} style={s.btnOutline}>Cancelar</button>
+          <LoadingButton loading={salvando} onClick={salvar} style={s.btnPrimario}>Salvar</LoadingButton>
+        </div>
       </div>
     </div>
   );
@@ -1607,7 +2317,8 @@ const Icons = {
   LogOut: ({ color = 'currentColor' }) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>,
   Close: ({ color = '#9ca3af', size = 18 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
   Lock: ({ color = 'currentColor' }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
-  DollarSign: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+  DollarSign: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>,
+  Wallet: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5h-4a2 2 0 0 1 0-4h4z"></path></svg>
 };
 
 const s = {
