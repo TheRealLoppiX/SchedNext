@@ -220,9 +220,6 @@ function CadastroEmpresa({ setEmpresaLogada }) {
               onChange={(e) => setDocumento(formatarDocumento(e.target.value))}
               required
             />
-            <p style={{ fontSize: '12px', color: 'var(--bb-text-muted)', margin: '-4px 0 0' }}>
-              Usamos esses dados só para evitar contas duplicadas e emitir cobranças.
-            </p>
             <input
               type="password"
               className="bb-input"
