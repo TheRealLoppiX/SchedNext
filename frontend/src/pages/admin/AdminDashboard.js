@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import AgendaModal from './AgendaModal';
 import './AdminDashboard.css';
 import { obterTerminologia } from '../../utils/terminologia';
@@ -14,6 +14,9 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
   
   const [barbeiros, setBarbeiros] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Espelha se o modal de encaixe/agenda está aberto, pra o auto-refresh (setInterval) saber
+  // que não deve mexer na tela enquanto alguém preenche um formulário.
+  const modalAbertoRef = useRef(false);
   const [barbeiroSelecionado, setBarbeiroSelecionado] = useState(null);
   const [agendamentos, setAgendamentos] = useState([]);
   
@@ -118,9 +121,13 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
     setDiasCalendario(dias);
   }, [anchorDate]);
 
-  const carregarDadosDashboard = useCallback(async () => {
+  // silencioso = atualização em segundo plano (auto-refresh): não liga o `loading`. Antes, todo
+  // refresh de 30s ligava o loading e, com stats.total zerado (conta nova, período sem
+  // agendamentos), o `if (loading && !stats.total)` mais abaixo trocava a tela inteira por
+  // "Atualizando dashboard..." e DESMONTAVA o modal de encaixe, perdendo o que estava sendo digitado.
+  const carregarDadosDashboard = useCallback(async (silencioso = false) => {
     if (!empresaIdEfetivo) return;
-    setLoading(true);
+    if (!silencioso) setLoading(true);
 
     try {
       let urlParams = '';
@@ -145,7 +152,13 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
 
   useEffect(() => {
     carregarDadosDashboard();
-    const interval = setInterval(carregarDadosDashboard, 30000);
+    // Auto-refresh a cada 30s, mas só com a aba visível e sem modal aberto: com o modal aberto
+    // (cadastro de encaixe, checkout) não há por que recarregar por baixo, e a lista é
+    // atualizada de qualquer forma ao fechar o modal.
+    const interval = setInterval(() => {
+      if (document.hidden || modalAbertoRef.current) return;
+      carregarDadosDashboard(true);
+    }, 30000);
     return () => clearInterval(interval);
   }, [carregarDadosDashboard]);
 
@@ -245,6 +258,8 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
     
     return slotTime < agora;
   };
+
+  modalAbertoRef.current = !!barbeiroSelecionado;
 
   if (loading && !stats.total) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Atualizando dashboard...</p>;
 
@@ -531,7 +546,7 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
             setBarbeiroSelecionado(null);
             setHoraEncaixe(null);
             setAgendamentoCheckout(null);
-            carregarDadosDashboard();
+            carregarDadosDashboard(true);
           }}
         />
       )}
