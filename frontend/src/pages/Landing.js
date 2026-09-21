@@ -165,6 +165,7 @@ function MiniSparkline() {
 
 function Landing() {
   const [planos, setPlanos] = useState([]);
+  const diasTesteGratis = planos.find((pl) => pl.nome === 'Grátis')?.dias_teste || 0;
   const [reduzirMovimento] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
@@ -263,7 +264,7 @@ function Landing() {
             </h1>
             <p className="ln-hero-sub" style={s.heroSubtitulo}>
               Sua equipe organizada, sua agenda sempre em dia, seus clientes marcando sozinhos.
-              Grátis pra sempre, sem cartão, sem complicação.
+              {diasTesteGratis > 0 ? `Teste grátis por ${diasTesteGratis} dias, sem cartão, sem complicação.` : 'Grátis pra sempre, sem cartão, sem complicação.'}
             </p>
             <div className="ln-hero-cta" style={s.heroCtaRow}>
               <Link to="/cadastrar" className="ln-cta-primary" style={s.ctaPrincipal}>
@@ -362,6 +363,7 @@ function Landing() {
                 </p>
                 <div style={s.planoDivisor} />
                 <ul style={s.listaPlano}>
+                  {p.dias_teste > 0 && <ItemPlano texto={`${p.dias_teste} dias de teste grátis`} />}
                   <ItemPlano texto={p.limite_profissionais == null ? 'Profissionais ilimitados' : `Até ${p.limite_profissionais} profissional(is)`} />
                   <ItemPlano texto={p.limite_agendamentos_mes == null ? 'Agendamentos ilimitados/mês' : `Até ${p.limite_agendamentos_mes} agendamentos/mês`} />
                   {p.permite_paleta_customizada && <ItemPlano texto="Paleta de cores personalizada" />}

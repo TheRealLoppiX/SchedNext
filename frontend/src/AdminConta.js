@@ -449,7 +449,7 @@ function AdminConta({ empresaId }) {
                                         >
                                             {planosDisponiveis.map(p => (
                                                 <option key={p.id} value={p.id}>
-                                                    {p.nome}{p.preco_mensal > 0 ? ` · R$ ${Number(p.preco_mensal).toFixed(2)}/mês` : p.preco_mensal === 0 ? ' · Grátis' : ' · sob consulta'}
+                                                    {p.nome}{p.dias_teste > 0 ? ` · ${p.dias_teste} dias de teste` : ''}{p.preco_mensal > 0 ? ` · R$ ${Number(p.preco_mensal).toFixed(2)}/mês` : p.preco_mensal === 0 ? ' · Grátis' : ' · sob consulta'}
                                                 </option>
                                             ))}
                                         </select>

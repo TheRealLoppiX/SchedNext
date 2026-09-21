@@ -288,6 +288,11 @@ function CadastroEmpresa({ setEmpresaLogada }) {
                       <span>{p.nome}</span>
                       <span>{ehEnterprise ? 'Sob consulta' : p.preco_mensal === 0 ? 'Grátis' : `R$ ${Number(p.preco_mensal).toFixed(2)}/mês`}</span>
                     </div>
+                    {p.dias_teste > 0 && (
+                      <div style={{ fontSize: '12px', color: 'var(--bb-success)', fontWeight: 700, marginTop: '4px' }}>
+                        {p.dias_teste} dias de teste grátis
+                      </div>
+                    )}
                     <div style={{ fontSize: '12px', color: 'var(--bb-text-muted)', marginTop: '4px' }}>
                       {ehEnterprise
                         ? 'Fale com nosso time pra combinar os detalhes'
