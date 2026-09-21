@@ -97,7 +97,8 @@ const PLANO_VAZIO = {
   nome: '', preco_mensal: '', limite_profissionais: '', limite_agendamentos_mes: '',
   permite_paleta_customizada: false, permite_whatsapp_bot: false, permite_remover_marca: false,
   permite_ia: false, permite_multi_unidade: false, permite_api_publica: false,
-  permite_relatorios_avancados: false, permite_dominio_customizado: false
+  permite_relatorios_avancados: false, permite_dominio_customizado: false,
+  ativo: true, publico: true, dias_teste: ''
 };
 
 const ABAS = [
@@ -106,6 +107,8 @@ const ABAS = [
   { valor: 'contas', label: 'Contas a Pagar/Receber', icon: 'Wallet' },
   { valor: 'empresas', label: 'Empresas', icon: 'Building' },
   { valor: 'planos', label: 'Planos', icon: 'Tag' },
+  { valor: 'testes', label: 'Testar Planos', icon: 'TrendingUp' },
+  { valor: 'antifraude', label: 'Antifraude', icon: 'Shield' },
   { valor: 'chaves', label: 'Chaves de Ativação', icon: 'Key' },
   { valor: 'leads', label: 'Leads Enterprise', icon: 'Mail' },
   { valor: 'superadmins', label: 'Super Admins', icon: 'Shield' }
@@ -156,7 +159,9 @@ function SuperAdminDashboard() {
         {aba === 'financeiro' && <AbaFinanceiro toast={toast} />}
         {aba === 'contas' && <AbaContas toast={toast} confirmar={confirmar} />}
         {aba === 'empresas' && <AbaEmpresas toast={toast} confirmar={confirmar} />}
-        {aba === 'planos' && <AbaPlanos toast={toast} />}
+        {aba === 'planos' && <AbaPlanos toast={toast} confirmar={confirmar} />}
+        {aba === 'testes' && <AbaTestesPlano toast={toast} confirmar={confirmar} />}
+        {aba === 'antifraude' && <AbaAntifraude toast={toast} confirmar={confirmar} />}
         {aba === 'chaves' && <AbaChaves toast={toast} confirmar={confirmar} />}
         {aba === 'leads' && <AbaLeads toast={toast} confirmar={confirmar} />}
         {aba === 'superadmins' && <AbaSuperAdmins toast={toast} confirmar={confirmar} />}
@@ -1925,7 +1930,7 @@ function InfoItem({ label, valor, badge, cor }) {
   );
 }
 
-function AbaPlanos({ toast }) {
+function AbaPlanos({ toast, confirmar }) {
   const [planos, setPlanos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [editando, setEditando] = useState(null);
@@ -1960,7 +1965,10 @@ function AbaPlanos({ toast }) {
           ...editando,
           preco_mensal: editando.preco_mensal === '' ? null : editando.preco_mensal,
           limite_profissionais: editando.limite_profissionais === '' ? null : editando.limite_profissionais,
-          limite_agendamentos_mes: editando.limite_agendamentos_mes === '' ? null : editando.limite_agendamentos_mes
+          limite_agendamentos_mes: editando.limite_agendamentos_mes === '' ? null : editando.limite_agendamentos_mes,
+          dias_teste: editando.dias_teste === '' || editando.dias_teste == null ? null : editando.dias_teste,
+          ativo: editando.ativo !== false,
+          publico: editando.publico !== false
         })
       });
       if (res.ok) {
@@ -1979,6 +1987,30 @@ function AbaPlanos({ toast }) {
     }
   };
 
+  const alternarAtivo = async (plano) => {
+    const desligando = plano.ativo !== false;
+    const ok = await confirmar(
+      desligando ? `Desligar o plano "${plano.nome}"?` : `Ligar o plano "${plano.nome}"?`,
+      {
+        detail: desligando
+          ? 'Ele some da landing e do cadastro e ninguém consegue contratar. Quem já está nele continua normalmente.'
+          : 'Ele volta a aparecer no site e pode ser contratado (se estiver marcado como visível).',
+        confirmText: desligando ? 'Desligar' : 'Ligar',
+        danger: desligando
+      }
+    );
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/planos/${plano.id}/ativo`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ativo: !desligando })
+      });
+      const data = await res.json();
+      if (res.ok) { toast.success(desligando ? 'Plano desligado.' : 'Plano ligado.'); carregar(); } else toast.error(data.error || 'Não foi possível alterar o plano.');
+    } catch (err) { toast.error('Erro de conexão.'); }
+  };
+
   return (
     <div>
       <div style={s.barraTop}>
@@ -1989,10 +2021,13 @@ function AbaPlanos({ toast }) {
       {carregando ? <p style={s.textoCarregando}>Carregando...</p> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {planos.map((p) => (
-            <div key={p.id} style={s.card}>
+            <div key={p.id} style={{ ...s.card, ...(p.ativo === false ? { opacity: 0.6 } : {}) }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
                   <strong style={{ fontSize: '15px', color: '#111827' }}>{p.nome}</strong>
+                  {p.ativo === false && <span style={{ ...s.badgeRoxo, background: '#fee2e2', color: '#991b1b', marginLeft: '8px' }}>Desligado</span>}
+                  {p.publico === false && <span style={{ ...s.badgeRoxo, background: '#fef3c7', color: '#92400e', marginLeft: '8px' }}>Oculto do site</span>}
+                  {p.dias_teste ? <span style={{ ...s.badgeRoxo, background: '#dbeafe', color: '#1e40af', marginLeft: '8px' }}>{p.dias_teste} dias de teste</span> : null}
                   <div style={s.subTexto}>
                     {formatarPreco(p.preco_mensal)} ·{' '}
                     {p.limite_profissionais == null ? 'Profissionais ilimitados' : `Até ${p.limite_profissionais} profissional(is)`} ·{' '}
@@ -2004,7 +2039,12 @@ function AbaPlanos({ toast }) {
                     ))}
                   </div>
                 </div>
-                <button onClick={() => { setCriandoNovo(false); setEditando({ ...p }); }} style={s.btnOutline}>Editar</button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {p.nome !== 'Grátis' && (
+                    <button onClick={() => alternarAtivo(p)} style={s.btnOutline}>{p.ativo === false ? 'Ligar' : 'Desligar'}</button>
+                  )}
+                  <button onClick={() => { setCriandoNovo(false); setEditando({ ...p }); }} style={s.btnOutline}>Editar</button>
+                </div>
               </div>
             </div>
           ))}
@@ -2031,7 +2071,25 @@ function AbaPlanos({ toast }) {
             <label style={s.label}>Limite de agendamentos/mês (vazio = ilimitado)</label>
             <input type="number" style={s.input} value={editando.limite_agendamentos_mes ?? ''} onChange={(e) => setEditando({ ...editando, limite_agendamentos_mes: e.target.value })} />
 
-            <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={s.label}>Dias de teste (vazio = sem limite de tempo)</label>
+            <input type="number" min="1" style={s.input} value={editando.dias_teste ?? ''} onChange={(e) => setEditando({ ...editando, dias_teste: e.target.value })} />
+            <p style={{ ...s.subTexto, marginTop: '4px' }}>
+              Conta nova nesse plano tem esse prazo. Ao acabar, o painel trava até assinar um plano pago e o cliente recebe um e-mail
+              (3 dias antes e no vencimento). O teste vale uma vez por conta.
+            </p>
+
+            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={s.checkboxLinha}>
+                <input type="checkbox" checked={editando.ativo !== false} onChange={(e) => setEditando({ ...editando, ativo: e.target.checked })} />
+                Plano ligado (contratável)
+              </label>
+              <label style={s.checkboxLinha}>
+                <input type="checkbox" checked={editando.publico !== false} onChange={(e) => setEditando({ ...editando, publico: e.target.checked })} />
+                Visível no site (desmarque para planos de teste: só você aplica, na aba Testar Planos)
+              </label>
+            </div>
+
+            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {FLAGS_PLANO.map(([chave, rotulo]) => (
                 <label key={chave} style={s.checkboxLinha}>
                   <input type="checkbox" checked={!!editando[chave]} onChange={(e) => setEditando({ ...editando, [chave]: e.target.checked })} />
@@ -2045,6 +2103,259 @@ function AbaPlanos({ toast }) {
               <LoadingButton loading={salvando} onClick={salvar} style={{ ...s.btnPrimario, flex: 2 }}>Salvar</LoadingButton>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Área de teste de planos: aplica um plano (mesmo desligado ou oculto do site) numa barbearia
+// ESCOLHIDA por alguns dias. Quando o prazo acaba, ela volta sozinha ao plano anterior. É o jeito
+// seguro de testar um plano "completo" de R$0 sem que qualquer visitante consiga assiná-lo.
+function AbaTestesPlano({ toast, confirmar }) {
+  const [testes, setTestes] = useState([]);
+  const [planos, setPlanos] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [busca, setBusca] = useState('');
+  const [resultados, setResultados] = useState([]);
+  const [empresaSel, setEmpresaSel] = useState(null);
+  const [planoId, setPlanoId] = useState('');
+  const [dias, setDias] = useState(7);
+  const [aplicando, setAplicando] = useState(false);
+
+  const carregar = useCallback(async () => {
+    setCarregando(true);
+    try {
+      const [resTestes, resPlanos] = await Promise.all([
+        fetch(`${API_URL}/super-admin/testes-plano`),
+        fetch(`${API_URL}/super-admin/planos`)
+      ]);
+      const dadosTestes = await resTestes.json();
+      const dadosPlanos = await resPlanos.json();
+      setTestes(Array.isArray(dadosTestes) ? dadosTestes : []);
+      setPlanos(Array.isArray(dadosPlanos) ? dadosPlanos : []);
+    } catch (err) {
+      toast.error('Erro ao carregar testes de plano.');
+    } finally {
+      setCarregando(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  // Busca de barbearia com debounce: por nome, slug ou e-mail.
+  useEffect(() => {
+    if (busca.trim().length < 2) { setResultados([]); return undefined; }
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_URL}/super-admin/empresas?busca=${encodeURIComponent(busca.trim())}`);
+        const data = await res.json();
+        setResultados(Array.isArray(data) ? data.slice(0, 8) : []);
+      } catch (err) { setResultados([]); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [busca]);
+
+  const aplicar = async () => {
+    if (!empresaSel) return toast.error('Escolha a barbearia que vai receber o teste.');
+    if (!planoId) return toast.error('Escolha o plano a testar.');
+    const plano = planos.find((p) => String(p.id) === String(planoId));
+    const ok = await confirmar(`Aplicar o plano "${plano?.nome}" em "${empresaSel.nome}" por ${dias} dia(s)?`, {
+      detail: 'Ao acabar o prazo, a barbearia volta automaticamente ao plano anterior.',
+      confirmText: 'Aplicar teste'
+    });
+    if (!ok) return;
+
+    setAplicando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/testes-plano`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresa_id: empresaSel.id, plano_plataforma_id: planoId, dias: Number(dias) })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message);
+        setEmpresaSel(null); setBusca(''); setResultados([]);
+        carregar();
+      } else {
+        toast.error(data.error || 'Não foi possível aplicar o teste.');
+      }
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setAplicando(false);
+    }
+  };
+
+  const encerrar = async (teste) => {
+    const ok = await confirmar(`Encerrar o teste de "${teste.nome}" agora?`, {
+      detail: `Ela volta pro plano ${teste.plano_anterior?.nome || 'anterior'}.`,
+      confirmText: 'Encerrar teste',
+      danger: true
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/testes-plano/${teste.id}/encerrar`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregar(); } else toast.error(data.error || 'Não foi possível encerrar.');
+    } catch (err) { toast.error('Erro de conexão.'); }
+  };
+
+  return (
+    <div>
+      <div style={s.card}>
+        <h3 style={{ margin: '0 0 4px', fontSize: '16px', color: '#111827' }}>Testar um plano em uma barbearia</h3>
+        <p style={{ ...s.subTexto, marginBottom: '12px' }}>
+          Para testar um plano completo de R$0 sem risco, crie-o na aba Planos e desmarque "Visível no site". Ele nunca aparece
+          para visitantes e não pode ser contratado; só você aplica aqui, na barbearia que escolher, por tempo limitado.
+        </p>
+
+        <label style={s.label}>1. Barbearia do teste</label>
+        {empresaSel ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <span style={s.badgeRoxo}>{empresaSel.nome} ({empresaSel.slug})</span>
+            <span style={s.subTexto}>Plano atual: {empresaSel.plano_plataforma?.nome || '-'}</span>
+            <button onClick={() => setEmpresaSel(null)} style={s.btnLink}>Trocar barbearia</button>
+          </div>
+        ) : (
+          <>
+            <input style={s.input} placeholder="Buscar por nome, endereço (slug) ou e-mail" value={busca} onChange={(e) => setBusca(e.target.value)} />
+            {resultados.length > 0 && (
+              <div style={{ marginTop: '6px', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+                {resultados.map((e) => (
+                  <button
+                    key={e.id}
+                    onClick={() => { setEmpresaSel(e); setResultados([]); }}
+                    style={{ display: 'block', width: '100%', textAlign: 'left', background: '#fff', border: 'none', borderBottom: '1px solid #f3f4f6', padding: '10px 14px', cursor: 'pointer' }}
+                  >
+                    <strong style={{ color: '#111827', fontSize: '13px' }}>{e.nome}</strong>
+                    <div style={s.subTexto}>{e.slug} · {e.email} · plano {e.plano_plataforma?.nome || '-'}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        <label style={s.label}>2. Plano a testar</label>
+        <select style={{ ...s.selectFiltro, width: '100%' }} value={planoId} onChange={(e) => setPlanoId(e.target.value)}>
+          <option value="">Selecione...</option>
+          {planos.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.nome} · {formatarPreco(p.preco_mensal)}{!p.ativo ? ' (desligado)' : ''}{!p.publico ? ' (oculto)' : ''}
+            </option>
+          ))}
+        </select>
+
+        <label style={s.label}>3. Duração do teste (dias)</label>
+        <input type="number" min="1" max="90" style={s.input} value={dias} onChange={(e) => setDias(e.target.value)} />
+
+        <div style={{ marginTop: '16px' }}>
+          <LoadingButton loading={aplicando} onClick={aplicar} style={s.btnPrimario}>Aplicar teste</LoadingButton>
+        </div>
+      </div>
+
+      <h3 style={{ margin: '24px 0 10px', fontSize: '15px', color: '#111827' }}>Testes em andamento</h3>
+      {carregando ? <p style={s.textoCarregando}>Carregando...</p> : testes.length === 0 ? (
+        <p style={s.textoCarregando}>Nenhum teste de plano em andamento.</p>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                {['Barbearia', 'Plano em teste', 'Volta para', 'Termina em', ''].map((h) => <th key={h} style={s.th}>{h}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {testes.map((t) => (
+                <tr key={t.id} style={s.tr}>
+                  <td style={s.td}><strong style={{ color: '#111827' }}>{t.nome}</strong><div style={s.subTexto}>{t.slug}</div></td>
+                  <td style={s.td}>{t.plano_atual?.nome || '-'}</td>
+                  <td style={s.td}>{t.plano_anterior?.nome || 'Grátis'}</td>
+                  <td style={s.td}>{formatarData(t.plano_teste_expira_em)}</td>
+                  <td style={{ ...s.td, textAlign: 'right' }}><button onClick={() => encerrar(t)} style={s.btnOutline}>Encerrar agora</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const ROTULO_CAMPO_ANTIFRAUDE = { email: 'E-mail', telefone: 'Telefone', documento: 'CPF/CNPJ', nome: 'Nome da empresa', ip: 'IP de cadastro' };
+
+// Antifraude de cadastro: o site já BLOQUEIA cadastro novo com e-mail (normalizado), telefone ou
+// CPF/CNPJ repetido. Aqui aparecem os grupos de contas que compartilham algum dado (inclui nome
+// igual e IP repetido, que só sinalizam) pra você investigar e liberar falsos positivos.
+function AbaAntifraude({ toast, confirmar }) {
+  const [grupos, setGrupos] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+
+  const carregar = useCallback(async () => {
+    setCarregando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/antifraude`);
+      const data = await res.json();
+      setGrupos(Array.isArray(data.grupos) ? data.grupos : []);
+    } catch (err) {
+      toast.error('Erro ao carregar o antifraude.');
+    } finally {
+      setCarregando(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const liberar = async (registro) => {
+    const ok = await confirmar(`Liberar "${registro.nome_empresa}"?`, {
+      detail: 'Esses dados deixam de bloquear novos cadastros e o registro sai dos alertas. Use só se for um falso positivo.',
+      confirmText: 'Liberar'
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/antifraude/${registro.id}/liberar`, { method: 'POST' });
+      if (res.ok) { toast.success('Registro liberado.'); carregar(); } else toast.error('Não foi possível liberar.');
+    } catch (err) { toast.error('Erro de conexão.'); }
+  };
+
+  if (carregando) return <p style={s.textoCarregando}>Carregando...</p>;
+
+  return (
+    <div>
+      <p style={{ ...s.subTexto, marginBottom: '14px' }}>
+        Cadastros de empresa exigem e-mail, telefone e CPF/CNPJ. E-mail com pontos ou "+" do Gmail conta como o mesmo e-mail, e o
+        telefone ignora DDI e nono dígito. Repetiu e-mail, telefone ou CPF/CNPJ: o cadastro é barrado. Nome igual e IP repetido só geram alerta.
+      </p>
+
+      {grupos.length === 0 ? (
+        <div style={s.card}><p style={{ margin: 0, color: '#065f46', fontSize: '14px' }}>Nenhuma conta compartilhando dados. Tudo limpo.</p></div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {grupos.map((g) => (
+            <div key={`${g.campo}-${g.valor}`} style={s.card}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '10px' }}>
+                <span style={s.badgeRoxo}>{ROTULO_CAMPO_ANTIFRAUDE[g.campo]}</span>
+                <strong style={{ fontSize: '13px', color: '#111827', wordBreak: 'break-all' }}>{g.valor}</strong>
+                <span style={s.subTexto}>{g.empresas.length} contas</span>
+              </div>
+              {g.empresas.map((r) => (
+                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '8px 0', borderTop: '1px solid #f3f4f6', flexWrap: 'wrap' }}>
+                  <div>
+                    <strong style={{ fontSize: '13px', color: '#111827' }}>{r.nome_empresa || r.empresa?.slug || 'Empresa removida'}</strong>
+                    <div style={s.subTexto}>
+                      {r.empresa ? `${r.empresa.slug} · plano ${r.empresa.plano?.nome || '-'} · ${r.empresa.status_assinatura}` : 'conta excluída'} · cadastro em {formatarData(r.criado_em)}
+                    </div>
+                  </div>
+                  <button onClick={() => liberar(r)} style={s.btnOutline}>Liberar</button>
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       )}
     </div>

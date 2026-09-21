@@ -74,7 +74,9 @@ function AdminConta({ empresaId }) {
                     proxima_cobranca_em: data.proxima_cobranca_em,
                     cancelamento_agendado: data.cancelamento_agendado,
                     plano_pendente: data.plano_plataforma_pendente,
-                    chave_ativacao_expira_em: data.chave_ativacao_expira_em
+                    chave_ativacao_expira_em: data.chave_ativacao_expira_em,
+                    trial_expira_em: data.trial_expira_em,
+                    plano_teste_expira_em: data.plano_teste_expira_em
                 });
                 setPlanoEscolhidoId(data.plano_plataforma?.id || null);
             }
@@ -274,6 +276,19 @@ function AdminConta({ empresaId }) {
 
     if (carregando) return <p style={{ textAlign: 'center', marginTop: '50px', color: '#6b7280' }}>Carregando configurações...</p>;
 
+    // Mesma regra do bloqueio no backend (middleware/trialAuth.js): teste só conta enquanto não
+    // houver plano pago em dia, chave promocional ou teste de plano do admin absoluto em vigor.
+    const situacaoTeste = (() => {
+        if (!assinatura?.trial_expira_em) return null;
+        const agora = Date.now();
+        const vigente = (v) => v && new Date(v).getTime() > agora;
+        const planoPago = assinatura.plano && Number(assinatura.plano.preco_mensal) !== 0 && assinatura.status_assinatura === 'ativa';
+        if (planoPago || vigente(assinatura.chave_ativacao_expira_em) || vigente(assinatura.plano_teste_expira_em)) return null;
+        const fim = new Date(assinatura.trial_expira_em);
+        const expirado = fim.getTime() <= agora;
+        return { expirado, dias: Math.max(1, Math.ceil((fim.getTime() - agora) / 86400000)), data: fim.toLocaleDateString('pt-BR') };
+    })();
+
     return (
         <div className="admin-page-container" style={styles.container}>
             <header style={styles.header}>
@@ -286,8 +301,23 @@ function AdminConta({ empresaId }) {
                 </button>
             </header>
             
+            {situacaoTeste && (
+                <div style={{
+                    background: situacaoTeste.expirado ? '#fee2e2' : '#dbeafe',
+                    color: situacaoTeste.expirado ? '#991b1b' : '#1e40af',
+                    border: `1px solid ${situacaoTeste.expirado ? '#fca5a5' : '#93c5fd'}`,
+                    borderRadius: '10px', padding: '14px 18px', marginBottom: '18px', fontSize: '14px', lineHeight: 1.5
+                }}>
+                    {situacaoTeste.expirado ? (
+                        <><strong>Seu período de teste acabou.</strong> O painel está pausado até você escolher um plano. Seus dados continuam guardados: assim que assinar, tudo volta ao normal. Escolha o plano em "Trocar de plano" abaixo.</>
+                    ) : (
+                        <><strong>Você está em período de teste.</strong> Faltam {situacaoTeste.dias} {situacaoTeste.dias === 1 ? 'dia' : 'dias'} (até {situacaoTeste.data}). Assine um plano para continuar sem interrupção.</>
+                    )}
+                </div>
+            )}
+
             <div style={styles.grid}>
-                
+
                 {/* COLUNA ESQUERDA: IDENTIDADE VISUAL */}
                 <div style={styles.coluna}>
                     <div style={styles.card}>

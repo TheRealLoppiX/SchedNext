@@ -113,6 +113,13 @@ window.fetch = (input, init = {}) => {
         }
       }
     }
+    // Teste grátis acabou (ver backend/src/middleware/trialAuth.js): qualquer rota do painel
+    // responde 403 TRIAL_EXPIRADO; leva o admin direto pra Assinatura, onde escolhe um plano.
+    if (res.status === 403 && isAdminRoute && !window.location.pathname.startsWith('/admin/conta')) {
+      res.clone().json().then((corpo) => {
+        if (corpo && corpo.code === 'TRIAL_EXPIRADO') window.location.href = '/admin/conta?trial=expirado';
+      }).catch(() => {});
+    }
     return res;
   });
 };

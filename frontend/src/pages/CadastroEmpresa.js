@@ -4,7 +4,8 @@ import { useToast } from '../components/Toast';
 import LoadingButton from '../components/LoadingButton';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 import { obterTerminologia } from '../utils/terminologia';
-import { emailValido } from '../utils/validacao';
+import { emailValido, formatarDocumento, documentoTemTamanhoValido } from '../utils/validacao';
+import { formatarTelefone } from '../utils/telefone';
 import { API_URL } from '../services/api';
 
 function gerarSlug(nome) {
@@ -29,6 +30,8 @@ function CadastroEmpresa({ setEmpresaLogada }) {
   const [slugEditadoManualmente, setSlugEditadoManualmente] = useState(false);
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [documento, setDocumento] = useState('');
   const [vertical, setVertical] = useState('barbearia');
   const [planos, setPlanos] = useState([]);
   const [planoId, setPlanoId] = useState(null);
@@ -75,6 +78,8 @@ function CadastroEmpresa({ setEmpresaLogada }) {
     if (!nome.trim()) return toast.error('Informe o nome do seu negócio.');
     if (!emailValido(email)) return toast.error('Informe um e-mail válido.');
     if (senha.length < 6) return toast.error('A senha precisa ter ao menos 6 caracteres.');
+    if (telefone.replace(/\D/g, '').length < 10) return toast.error('Informe um telefone com DDD.');
+    if (!documentoTemTamanhoValido(documento)) return toast.error('Informe um CPF ou CNPJ válido.');
     if (statusSlug.disponivel === false) return toast.error(statusSlug.motivo || 'Esse endereço já está em uso.');
     setEtapa(2);
   };
@@ -107,7 +112,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
       const resCadastro = await fetch(`${API_URL}/empresas/registrar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, slug, email, senha, vertical, plano_plataforma_id: planoId })
+        body: JSON.stringify({ nome, slug, email, senha, vertical, plano_plataforma_id: planoId, telefone, documento })
       });
       const dataCadastro = await resCadastro.json();
 
@@ -198,6 +203,26 @@ function CadastroEmpresa({ setEmpresaLogada }) {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
+            <input
+              type="tel"
+              className="bb-input"
+              placeholder="Telefone / WhatsApp com DDD"
+              value={telefone}
+              onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
+              required
+            />
+            <input
+              type="text"
+              inputMode="numeric"
+              className="bb-input"
+              placeholder="CPF ou CNPJ"
+              value={documento}
+              onChange={(e) => setDocumento(formatarDocumento(e.target.value))}
+              required
+            />
+            <p style={{ fontSize: '12px', color: 'var(--bb-text-muted)', margin: '-4px 0 0' }}>
+              Usamos esses dados só para evitar contas duplicadas e emitir cobranças.
+            </p>
             <input
               type="password"
               className="bb-input"
