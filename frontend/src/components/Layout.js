@@ -4,7 +4,6 @@ import { useToast } from './Toast';
 import { obterTerminologia } from '../utils/terminologia';
 import usePaletaTenant from '../hooks/usePaletaTenant';
 import MarcaPlataforma from './MarcaPlataforma';
-import SuporteFlutuante from './SuporteFlutuante';
 import { API_URL } from '../services/api';
 
 
@@ -464,7 +463,6 @@ function Layout({ setEmpresaId }) {
         ) : null}
         {!isAdminPath && <MarcaPlataforma empresa={empresaTenant} />}
       </main>
-      {isAdminPath && !adminUnidadeId && <SuporteFlutuante />}
     </div>
   );
 }

@@ -322,8 +322,8 @@ function Docs() {
           {/* ===================== SUPORTE ===================== */}
           <section id="suporte" className="doc-secao">
             <h2>Suporte <Badge tipo="pro" /></h2>
-            <p className="doc-intro">O botão de interrogação flutuante, disponível em qualquer tela do painel, abre um chat com IA treinada no próprio SchedNext pra negócios nos planos Profissional e Enterprise. Se a resposta automática não resolver, um clique em "Falar com o time" encaminha a conversa direto pro time da SchedNext, que responde ali mesmo, sem precisar abrir outro canal.</p>
-            <p>O mesmo botão guarda o histórico completo de conversas anteriores, mesmo já resolvidas. Nos demais planos (Grátis e Essencial), o suporte continua disponível por e-mail, mostrado no mesmo lugar.</p>
+            <p className="doc-intro">O mesmo botão de interrogação flutuante usado pras perguntas frequentes, disponível em qualquer tela do painel, também dá acesso ao atendimento: pra negócios nos planos Profissional e Enterprise, é um chat com IA treinada no próprio SchedNext. Se a resposta automática não resolver, um clique em "Falar com o time" encaminha a conversa direto pro time da SchedNext, que responde ali mesmo, sem precisar abrir outro canal.</p>
+            <p>O mesmo botão guarda o histórico completo de conversas anteriores, mesmo já resolvidas. Nos demais planos (Grátis e Essencial), o atendimento continua disponível por e-mail, mostrado no mesmo lugar.</p>
           </section>
 
           {/* ===================== WHATSAPP: CONECTAR ===================== */}
