@@ -8,6 +8,7 @@ import Landing from './pages/Landing';
 import Docs from './pages/Docs';
 import CadastroEmpresa from './pages/CadastroEmpresa';
 import Login from './pages/Login';
+import EntrarMagico from './pages/EntrarMagico';
 import Barbeiros from './pages/Barbeiros';
 import Agenda from './pages/Agenda';
 import Assinatura from './pages/Assinatura';
@@ -37,6 +38,7 @@ import AdminApiKeys from './pages/admin/AdminApiKeys';
 import AdminRelatorios from './pages/admin/AdminRelatorios';
 import AdminDominio from './pages/admin/AdminDominio';
 import AdminWhatsapp from './pages/admin/AdminWhatsapp';
+import AdminSuporte from './pages/admin/AdminSuporte';
 import AdminMercadoPago from './pages/admin/AdminMercadoPago';
 
 // Admin absoluto (dono da plataforma) — fora da árvore de tenant, ver
@@ -93,6 +95,7 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
         <>
           <Route path="/:empresaSlug" element={<Login />} />
           <Route path="/:empresaSlug/login" element={<Login />} />
+          <Route path="/:empresaSlug/entrar-magico" element={<EntrarMagico />} />
           <Route path="/:empresaSlug/cadastro" element={<Cadastro />} />
           <Route path="/:empresaSlug/recuperar-senha" element={<RecuperarSenha />} />
         </>
@@ -184,6 +187,7 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
         <Route path="/admin/dominio" element={empresaId ? <AdminDominio empresaId={empresaId} /> : <Navigate to="/admin/login" />} />
 
         <Route path="/admin/whatsapp" element={empresaId ? <AdminWhatsapp /> : <Navigate to="/admin/login" />} />
+        <Route path="/admin/suporte" element={empresaId ? <AdminSuporte /> : <Navigate to="/admin/login" />} />
         <Route path="/admin/mercadopago" element={empresaId ? <AdminMercadoPago /> : <Navigate to="/admin/login" />} />
 
       </Route>

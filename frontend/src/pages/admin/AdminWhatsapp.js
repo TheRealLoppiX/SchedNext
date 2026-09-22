@@ -24,7 +24,7 @@ function AdminWhatsapp() {
   const [telefoneTeste, setTelefoneTeste] = useState('');
   const [testando, setTestando] = useState(false);
 
-  const [botConfig, setBotConfig] = useState({ permiteIa: false, modo: 'guiado', nome: '', personalidade: '', boasVindas: '', temperatura: 0.6 });
+  const [botConfig, setBotConfig] = useState({ permiteIa: false, modo: 'guiado', nome: '', personalidade: '', boasVindas: '', temperatura: 0.6, resumoProfissionaisAtivo: false, resumoProfissionaisHorario: '08:00' });
   const [salvandoBot, setSalvandoBot] = useState(false);
 
   const pollRef = useRef(null);
@@ -172,7 +172,9 @@ function AdminWhatsapp() {
           nome: botConfig.nome,
           personalidade: botConfig.personalidade,
           boas_vindas: botConfig.boasVindas,
-          temperatura: botConfig.temperatura
+          temperatura: botConfig.temperatura,
+          resumo_profissionais_ativo: botConfig.resumoProfissionaisAtivo,
+          resumo_profissionais_horario: botConfig.resumoProfissionaisHorario
         })
       });
       const dados = await res.json();
@@ -339,6 +341,41 @@ function AdminWhatsapp() {
             <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#9ca3af' }}>
               Mais baixo = respostas mais previsíveis e diretas. Mais alto = respostas mais variadas e criativas.
             </p>
+          </>
+        )}
+
+        <div style={{ marginTop: '20px' }}>
+          <LoadingButton loading={salvandoBot} onClick={salvarBotConfig} style={styles.btnCadastrar}>Salvar</LoadingButton>
+        </div>
+      </div>
+
+      <div style={{ ...styles.cardForm, marginTop: '20px' }}>
+        <h3 style={styles.tituloSecao}>Resumo diário para os profissionais</h3>
+        <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#6b7280' }}>
+          Todo dia, no horário definido abaixo, cada profissional ativo com telefone cadastrado (em Equipe) recebe uma
+          mensagem no WhatsApp com os próprios atendimentos do dia.
+        </p>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#374151', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={botConfig.resumoProfissionaisAtivo}
+            onChange={(e) => setBotConfig((c) => ({ ...c, resumoProfissionaisAtivo: e.target.checked }))}
+            style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+          />
+          Enviar resumo diário automaticamente
+        </label>
+
+        {botConfig.resumoProfissionaisAtivo && (
+          <>
+            <label style={{ ...styles.label, marginTop: '16px' }}>Horário de envio</label>
+            <input
+              type="time"
+              value={botConfig.resumoProfissionaisHorario}
+              onChange={(e) => setBotConfig((c) => ({ ...c, resumoProfissionaisHorario: e.target.value }))}
+              style={{ ...styles.inputTexto, maxWidth: '160px' }}
+            />
+            <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#9ca3af' }}>Horário de Brasília.</p>
           </>
         )}
 

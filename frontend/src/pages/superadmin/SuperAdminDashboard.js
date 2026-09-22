@@ -111,6 +111,7 @@ const ABAS = [
   { valor: 'antifraude', label: 'Antifraude', icon: 'Shield' },
   { valor: 'chaves', label: 'Chaves de Ativação', icon: 'Key' },
   { valor: 'leads', label: 'Leads Enterprise', icon: 'Mail' },
+  { valor: 'suporte', label: 'Suporte', icon: 'MessageCircle' },
   { valor: 'superadmins', label: 'Super Admins', icon: 'Shield' }
 ];
 
@@ -164,6 +165,7 @@ function SuperAdminDashboard() {
         {aba === 'antifraude' && <AbaAntifraude toast={toast} confirmar={confirmar} />}
         {aba === 'chaves' && <AbaChaves toast={toast} confirmar={confirmar} />}
         {aba === 'leads' && <AbaLeads toast={toast} confirmar={confirmar} />}
+        {aba === 'suporte' && <AbaSuporte toast={toast} confirmar={confirmar} />}
         {aba === 'superadmins' && <AbaSuperAdmins toast={toast} confirmar={confirmar} />}
       </div>
     </div>
@@ -2638,6 +2640,192 @@ function AbaLeads({ toast, confirmar }) {
   );
 }
 
+const STATUS_SUPORTE_INFO = {
+  aguardando_humano: { label: 'Aguardando resposta', bg: '#fef3c7', fg: '#92400e' },
+  resolvido: { label: 'Resolvido', bg: '#f3f4f6', fg: '#6b7280' }
+};
+
+// Módulo de suporte (Admin -> Suporte, ver backend/src/routes/suporte.js e superAdminSuporte.js).
+// Lista conversas que a empresa escalou pra um humano; a IA responde sozinha enquanto o admin da
+// empresa não clica em "Falar com o time", então conversas ainda só com a IA nem aparecem aqui.
+function AbaSuporte({ toast, confirmar }) {
+  const [conversas, setConversas] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [conversaAberta, setConversaAberta] = useState(null); // { id } — abre o modal
+
+  const carregarConversas = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/super-admin/suporte`);
+      const data = await res.json();
+      setConversas(Array.isArray(data) ? data : []);
+    } catch (err) {
+      toast.error('Erro ao carregar conversas de suporte.');
+    } finally {
+      setCarregando(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { carregarConversas(); }, [carregarConversas]);
+
+  // Poll leve só enquanto não tem modal aberto — pra lista de "aguardando resposta" não ficar
+  // desatualizada se outra pessoa do time já respondeu por outra aba/sessão.
+  useEffect(() => {
+    if (conversaAberta) return;
+    const intervalo = setInterval(carregarConversas, 20000);
+    return () => clearInterval(intervalo);
+  }, [conversaAberta, carregarConversas]);
+
+  if (carregando) return <p style={s.textoCarregando}>Carregando...</p>;
+  if (conversas.length === 0) return <p style={s.textoVazio}>Nenhuma conversa de suporte escalada até agora.</p>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {conversas.map((c) => {
+        const status = STATUS_SUPORTE_INFO[c.status] || { label: c.status, bg: '#f3f4f6', fg: '#6b7280' };
+        return (
+          <div key={c.id} style={s.card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <strong style={{ fontSize: '15px', color: '#111827' }}>{c.nome_empresa}</strong>
+                <div style={s.subTexto}>Atualizado em {formatarData(c.atualizado_em)}</div>
+              </div>
+              <span style={{ ...s.badge, background: status.bg, color: status.fg }}>{status.label}</span>
+            </div>
+            <div style={{ marginTop: '14px' }}>
+              <button onClick={() => setConversaAberta({ id: c.id })} style={s.btnPrimario}>Abrir conversa</button>
+            </div>
+          </div>
+        );
+      })}
+
+      {conversaAberta && (
+        <ModalConversaSuporte
+          conversaId={conversaAberta.id}
+          onFechar={() => setConversaAberta(null)}
+          onResolvido={() => { setConversaAberta(null); carregarConversas(); }}
+          toast={toast}
+          confirmar={confirmar}
+        />
+      )}
+    </div>
+  );
+}
+
+function ModalConversaSuporte({ conversaId, onFechar, onResolvido, toast, confirmar }) {
+  const [conversa, setConversa] = useState(null);
+  const [mensagens, setMensagens] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [texto, setTexto] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [resolvendo, setResolvendo] = useState(false);
+
+  const carregar = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/super-admin/suporte/${conversaId}`);
+      const data = await res.json();
+      if (res.ok) { setConversa(data.conversa); setMensagens(data.mensagens); }
+    } catch (err) {
+      toast.error('Erro ao carregar a conversa.');
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    } finally {
+      setCarregando(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversaId]);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const enviar = async (e) => {
+    e.preventDefault();
+    const msg = texto.trim();
+    if (!msg || enviando) return;
+
+    setEnviando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/suporte/${conversaId}/mensagem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texto: msg })
+      });
+      if (res.ok) { setTexto(''); carregar(); }
+      else toast.error('Não foi possível enviar a mensagem.');
+    } catch (err) {
+      toast.error('Erro de conexão. Tente novamente.');
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const resolver = async () => {
+    const ok = await confirmar('Marcar esta conversa como resolvida?', { confirmText: 'Marcar como resolvida' });
+    if (!ok) return;
+
+    setResolvendo(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/suporte/${conversaId}/resolver`, { method: 'POST' });
+      if (res.ok) { toast.success('Conversa resolvida.'); onResolvido(); }
+      else toast.error('Não foi possível resolver agora.');
+    } catch (err) {
+      toast.error('Erro de conexão. Tente novamente.');
+    } finally {
+      setResolvendo(false);
+    }
+  };
+
+  return (
+    <div style={s.overlay} onClick={onFechar}>
+      <div style={{ ...s.modal, maxWidth: '560px', display: 'flex', flexDirection: 'column', height: '620px' }} onClick={(ev) => ev.stopPropagation()}>
+        <div style={s.modalHeader}>
+          <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{conversa?.nome_empresa || 'Conversa'}</h3>
+          <button onClick={onFechar} style={s.btnFechar}><Icons.Close /></button>
+        </div>
+
+        {carregando ? (
+          <p style={s.textoCarregando}>Carregando...</p>
+        ) : (
+          <>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', padding: '4px 2px' }}>
+              {mensagens.map((m) => (
+                <div key={m.id} style={{ display: 'flex', justifyContent: m.remetente === 'super_admin' ? 'flex-end' : 'flex-start' }}>
+                  <div style={{
+                    maxWidth: '80%', padding: '10px 14px', borderRadius: '14px', fontSize: '13.5px', lineHeight: '1.5', whiteSpace: 'pre-wrap',
+                    ...(m.remetente === 'super_admin'
+                      ? { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', borderBottomRightRadius: '2px' }
+                      : { backgroundColor: m.remetente === 'ia' ? '#f3f4f6' : '#eef2ff', color: '#111827', borderBottomLeftRadius: '2px' })
+                  }}>
+                    {m.remetente === 'empresa' && <div style={{ fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', opacity: 0.6, marginBottom: '4px' }}>Empresa</div>}
+                    {m.remetente === 'ia' && <div style={{ fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', opacity: 0.6, marginBottom: '4px' }}>IA</div>}
+                    {m.texto}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={enviar} style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+              <input
+                type="text"
+                placeholder="Responder..."
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                style={{ ...s.input, flex: 1 }}
+                disabled={enviando}
+              />
+              <button type="submit" disabled={enviando} style={s.btnPrimario}>Enviar</button>
+            </form>
+
+            {conversa?.status !== 'resolvido' && (
+              <button onClick={resolver} disabled={resolvendo} style={{ ...s.btnOutline, marginTop: '10px', alignSelf: 'flex-start' }}>
+                Marcar como resolvida
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Gestão dos donos da plataforma (tabela `super_admins`, ver backend/src/routes/superAdmin.js).
 // Só existe quem já é super admin pra criar outro, e só com e-mail @schednext.com.br — o
 // backend valida isso de novo (nunca confiar só na validação do front).
@@ -2945,7 +3133,8 @@ const Icons = {
   Close: ({ color = '#9ca3af', size = 18 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
   Lock: ({ color = 'currentColor' }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
   DollarSign: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>,
-  Wallet: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5h-4a2 2 0 0 1 0-4h4z"></path></svg>
+  Wallet: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5h-4a2 2 0 0 1 0-4h4z"></path></svg>,
+  MessageCircle: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
 };
 
 const s = {

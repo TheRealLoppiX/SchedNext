@@ -26,7 +26,8 @@ const INDICE = [
       { id: 'pagamentos', titulo: 'Pagamentos e Pix' },
       { id: 'relatorios', titulo: 'Relatórios' },
       { id: 'acoes-fidelidade', titulo: 'Ações e fidelidade' },
-      { id: 'ia-painel', titulo: 'IA no painel administrativo' }
+      { id: 'ia-painel', titulo: 'IA no painel administrativo' },
+      { id: 'suporte', titulo: 'Suporte' }
     ]
   },
   {
@@ -36,6 +37,7 @@ const INDICE = [
       { id: 'whatsapp-guiado', titulo: 'Modo guiado' },
       { id: 'whatsapp-livre', titulo: 'Modo livre (agente de IA)' },
       { id: 'whatsapp-personalidade', titulo: 'Personalidade do assistente' },
+      { id: 'whatsapp-resumo-profissionais', titulo: 'Resumo diário para profissionais' },
       { id: 'whatsapp-pix', titulo: 'Pagamento via bot' }
     ]
   },
@@ -317,6 +319,13 @@ function Docs() {
             <p>Em todos os casos, a IA só gera um rascunho de texto a partir de dados reais já existentes no sistema — o admin sempre revisa (e pode editar) antes de qualquer coisa ser usada ou enviada.</p>
           </section>
 
+          {/* ===================== SUPORTE ===================== */}
+          <section id="suporte" className="doc-secao">
+            <h2>Suporte <Badge tipo="pro" /></h2>
+            <p className="doc-intro">Em <em>Admin → Suporte</em>, negócios nos planos Profissional e Enterprise têm um chat com IA treinada no próprio SchedNext pra tirar dúvidas de uso na hora. Se a resposta automática não resolver, um clique em "Falar com o time" encaminha a conversa direto pro time da SchedNext, que responde ali mesmo, sem precisar abrir outro canal.</p>
+            <p>Nos demais planos (Grátis e Essencial), o suporte continua disponível por e-mail, mostrado na mesma tela.</p>
+          </section>
+
           {/* ===================== WHATSAPP: CONECTAR ===================== */}
           <section id="whatsapp-conectar" className="doc-secao">
             <span className="doc-secao-eyebrow">Bot de WhatsApp</span>
@@ -349,6 +358,7 @@ function Docs() {
               <li>Se não tem, o bot conduz um <strong>cadastro completo</strong>: nome, e-mail e senha, com confirmação por um código de 6 dígitos enviado por e-mail. A mesma conta pode depois ser usada pra entrar no site do negócio.</li>
             </ol>
             <p>Mesmo no modo guiado, o cliente não precisa ficar preso ao número do menu: escrever algo como "quero cortar amanhã de tarde" ou "quero ver meus agendamentos" já direciona pro fluxo certo, usando um classificador de intenção leve por IA (quando o plano libera IA). O menu continua existindo como alternativa sempre disponível (digitando <em>MENU</em>).</p>
+            <p>Toda vez que o menu aparece (e na confirmação de um agendamento), o bot também manda o link da página do negócio pra quem prefere terminar pelo navegador. Se o telefone já tem cadastro, esse link já abre com o cliente logado na própria conta — sem pedir e-mail e senha de novo — por um tempo curto, só o suficiente pra usar.</p>
           </section>
 
           {/* ===================== WHATSAPP: MODO LIVRE (IA) ===================== */}
@@ -395,6 +405,13 @@ function Docs() {
               </div>
             </div>
             <p>No modo guiado, a personalidade entra só nas frases de conversa (saudação, confirmações, mensagens de erro). Nunca nas listas numeradas de opções, que continuam idênticas sempre, pra não arriscar confundir o número que o cliente vai responder em seguida.</p>
+          </section>
+
+          {/* ===================== WHATSAPP: RESUMO DIÁRIO ===================== */}
+          <section id="whatsapp-resumo-profissionais" className="doc-secao">
+            <h2>Resumo diário para os profissionais <Badge tipo="pro" /></h2>
+            <p className="doc-intro">Além de atender clientes, o mesmo WhatsApp conectado pode avisar a própria equipe. Em <em>Admin → WhatsApp</em>, o negócio liga o resumo diário e escolhe um horário (Brasília) — todo dia, nesse horário, cada profissional ativo com telefone cadastrado (em <em>Equipe</em>) recebe uma mensagem só com os próprios atendimentos daquele dia, ou avisando que o dia está livre.</p>
+            <p>É opcional e independente do modo do bot (guiado ou livre) e da personalidade configurada — é sempre um texto fixo, sem uso de IA. Um profissional sem telefone cadastrado simplesmente não recebe nada, sem travar o envio dos demais.</p>
           </section>
 
           {/* ===================== WHATSAPP: PIX ===================== */}

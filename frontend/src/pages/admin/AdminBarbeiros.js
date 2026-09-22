@@ -15,6 +15,7 @@ function AdminBarbeiros({ empresaId }) {
     const [carregando, setCarregando] = useState(true);
 
     const [novoNome, setNovoNome] = useState('');
+    const [novoTelefone, setNovoTelefone] = useState('');
     const [novaFoto, setNovaFoto] = useState('');
     const [cadastrando, setCadastrando] = useState(false);
     const [salvando, setSalvando] = useState(false);
@@ -143,11 +144,11 @@ function AdminBarbeiros({ empresaId }) {
             const res = await fetch(`${API_URL}/admin/barbeiro`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nome: novoNome, empresa_id: idEfetivo, foto_url: novaFoto, unidade_id: novaUnidadeId || null })
+                body: JSON.stringify({ nome: novoNome, telefone: novoTelefone || null, empresa_id: idEfetivo, foto_url: novaFoto, unidade_id: novaUnidadeId || null })
             });
 
             if (res.ok) {
-                setNovoNome(''); setNovaFoto(''); setNovaUnidadeId('');
+                setNovoNome(''); setNovoTelefone(''); setNovaFoto(''); setNovaUnidadeId('');
                 carregarEquipe();
                 toast.success("Profissional cadastrado com sucesso!");
             } else {
@@ -364,6 +365,16 @@ function AdminBarbeiros({ empresaId }) {
                         />
                     </div>
                     <div style={styles.inputGroup}>
+                        <label style={styles.label}>Telefone (WhatsApp)</label>
+                        <input
+                            type="tel"
+                            placeholder="Ex: 11987654321"
+                            value={novoTelefone}
+                            onChange={e => setNovoTelefone(e.target.value)}
+                            style={styles.input}
+                        />
+                    </div>
+                    <div style={styles.inputGroup}>
                         <label style={styles.label}>Foto do Profissional</label>
                         <input
                             type="file"
@@ -488,6 +499,14 @@ function AdminBarbeiros({ empresaId }) {
                                 </div>
                                 <label style={styles.label}>Nome do {termos.profissional}:</label>
                                 <input style={styles.inputModal} value={editando.nome} onChange={e => setEditando({...editando, nome: e.target.value})} />
+                                <label style={styles.label}>Telefone (WhatsApp):</label>
+                                <input
+                                    type="tel"
+                                    placeholder="Ex: 11987654321"
+                                    style={styles.inputModal}
+                                    value={editando.telefone || ''}
+                                    onChange={e => setEditando({...editando, telefone: e.target.value})}
+                                />
                                 <label style={styles.label}>Comissão (% sobre a receita líquida):</label>
                                 <input
                                     type="number" min="0" max="100" step="0.1"
