@@ -2688,7 +2688,10 @@ function AbaSuporte({ toast, confirmar }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
               <div>
                 <strong style={{ fontSize: '15px', color: '#111827' }}>{c.nome_empresa}</strong>
-                <div style={s.subTexto}>Atualizado em {formatarData(c.atualizado_em)}</div>
+                <div style={s.subTexto}>
+                  Atualizado em {formatarData(c.atualizado_em)}
+                  {c.atendido_por_nome && ` · Atendido por ${c.atendido_por_nome}`}
+                </div>
               </div>
               <span style={{ ...s.badge, background: status.bg, color: status.fg }}>{status.label}</span>
             </div>
@@ -2715,16 +2718,21 @@ function AbaSuporte({ toast, confirmar }) {
 function ModalConversaSuporte({ conversaId, onFechar, onResolvido, toast, confirmar }) {
   const [conversa, setConversa] = useState(null);
   const [mensagens, setMensagens] = useState([]);
+  const [voceMesmoId, setVoceMesmoId] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [resolvendo, setResolvendo] = useState(false);
+  const [aceitando, setAceitando] = useState(false);
+  const [repassando, setRepassando] = useState(false);
+  const [outrosAdmins, setOutrosAdmins] = useState([]);
+  const [destinoRepasse, setDestinoRepasse] = useState('');
 
   const carregar = useCallback(async () => {
     try {
       const res = await fetch(`${API_URL}/super-admin/suporte/${conversaId}`);
       const data = await res.json();
-      if (res.ok) { setConversa(data.conversa); setMensagens(data.mensagens); }
+      if (res.ok) { setConversa(data.conversa); setMensagens(data.mensagens); setVoceMesmoId(data.voceMesmoId); }
     } catch (err) {
       toast.error('Erro ao carregar a conversa.');
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2736,10 +2744,23 @@ function ModalConversaSuporte({ conversaId, onFechar, onResolvido, toast, confir
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  // Só carrega a lista de super admins quando precisa (pro seletor de "repassar") — não vale
+  // pagar essa chamada extra toda vez que o modal abre.
+  useEffect(() => {
+    fetch(`${API_URL}/super-admin/super-admins`).then((r) => r.json()).then((data) => {
+      setOutrosAdmins(Array.isArray(data) ? data.filter((a) => a.id !== voceMesmoId) : []);
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voceMesmoId]);
+
+  // Atendido por outro admin (não você) — só visualização, não dá pra responder até ser
+  // repassado (ver POST /super-admin/suporte/:id/mensagem, que também recusa server-side).
+  const bloqueadoPorOutro = conversa?.atendido_por_super_admin_id && conversa.atendido_por_super_admin_id !== voceMesmoId;
+
   const enviar = async (e) => {
     e.preventDefault();
     const msg = texto.trim();
-    if (!msg || enviando) return;
+    if (!msg || enviando || bloqueadoPorOutro) return;
 
     setEnviando(true);
     try {
@@ -2749,11 +2770,50 @@ function ModalConversaSuporte({ conversaId, onFechar, onResolvido, toast, confir
         body: JSON.stringify({ texto: msg })
       });
       if (res.ok) { setTexto(''); carregar(); }
-      else toast.error('Não foi possível enviar a mensagem.');
+      else {
+        const dados = await res.json().catch(() => ({}));
+        toast.error(dados.error || 'Não foi possível enviar a mensagem.');
+        if (res.status === 409 || res.status === 403) carregar(); // sincroniza quem está atendendo
+      }
     } catch (err) {
       toast.error('Erro de conexão. Tente novamente.');
     } finally {
       setEnviando(false);
+    }
+  };
+
+  const aceitar = async () => {
+    setAceitando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/suporte/${conversaId}/aceitar`, { method: 'POST' });
+      if (res.ok) { toast.success('Caso aceito — só você pode responder agora.'); carregar(); }
+      else {
+        const dados = await res.json().catch(() => ({}));
+        toast.error(dados.error || 'Não foi possível aceitar o caso.');
+        if (res.status === 409) carregar();
+      }
+    } catch (err) {
+      toast.error('Erro de conexão. Tente novamente.');
+    } finally {
+      setAceitando(false);
+    }
+  };
+
+  const repassar = async () => {
+    if (!destinoRepasse) return toast.error('Escolha pra quem repassar.');
+    setRepassando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/suporte/${conversaId}/repassar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ super_admin_id: destinoRepasse })
+      });
+      if (res.ok) { toast.success('Caso repassado.'); setDestinoRepasse(''); carregar(); }
+      else toast.error('Não foi possível repassar agora.');
+    } catch (err) {
+      toast.error('Erro de conexão. Tente novamente.');
+    } finally {
+      setRepassando(false);
     }
   };
 
@@ -2775,7 +2835,7 @@ function ModalConversaSuporte({ conversaId, onFechar, onResolvido, toast, confir
 
   return (
     <div style={s.overlay} onClick={onFechar}>
-      <div style={{ ...s.modal, maxWidth: '560px', display: 'flex', flexDirection: 'column', height: '620px' }} onClick={(ev) => ev.stopPropagation()}>
+      <div style={{ ...s.modal, maxWidth: '560px', display: 'flex', flexDirection: 'column', height: '660px' }} onClick={(ev) => ev.stopPropagation()}>
         <div style={s.modalHeader}>
           <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{conversa?.nome_empresa || 'Conversa'}</h3>
           <button onClick={onFechar} style={s.btnFechar}><Icons.Close /></button>
@@ -2785,6 +2845,19 @@ function ModalConversaSuporte({ conversaId, onFechar, onResolvido, toast, confir
           <p style={s.textoCarregando}>Carregando...</p>
         ) : (
           <>
+            {conversa?.status !== 'resolvido' && (
+              <div style={{
+                padding: '8px 12px', borderRadius: '8px', fontSize: '12.5px', marginBottom: '10px',
+                ...(bloqueadoPorOutro ? { background: '#fef2f2', color: '#991b1b' } : conversa?.atendido_por_super_admin_id ? { background: '#ecfdf5', color: '#065f46' } : { background: '#fef3c7', color: '#92400e' })
+              }}>
+                {bloqueadoPorOutro
+                  ? `Atendido por ${conversa.atendido_por_nome} — só ele(a) pode responder até repassar o caso.`
+                  : conversa?.atendido_por_super_admin_id
+                    ? 'Você está atendendo este caso.'
+                    : 'Ninguém aceitou este caso ainda — responder já reivindica pra você, ou aceite explicitamente abaixo.'}
+              </div>
+            )}
+
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', padding: '4px 2px' }}>
               {mensagens.map((m) => (
                 <div key={m.id} style={{ display: 'flex', justifyContent: m.remetente === 'super_admin' ? 'flex-end' : 'flex-start' }}>
@@ -2796,23 +2869,40 @@ function ModalConversaSuporte({ conversaId, onFechar, onResolvido, toast, confir
                   }}>
                     {m.remetente === 'empresa' && <div style={{ fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', opacity: 0.6, marginBottom: '4px' }}>Empresa</div>}
                     {m.remetente === 'ia' && <div style={{ fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', opacity: 0.6, marginBottom: '4px' }}>IA</div>}
+                    {m.remetente === 'super_admin' && <div style={{ fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', opacity: 0.75, marginBottom: '4px' }}>{m.nome_admin || 'Time SchedNext'}</div>}
                     {m.texto}
                   </div>
                 </div>
               ))}
             </div>
 
-            <form onSubmit={enviar} style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+            {conversa?.status !== 'resolvido' && !conversa?.atendido_por_super_admin_id && (
+              <button onClick={aceitar} disabled={aceitando} style={{ ...s.btnOutline, marginBottom: '10px', alignSelf: 'flex-start' }}>
+                Aceitar caso
+              </button>
+            )}
+
+            <form onSubmit={enviar} style={{ display: 'flex', gap: '8px' }}>
               <input
                 type="text"
-                placeholder="Responder..."
+                placeholder={bloqueadoPorOutro ? 'Peça pra repassar o caso antes de responder' : 'Responder...'}
                 value={texto}
                 onChange={(e) => setTexto(e.target.value)}
                 style={{ ...s.input, flex: 1 }}
-                disabled={enviando}
+                disabled={enviando || bloqueadoPorOutro || conversa?.status === 'resolvido'}
               />
-              <button type="submit" disabled={enviando} style={s.btnPrimario}>Enviar</button>
+              <button type="submit" disabled={enviando || bloqueadoPorOutro || conversa?.status === 'resolvido'} style={s.btnPrimario}>Enviar</button>
             </form>
+
+            {conversa?.status !== 'resolvido' && outrosAdmins.length > 0 && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                <select value={destinoRepasse} onChange={(e) => setDestinoRepasse(e.target.value)} style={{ ...s.input, flex: 1, fontSize: '13px' }}>
+                  <option value="">Repassar caso pra...</option>
+                  {outrosAdmins.map((a) => <option key={a.id} value={a.id}>{a.email}</option>)}
+                </select>
+                <button onClick={repassar} disabled={repassando || !destinoRepasse} style={s.btnOutline}>Repassar</button>
+              </div>
+            )}
 
             {conversa?.status !== 'resolvido' && (
               <button onClick={resolver} disabled={resolvendo} style={{ ...s.btnOutline, marginTop: '10px', alignSelf: 'flex-start' }}>
