@@ -8,6 +8,7 @@ import Landing from './pages/Landing';
 import Docs from './pages/Docs';
 import CadastroEmpresa from './pages/CadastroEmpresa';
 import Login from './pages/Login';
+import EntrarMagico from './pages/EntrarMagico';
 import Barbeiros from './pages/Barbeiros';
 import Agenda from './pages/Agenda';
 import Assinatura from './pages/Assinatura';
@@ -94,6 +95,7 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
         <>
           <Route path="/:empresaSlug" element={<Login />} />
           <Route path="/:empresaSlug/login" element={<Login />} />
+          <Route path="/:empresaSlug/entrar-magico" element={<EntrarMagico />} />
           <Route path="/:empresaSlug/cadastro" element={<Cadastro />} />
           <Route path="/:empresaSlug/recuperar-senha" element={<RecuperarSenha />} />
         </>

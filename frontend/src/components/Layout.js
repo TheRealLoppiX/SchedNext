@@ -358,8 +358,8 @@ function Layout({ setEmpresaId }) {
                       <Icons.CreditCard /> Mercado Pago
                     </button>
 
-                    <button 
-                       onClick={() => navigate('/admin/conta')} 
+                    <button
+                       onClick={() => navigate('/admin/conta')}
                        style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/conta') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
                     >
                        <Icons.Settings /> Perfil

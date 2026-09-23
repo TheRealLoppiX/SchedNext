@@ -317,7 +317,26 @@ code {
   box-shadow: 0 10px 24px rgba(229, 72, 77, 0.35);
 }
 
-/* ===================== Botão de ajuda + FAQ ===================== */
+/* ===================== Botão de ajuda + FAQ + suporte ===================== */
+
+@keyframes bb-help-pulse {
+  0%, 100% { box-shadow: 0 10px 24px rgba(37, 84, 235, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.12) inset, 0 0 0 0 rgba(76, 116, 240, 0.5); }
+  50% { box-shadow: 0 10px 24px rgba(37, 84, 235, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.12) inset, 0 0 0 10px rgba(76, 116, 240, 0); }
+}
+
+@keyframes bb-help-panel-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes bb-help-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-help-fab, .bb-help-box, .bb-help-bolha, .bb-help-item { animation: none !important; }
+}
 
 .bb-help-fab {
   position: fixed;
@@ -336,11 +355,13 @@ code {
   box-shadow: 0 10px 24px rgba(37, 84, 235, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
   z-index: 4000;
   transition: transform 0.15s, box-shadow 0.15s;
+  animation: bb-help-pulse 2.6s ease-in-out infinite;
 }
 
 .bb-help-fab:hover {
   transform: scale(1.06);
   box-shadow: 0 14px 30px rgba(37, 84, 235, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+  animation-play-state: paused;
 }
 
 .bb-help-fab:active {
@@ -360,6 +381,8 @@ code {
   box-shadow: 0 24px 60px rgba(20, 24, 43, 0.25);
   display: flex;
   flex-direction: column;
+  animation: bb-help-panel-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: bottom right;
 }
 
 .bb-help-header {
@@ -369,6 +392,51 @@ code {
   padding: 20px 24px;
   background: linear-gradient(135deg, #4c74f0, #2554eb);
   flex-shrink: 0;
+}
+
+.bb-help-secao-titulo {
+  margin: 18px 24px 4px;
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--bb-text-muted);
+}
+
+.bb-help-chat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 24px 20px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(76,116,240,0.08), rgba(37,84,235,0.05));
+  border: 1px solid rgba(76,116,240,0.18);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.15s, background 0.15s;
+  animation: bb-help-fade-in 0.3s ease-out both;
+}
+
+.bb-help-chat-card:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, rgba(76,116,240,0.14), rgba(37,84,235,0.08));
+}
+
+.bb-help-chat-icone {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4c74f0, #2554eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.bb-help-bolha {
+  animation: bb-help-fade-in 0.2s ease-out both;
 }
 
 .bb-help-header h3 {
