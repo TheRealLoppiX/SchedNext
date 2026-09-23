@@ -34,6 +34,8 @@ function AdminConta({ empresaId }) {
     const [enterpriseEnviado, setEnterpriseEnviado] = useState(false);
     const [codigoChave, setCodigoChave] = useState('');
     const [ativandoChave, setAtivandoChave] = useState(false);
+    const [formaPagamentoEscolhida, setFormaPagamentoEscolhida] = useState('cartao');
+    const [pixGerado, setPixGerado] = useState(null);
     const [slug, setSlug] = useState('');
     const [dominioCustomizado, setDominioCustomizado] = useState(null);
     const [dominioVerificado, setDominioVerificado] = useState(false);
@@ -123,17 +125,21 @@ function AdminConta({ empresaId }) {
     const trocarPlano = async () => {
         if (!planoEscolhidoId || planoEscolhidoId === assinatura?.plano?.id) return;
         setProcessandoAssinatura(true);
+        setPixGerado(null);
         try {
             const res = await fetch(`${API_URL}/admin/assinatura-plataforma/iniciar-upgrade`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plano_plataforma_id: planoEscolhidoId })
+                body: JSON.stringify({ plano_plataforma_id: planoEscolhidoId, forma_pagamento: formaPagamentoEscolhida })
             });
             const data = await res.json();
             if (res.ok) {
                 if (data.checkoutUrl) {
                     window.open(data.checkoutUrl, '_blank', 'noopener,noreferrer');
                     toast.success('Finalize a autorização na aba que abriu. Seu plano ativa automaticamente assim que for confirmado.');
+                } else if (data.qr_code) {
+                    setPixGerado(data);
+                    toast.success('Pix gerado! Pague abaixo para ativar o plano.');
                 } else {
                     toast.success(data.message || 'Plano atualizado!');
                 }
@@ -146,6 +152,13 @@ function AdminConta({ empresaId }) {
         } finally {
             setProcessandoAssinatura(false);
         }
+    };
+
+    const copiarPix = () => {
+        if (!pixGerado?.qr_code) return;
+        navigator.clipboard.writeText(pixGerado.qr_code)
+            .then(() => toast.success('Código Pix copiado!'))
+            .catch(() => toast.error('Não foi possível copiar o código.'));
     };
 
     const cancelarCobranca = async () => {
@@ -463,6 +476,30 @@ function AdminConta({ empresaId }) {
                                             </button>
                                         )}
                                     </div>
+
+                                    {!planoEscolhidoEhEnterprise && planoSelecionado?.preco_mensal > 0 && planoEscolhidoId !== assinatura.plano?.id && (
+                                        <div style={{ display: 'flex', gap: '14px', marginTop: '10px', fontSize: '13px', color: '#374151' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                                                <input type="radio" checked={formaPagamentoEscolhida === 'cartao'} onChange={() => setFormaPagamentoEscolhida('cartao')} />
+                                                Cartão (recorrente)
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                                                <input type="radio" checked={formaPagamentoEscolhida === 'pix'} onChange={() => setFormaPagamentoEscolhida('pix')} />
+                                                Pix
+                                            </label>
+                                        </div>
+                                    )}
+
+                                    {pixGerado && (
+                                        <div style={{ marginTop: '12px', padding: '14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', textAlign: 'center' }}>
+                                            {pixGerado.qr_code_base64 && (
+                                                <img src={`data:image/png;base64,${pixGerado.qr_code_base64}`} alt="QR Code Pix" style={{ width: '180px', height: '180px', margin: '0 auto 10px' }} />
+                                            )}
+                                            <button onClick={copiarPix} style={{ ...styles.btnTrocarPlano, width: '100%' }}>Copiar código Pix</button>
+                                            <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#6b7280' }}>O plano ativa automaticamente assim que o pagamento for confirmado.</p>
+                                        </div>
+                                    )}
+
                                     {planoEscolhidoEhEnterprise && planoEscolhidoId !== assinatura.plano?.id && (
                                         enterpriseEnviado ? (
                                             <p style={{ marginTop: '10px', fontSize: '13px', color: '#059669' }}>

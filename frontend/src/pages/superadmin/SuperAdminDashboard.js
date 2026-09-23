@@ -136,6 +136,7 @@ const GRUPOS_MENU = [
   ] },
   { titulo: 'Planos', itens: [
     { valor: 'planos', label: 'Planos', icon: 'Tag' },
+    { valor: 'campanhas', label: 'Campanhas Promocionais', icon: 'DollarSign' },
     { valor: 'testes', label: 'Testar Planos', icon: 'TrendingUp' },
     { valor: 'chaves', label: 'Chaves de Ativação', icon: 'Key' }
   ] },
@@ -213,6 +214,7 @@ function SuperAdminDashboard() {
           {aba === 'contas' && <AbaContas toast={toast} confirmar={confirmar} />}
           {aba === 'empresas' && <AbaEmpresas toast={toast} confirmar={confirmar} />}
           {aba === 'planos' && <AbaPlanos toast={toast} confirmar={confirmar} />}
+          {aba === 'campanhas' && <AbaCampanhas toast={toast} confirmar={confirmar} />}
           {aba === 'testes' && <AbaTestesPlano toast={toast} confirmar={confirmar} />}
           {aba === 'antifraude' && <AbaAntifraude toast={toast} confirmar={confirmar} />}
           {aba === 'chaves' && <AbaChaves toast={toast} confirmar={confirmar} />}
@@ -2466,6 +2468,239 @@ function AbaTestesPlano({ toast, confirmar }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Campanhas promocionais de preço escalonado por ciclo (ex: Black Friday: 1º mês R$9,99, 2º
+// R$19,99, demais no preço cheio) — ver backend/sql/2026_campanhas_precificacao.sql e
+// backend/src/services/precificacaoPlataforma.js pra onde o preço de cada ciclo é resolvido de
+// verdade (cadastro/upgrade novo, renovação de cartão via Mercado Pago, geração de cada cobrança
+// Pix). Aqui é só o CRUD: criar, editar, ligar/desligar (kill-switch, não apaga ninguém que já
+// entrou) e excluir.
+function AbaCampanhas({ toast, confirmar }) {
+  const [campanhas, setCampanhas] = useState([]);
+  const [planos, setPlanos] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [editando, setEditando] = useState(null);
+  const [salvando, setSalvando] = useState(false);
+  useEscToClose(!!editando, () => setEditando(null));
+
+  const carregar = useCallback(async () => {
+    setCarregando(true);
+    try {
+      const [resCampanhas, resPlanos] = await Promise.all([
+        fetch(`${API_URL}/super-admin/campanhas-precificacao`),
+        fetch(`${API_URL}/super-admin/planos`)
+      ]);
+      setCampanhas(await resCampanhas.json());
+      setPlanos(await resPlanos.json());
+    } catch (err) {
+      toast.error('Erro ao carregar campanhas.');
+    } finally {
+      setCarregando(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const abrirNova = () => setEditando({
+    plano_plataforma_id: planos.find((p) => p.preco_mensal > 0)?.id || '',
+    nome: '',
+    inicio: '',
+    fim: '',
+    precos_por_ciclo: [{ numero_ciclo: 1, valor: '' }]
+  });
+
+  const abrirEdicao = (c) => setEditando({
+    id: c.id,
+    plano_plataforma_id: c.plano_plataforma?.id || '',
+    nome: c.nome,
+    inicio: c.inicio.slice(0, 10),
+    fim: c.fim.slice(0, 10),
+    precos_por_ciclo: c.campanha_precos_ciclo.map((p) => ({ numero_ciclo: p.numero_ciclo, valor: p.valor }))
+  });
+
+  const atualizarCiclo = (idx, campo, valor) => {
+    setEditando((prev) => ({ ...prev, precos_por_ciclo: prev.precos_por_ciclo.map((p, i) => (i === idx ? { ...p, [campo]: valor } : p)) }));
+  };
+  const addCiclo = () => setEditando((prev) => ({ ...prev, precos_por_ciclo: [...prev.precos_por_ciclo, { numero_ciclo: prev.precos_por_ciclo.length + 1, valor: '' }] }));
+  const removerCiclo = (idx) => setEditando((prev) => ({ ...prev, precos_por_ciclo: prev.precos_por_ciclo.filter((_, i) => i !== idx) }));
+
+  const salvar = async () => {
+    if (!editando.nome.trim() || !editando.plano_plataforma_id || !editando.inicio || !editando.fim) {
+      return toast.error('Preencha nome, plano e o período da campanha.');
+    }
+    if (!editando.precos_por_ciclo.length || editando.precos_por_ciclo.some((p) => p.valor === '' || p.numero_ciclo === '')) {
+      return toast.error('Preencha o número e o valor de cada ciclo.');
+    }
+
+    setSalvando(true);
+    try {
+      const url = editando.id
+        ? `${API_URL}/super-admin/campanhas-precificacao/${editando.id}`
+        : `${API_URL}/super-admin/campanhas-precificacao`;
+      const res = await fetch(url, {
+        method: editando.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plano_plataforma_id: editando.plano_plataforma_id,
+          nome: editando.nome,
+          inicio: editando.inicio,
+          fim: editando.fim,
+          precos_por_ciclo: editando.precos_por_ciclo.map((p) => ({ numero_ciclo: Number(p.numero_ciclo), valor: Number(p.valor) }))
+        })
+      });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); setEditando(null); carregar(); }
+      else toast.error(data.error || 'Não foi possível salvar a campanha.');
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const alternarAtiva = async (c) => {
+    const ok = await confirmar(`${c.ativa ? 'Desativar' : 'Ativar'} a campanha "${c.nome}"?`, {
+      detail: c.ativa
+        ? 'Quem já entrou nela cai no preço cheio a partir do próximo ciclo. Novos cadastros deixam de ver essa promoção.'
+        : 'Volta a valer pra novos cadastros/upgrades dentro da janela de datas já definida.',
+      confirmText: c.ativa ? 'Desativar' : 'Ativar',
+      danger: c.ativa
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/campanhas-precificacao/${c.id}/ativa`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ativa: !c.ativa })
+      });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregar(); } else toast.error(data.error || 'Não foi possível atualizar.');
+    } catch (err) { toast.error('Erro de conexão.'); }
+  };
+
+  const excluir = async (c) => {
+    const ok = await confirmar(`Excluir a campanha "${c.nome}"?`, {
+      detail: 'Empresas que já entraram nela caem no preço cheio a partir do próximo ciclo. Isso não afeta nenhuma cobrança já paga.',
+      confirmText: 'Excluir',
+      danger: true
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/campanhas-precificacao/${c.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregar(); } else toast.error(data.error || 'Não foi possível excluir.');
+    } catch (err) { toast.error('Erro de conexão.'); }
+  };
+
+  return (
+    <div>
+      <div style={{ ...s.barraTop, justifyContent: 'flex-end' }}>
+        <button onClick={abrirNova} style={s.btnPrimario}>+ Nova campanha</button>
+      </div>
+
+      {carregando ? <p style={s.textoCarregando}>Carregando...</p> : campanhas.length === 0 ? (
+        <p style={s.textoVazio}>Nenhuma campanha criada ainda.</p>
+      ) : (
+        <div style={s.cardTabela}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={s.table}>
+              <thead>
+                <tr>
+                  {['Campanha', 'Plano', 'Período', 'Preços por ciclo', 'Status', 'Ações'].map((h) => (
+                    <th key={h} style={{ ...s.th, ...(h === 'Ações' ? { textAlign: 'right' } : {}) }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {campanhas.map((c) => {
+                  const expirada = new Date(c.fim) < new Date();
+                  return (
+                    <tr key={c.id} style={s.tr}>
+                      <td style={s.td}><strong style={{ color: '#111827' }}>{c.nome}</strong></td>
+                      <td style={s.td}>{c.plano_plataforma?.nome || '-'}</td>
+                      <td style={s.td}>{formatarData(c.inicio)} - {formatarData(c.fim)}</td>
+                      <td style={s.td}>{c.campanha_precos_ciclo.map((p) => `${p.numero_ciclo}º: ${formatarPreco(p.valor)}`).join(' · ')}, demais: cheio</td>
+                      <td style={s.td}>
+                        <span style={{ ...s.badge, background: c.ativa && !expirada ? '#d1fae5' : '#f3f4f6', color: c.ativa && !expirada ? '#065f46' : '#6b7280' }}>
+                          {!c.ativa ? 'Desativada' : expirada ? 'Expirada' : 'Ativa'}
+                        </span>
+                      </td>
+                      <td style={{ ...s.td, textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                          <button onClick={() => abrirEdicao(c)} style={s.btnOutline}>Editar</button>
+                          <button onClick={() => alternarAtiva(c)} style={{ ...s.btnOutline, ...(c.ativa ? s.btnOutlineVermelho : s.btnOutlineVerde) }}>
+                            {c.ativa ? 'Desativar' : 'Ativar'}
+                          </button>
+                          <button onClick={() => excluir(c)} style={{ ...s.btnOutline, ...s.btnOutlineVermelho }}>Excluir</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {editando && (
+        <div style={s.overlay} onClick={() => setEditando(null)}>
+          <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
+            <div style={s.modalHeader}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{editando.id ? 'Editar campanha' : 'Nova campanha'}</h3>
+              <button onClick={() => setEditando(null)} style={s.btnFechar}><Icons.Close /></button>
+            </div>
+
+            <label style={s.label}>Nome da campanha</label>
+            <input style={s.input} value={editando.nome} onChange={(e) => setEditando({ ...editando, nome: e.target.value })} placeholder="Ex: Black Friday 2026" />
+
+            <label style={s.label}>Plano</label>
+            <select style={s.input} value={editando.plano_plataforma_id} onChange={(e) => setEditando({ ...editando, plano_plataforma_id: e.target.value })}>
+              {planos.filter((p) => p.preco_mensal > 0).map((p) => <option key={p.id} value={p.id}>{p.nome} · {formatarPreco(p.preco_mensal)}</option>)}
+            </select>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={s.label}>Início</label>
+                <input type="date" style={s.input} value={editando.inicio} onChange={(e) => setEditando({ ...editando, inicio: e.target.value })} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={s.label}>Fim</label>
+                <input type="date" style={s.input} value={editando.fim} onChange={(e) => setEditando({ ...editando, fim: e.target.value })} />
+              </div>
+            </div>
+
+            <label style={s.label}>Preço por ciclo</label>
+            {editando.precos_por_ciclo.map((p, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+                <input
+                  type="number" min="1" style={{ ...s.input, width: '70px' }} value={p.numero_ciclo}
+                  onChange={(e) => atualizarCiclo(idx, 'numero_ciclo', e.target.value)} title="Número do ciclo"
+                />
+                <span style={{ fontSize: '12px', color: '#9ca3af', whiteSpace: 'nowrap' }}>º ciclo →</span>
+                <input
+                  type="number" min="0" step="0.01" style={{ ...s.input, flex: 1 }} value={p.valor}
+                  onChange={(e) => atualizarCiclo(idx, 'valor', e.target.value)} placeholder="Valor (R$)"
+                />
+                {editando.precos_por_ciclo.length > 1 && (
+                  <button onClick={() => removerCiclo(idx)} style={s.btnLink}>Remover</button>
+                )}
+              </div>
+            ))}
+            <button onClick={addCiclo} style={s.btnLink}>+ Adicionar ciclo</button>
+            <p style={{ ...s.subTexto, marginTop: '6px' }}>Ciclos além do último definido aqui cobram o preço cheio do plano automaticamente.</p>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button onClick={() => setEditando(null)} style={{ ...s.btnOutline, flex: 1 }}>Cancelar</button>
+              <LoadingButton loading={salvando} onClick={salvar} style={{ ...s.btnPrimario, flex: 2 }}>Salvar</LoadingButton>
+            </div>
+          </div>
         </div>
       )}
     </div>
