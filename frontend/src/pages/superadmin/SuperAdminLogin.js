@@ -5,8 +5,8 @@ import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
 
 // Login do dono da plataforma — totalmente separado do login de admin de empresa (ver
-// backend/src/middleware/superAdminAuth.js). Não tem cadastro nem recuperação de senha: é uma
-// conta única configurada via variável de ambiente.
+// backend/src/middleware/superAdminAuth.js). Tem recuperação de senha, mas não cadastro: um
+// super admin novo só é criado por quem já é super admin (ver backend/src/routes/superAdmin.js).
 function SuperAdminLogin() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -61,6 +61,10 @@ function SuperAdminLogin() {
           required
         />
         <LoadingButton type="submit" loading={entrando} className="bb-btn">Entrar</LoadingButton>
+
+        <p className="bb-link" style={{ marginTop: '15px' }} onClick={() => navigate('/admin-absoluto/recuperar-senha')}>
+          Esqueci minha senha
+        </p>
       </form>
     </div>
   );

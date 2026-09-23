@@ -44,6 +44,7 @@ import AdminMercadoPago from './pages/admin/AdminMercadoPago';
 // Admin absoluto (dono da plataforma) — fora da árvore de tenant, ver
 // src/utils/tenantSubdominio.js (rotaIndependeDeTenant).
 import SuperAdminLogin from './pages/superadmin/SuperAdminLogin';
+import RecuperarSenhaSuperAdmin from './pages/superadmin/RecuperarSenhaSuperAdmin';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 
 // Base compartilhada de UX (toast, confirmação e ajuda), ver auditoria de heurísticas
@@ -111,6 +112,7 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
 
       {/* ================= ADMIN ABSOLUTO (dono da plataforma, fora do tenant) ================= */}
       <Route path="/admin-absoluto/login" element={<SuperAdminLogin />} />
+      <Route path="/admin-absoluto/recuperar-senha" element={<RecuperarSenhaSuperAdmin />} />
       <Route
         path="/admin-absoluto/dashboard"
         element={localStorage.getItem('superAdminToken') ? <SuperAdminDashboard /> : <Navigate to="/admin-absoluto/login" />}
