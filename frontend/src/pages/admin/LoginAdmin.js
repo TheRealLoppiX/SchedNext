@@ -65,6 +65,17 @@ function LoginAdmin({ setEmpresaLogada }) {
           required
         />
         <LoadingButton type="submit" loading={entrando} className="bb-btn">Acessar Dashboard</LoadingButton>
+
+        <p className="bb-link" style={{ marginTop: '15px' }} onClick={() => navigate('/admin/recuperar-senha')}>
+          Esqueci minha senha
+        </p>
+
+        <p className="bb-text-muted" style={{ marginTop: '18px' }}>
+          Não tem uma conta?{' '}
+          <span className="bb-link" onClick={() => navigate('/cadastrar')}>
+            Cadastre sua empresa aqui
+          </span>
+        </p>
       </form>
     </div>
   );

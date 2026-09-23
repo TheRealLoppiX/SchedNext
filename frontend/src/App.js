@@ -25,6 +25,7 @@ import Layout from './components/Layout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminBarbeiros from './pages/admin/AdminBarbeiros';
 import LoginAdmin from './pages/admin/LoginAdmin';
+import RecuperarSenhaAdmin from './pages/admin/RecuperarSenhaAdmin';
 import GestaoServicos from './pages/admin/GestaoServicos';
 import AdminAgendamentos from './pages/admin/AdminAgendamentos';
 import AdminEstoque from './pages/admin/AdminEstoque';
@@ -104,6 +105,7 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
           empresaId ? <Navigate to="/admin/dashboard" /> : <LoginAdmin setEmpresaLogada={setEmpresaId} />
         }
       />
+      <Route path="/admin/recuperar-senha" element={<RecuperarSenhaAdmin />} />
 
       {/* ================= ADMIN ABSOLUTO (dono da plataforma, fora do tenant) ================= */}
       <Route path="/admin-absoluto/login" element={<SuperAdminLogin />} />
