@@ -43,7 +43,7 @@ const VERTICAL_LABELS = {
   barbearia: 'Barbearia',
   salao: 'Salão de beleza',
   estudio_unhas: 'Estúdio de Unhas',
-  generico: 'Estabelecimento'
+  generico: 'Estabelecimento/Outro'
 };
 const VERTICAL_OPCOES = Object.entries(VERTICAL_LABELS);
 

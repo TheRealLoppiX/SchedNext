@@ -26,7 +26,7 @@ const TERMINOLOGIA = {
   },
   generico: {
     profissional: 'Profissional', profissionalPlural: 'Profissionais',
-    local: 'Estabelecimento', artigo: 'o', artigoContraido: 'do',
+    local: 'Estabelecimento/Outro', artigo: 'o', artigoContraido: 'do',
     exemploNome: 'Meu Negócio'
   }
 };
