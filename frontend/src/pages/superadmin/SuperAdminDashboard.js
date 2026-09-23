@@ -1822,6 +1822,7 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
   const [carregando, setCarregando] = useState(true);
   const [editandoPlano, setEditandoPlano] = useState(false);
   const [novoPlanoId, setNovoPlanoId] = useState('');
+  const [gerarCobranca, setGerarCobranca] = useState(true);
   const [salvandoPlano, setSalvandoPlano] = useState(false);
   const [editandoVencimento, setEditandoVencimento] = useState(false);
   const [novoVencimento, setNovoVencimento] = useState('');
@@ -1856,8 +1857,11 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
     const planoEscolhido = planos.find((p) => String(p.id) === String(novoPlanoId));
     if (!planoEscolhido || String(novoPlanoId) === String(empresa.plano_plataforma_id)) { setEditandoPlano(false); return; }
 
+    const cobraraDeVerdade = gerarCobranca && Number(planoEscolhido.preco_mensal) > 0;
     const ok = await confirmar(`Trocar o plano de "${empresa.nome}" para ${planoEscolhido.nome}?`, {
-      detail: 'Se havia uma cobrança recorrente ativa no Mercado Pago, ela é cancelada nessa troca. A empresa passa a valer o novo plano imediatamente.',
+      detail: cobraraDeVerdade
+        ? `Se havia uma cobrança recorrente ativa no Mercado Pago, ela é cancelada nessa troca. A empresa passa a valer o novo plano imediatamente, e uma cobrança de ${formatarPreco(planoEscolhido.preco_mensal)} é lançada em Contas a Receber.`
+        : 'Se havia uma cobrança recorrente ativa no Mercado Pago, ela é cancelada nessa troca. A empresa passa a valer o novo plano imediatamente, sem lançar nenhuma cobrança (cortesia).',
       confirmText: 'Trocar plano'
     });
     if (!ok) return;
@@ -1867,7 +1871,7 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
       const res = await fetch(`${API_URL}/super-admin/empresas/${id}/plano`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plano_plataforma_id: novoPlanoId })
+        body: JSON.stringify({ plano_plataforma_id: novoPlanoId, gerar_cobranca: gerarCobranca })
       });
       const data = await res.json();
       if (res.ok) {
@@ -2011,16 +2015,24 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '14px', color: '#111827' }}>{empresa.plano_plataforma?.nome || '-'} · {formatarPreco(empresa.plano_plataforma?.preco_mensal)}</span>
                     {!empresa.excluida_em && (
-                      <button onClick={() => { setNovoPlanoId(String(empresa.plano_plataforma_id || '')); setEditandoPlano(true); }} style={s.btnLink}>Trocar</button>
+                      <button onClick={() => { setNovoPlanoId(String(empresa.plano_plataforma_id || '')); setGerarCobranca(true); setEditandoPlano(true); }} style={s.btnLink}>Trocar</button>
                     )}
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <select style={s.selectFiltro} value={novoPlanoId} onChange={(e) => setNovoPlanoId(e.target.value)}>
-                      {planos.map((p) => <option key={p.id} value={p.id}>{p.nome} · {formatarPreco(p.preco_mensal)}</option>)}
-                    </select>
-                    <LoadingButton loading={salvandoPlano} onClick={salvarPlano} style={s.btnPrimario}>Salvar</LoadingButton>
-                    <button onClick={() => setEditandoPlano(false)} style={s.btnOutline}>Cancelar</button>
+                  <div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <select style={s.selectFiltro} value={novoPlanoId} onChange={(e) => setNovoPlanoId(e.target.value)}>
+                        {planos.map((p) => <option key={p.id} value={p.id}>{p.nome} · {formatarPreco(p.preco_mensal)}</option>)}
+                      </select>
+                      <LoadingButton loading={salvandoPlano} onClick={salvarPlano} style={s.btnPrimario}>Salvar</LoadingButton>
+                      <button onClick={() => setEditandoPlano(false)} style={s.btnOutline}>Cancelar</button>
+                    </div>
+                    {Number(planos.find((p) => String(p.id) === String(novoPlanoId))?.preco_mensal) > 0 && (
+                      <label style={{ ...s.checkboxLinha, marginTop: '8px' }}>
+                        <input type="checkbox" checked={gerarCobranca} onChange={(e) => setGerarCobranca(e.target.checked)} />
+                        Lançar cobrança em Contas a Receber (desmarque só pra cortesia)
+                      </label>
+                    )}
                   </div>
                 )}
               </div>
