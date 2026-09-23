@@ -1668,7 +1668,7 @@ function AbaEmpresas({ toast, confirmar }) {
   const alternarSuspensao = async (empresa) => {
     const suspender = empresa.status_assinatura !== 'suspensa';
     const ok = await confirmar(`${suspender ? 'Suspender' : 'Reativar'} a empresa "${empresa.nome}"?`, {
-      detail: suspender ? 'O login do admin dessa empresa fica bloqueado imediatamente.' : 'O login volta a funcionar normalmente.',
+      detail: suspender ? 'O login do admin dessa empresa fica bloqueado e qualquer cobrança recorrente ativa é cancelada imediatamente.' : 'O login volta a funcionar normalmente. Se ela tinha cobrança recorrente, precisa ser reconfigurada.',
       confirmText: suspender ? 'Suspender' : 'Reativar',
       danger: suspender
     });
