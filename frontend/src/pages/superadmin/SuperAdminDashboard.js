@@ -36,12 +36,14 @@ function infoStatusEmpresa(empresa) {
 }
 
 // Mesmo enum de backend/src/schemas/index.js (verticalEnum) — rótulo legível pro select de troca
-// de tipo de negócio no detalhe da empresa.
+// de tipo de negócio no detalhe da empresa. Mesmas palavras do seletor de vertical no cadastro
+// self-service (ver utils/terminologia.js, usado em pages/CadastroEmpresa.js), pra não ter dois
+// nomes diferentes pro mesmo tipo de negócio dependendo de qual painel você está.
 const VERTICAL_LABELS = {
   barbearia: 'Barbearia',
   salao: 'Salão de beleza',
-  estudio_unhas: 'Estúdio de unhas',
-  generico: 'Genérico / outro'
+  estudio_unhas: 'Estúdio de Unhas',
+  generico: 'Estabelecimento'
 };
 const VERTICAL_OPCOES = Object.entries(VERTICAL_LABELS);
 

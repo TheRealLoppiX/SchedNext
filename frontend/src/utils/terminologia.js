@@ -18,7 +18,10 @@ const TERMINOLOGIA = {
   },
   estudio_unhas: {
     profissional: 'Nail Designer', profissionalPlural: 'Nail Designers',
-    local: 'Estúdio', artigo: 'o', artigoContraido: 'do',
+    // "Estúdio" sozinho é ambíguo (tatuagem, foto, gravação...) — em todo lugar que usa
+    // termos.local (título de página, seletor de vertical no cadastro, etc.) precisa deixar
+    // claro que é de unhas.
+    local: 'Estúdio de Unhas', artigo: 'o', artigoContraido: 'do',
     exemploNome: 'Nail Studio da Ana'
   },
   generico: {
