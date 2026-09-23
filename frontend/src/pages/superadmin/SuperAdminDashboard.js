@@ -17,6 +17,11 @@ const STATUS_LEAD_INFO = {
 // sql/2026_status_assinatura_suspensa.sql pros valores válidos), não confundir com o
 // status_assinatura de cliente final da própria barbearia (ver AdminClientes.js).
 function infoStatusEmpresa(empresa) {
+  // excluida_em é uma coluna separada de status_assinatura (soft delete, ver
+  // sql/2026_empresas_exclusao.sql) — checa primeiro porque tem prioridade sobre qualquer status.
+  if (empresa.excluida_em) {
+    return { label: 'Excluída', bg: '#f3f4f6', fg: '#6b7280' };
+  }
   if (empresa.status_assinatura === 'ativa' && empresa.cancelamento_agendado && empresa.proxima_cobranca_em) {
     return { label: `Cancelamento agendado p/ ${formatarData(empresa.proxima_cobranca_em)}`, bg: '#fef3c7', fg: '#92400e' };
   }
@@ -29,6 +34,16 @@ function infoStatusEmpresa(empresa) {
   };
   return mapa[empresa.status_assinatura] || { label: empresa.status_assinatura || 'Sem status', bg: '#f3f4f6', fg: '#6b7280' };
 }
+
+// Mesmo enum de backend/src/schemas/index.js (verticalEnum) — rótulo legível pro select de troca
+// de tipo de negócio no detalhe da empresa.
+const VERTICAL_LABELS = {
+  barbearia: 'Barbearia',
+  salao: 'Salão de beleza',
+  estudio_unhas: 'Estúdio de unhas',
+  generico: 'Genérico / outro'
+};
+const VERTICAL_OPCOES = Object.entries(VERTICAL_LABELS);
 
 function formatarData(iso) {
   if (!iso) return '-';
@@ -101,24 +116,42 @@ const PLANO_VAZIO = {
   ativo: true, publico: true, dias_teste: ''
 };
 
-const ABAS = [
-  { valor: 'metricas', label: 'Métricas', icon: 'BarChart' },
-  { valor: 'financeiro', label: 'Financeiro', icon: 'DollarSign' },
-  { valor: 'contas', label: 'Contas a Pagar/Receber', icon: 'Wallet' },
-  { valor: 'empresas', label: 'Empresas', icon: 'Building' },
-  { valor: 'planos', label: 'Planos', icon: 'Tag' },
-  { valor: 'testes', label: 'Testar Planos', icon: 'TrendingUp' },
-  { valor: 'antifraude', label: 'Antifraude', icon: 'Shield' },
-  { valor: 'chaves', label: 'Chaves de Ativação', icon: 'Key' },
-  { valor: 'leads', label: 'Leads Enterprise', icon: 'Mail' },
-  { valor: 'suporte', label: 'Suporte', icon: 'MessageCircle' },
-  { valor: 'superadmins', label: 'Super Admins', icon: 'Shield' }
+// Agrupado em seções (em vez de uma fileira só de abas) pra ficar mais fácil de achar cada
+// coisa, mesmo padrão de organização visual da sidebar do admin de empresa (ver components/
+// Layout.js), só que sem colapsar: aqui são poucos usuários internos, não precisa economizar
+// espaço de tela.
+const GRUPOS_MENU = [
+  { titulo: 'Visão geral', itens: [
+    { valor: 'metricas', label: 'Métricas', icon: 'BarChart' }
+  ] },
+  { titulo: 'Financeiro', itens: [
+    { valor: 'financeiro', label: 'Financeiro', icon: 'DollarSign' },
+    { valor: 'contas', label: 'Contas a Pagar/Receber', icon: 'Wallet' }
+  ] },
+  { titulo: 'Empresas', itens: [
+    { valor: 'empresas', label: 'Empresas', icon: 'Building' },
+    { valor: 'antifraude', label: 'Antifraude', icon: 'Shield' }
+  ] },
+  { titulo: 'Planos', itens: [
+    { valor: 'planos', label: 'Planos', icon: 'Tag' },
+    { valor: 'testes', label: 'Testar Planos', icon: 'TrendingUp' },
+    { valor: 'chaves', label: 'Chaves de Ativação', icon: 'Key' }
+  ] },
+  { titulo: 'Relacionamento', itens: [
+    { valor: 'leads', label: 'Leads Enterprise', icon: 'Mail' },
+    { valor: 'suporte', label: 'Suporte', icon: 'MessageCircle' }
+  ] },
+  { titulo: 'Conta', itens: [
+    { valor: 'superadmins', label: 'Super Admins', icon: 'Shield' }
+  ] }
 ];
+const TODOS_ITENS_MENU = GRUPOS_MENU.flatMap((g) => g.itens);
 
 // Dashboard do admin absoluto — gerencia leads do plano Enterprise, planos da plataforma,
 // empresas cadastradas e métricas gerais. Fora da árvore de rotas de tenant de propósito (não
-// usa empresaId nem slug nenhum). Visual segue o mesmo padrão claro/cards do admin de empresa
-// (ver pages/admin/AdminClientes.js), só que num painel único sem sidebar por tenant.
+// usa empresaId nem slug nenhum). Sidebar fixa com o mesmo visual escuro do admin de empresa
+// (ver components/Layout.js), agrupada por seção pra ficar mais fácil de navegar entre as 11
+// telas do painel.
 function SuperAdminDashboard() {
   const [aba, setAba] = useState('metricas');
   const navigate = useNavigate();
@@ -130,44 +163,62 @@ function SuperAdminDashboard() {
     navigate('/admin-absoluto/login');
   };
 
+  const itemAtivo = TODOS_ITENS_MENU.find((i) => i.valor === aba);
+
   return (
     <div style={s.pagina}>
-      <div style={s.container}>
-        <header style={s.header}>
+      <aside style={s.sidebar}>
+        <div style={s.sidebarTopo}>
+          <Icons.Building color="#fff" />
           <div>
-            <h1 style={s.titulo}><Icons.Building color="#111827" /> Painel da plataforma</h1>
-            <p style={s.subtitulo}>Controle de empresas, planos e assinaturas da SchedNext</p>
+            <p style={s.sidebarTitulo}>SchedNext</p>
+            <p style={s.sidebarSubtitulo}>Admin absoluto</p>
           </div>
-          <button onClick={sair} style={s.btnSair}><Icons.LogOut color="#dc2626" /> Sair</button>
-        </header>
-
-        <div style={s.tabsRow}>
-          {ABAS.map(({ valor, label, icon }) => {
-            const IconeAba = Icons[icon];
-            return (
-              <button
-                key={valor}
-                onClick={() => setAba(valor)}
-                style={{ ...s.tab, ...(aba === valor ? s.tabAtivo : {}) }}
-              >
-                <IconeAba color={aba === valor ? '#fff' : '#6b7280'} /> {label}
-              </button>
-            );
-          })}
         </div>
 
-        {aba === 'metricas' && <AbaMetricas toast={toast} />}
-        {aba === 'financeiro' && <AbaFinanceiro toast={toast} />}
-        {aba === 'contas' && <AbaContas toast={toast} confirmar={confirmar} />}
-        {aba === 'empresas' && <AbaEmpresas toast={toast} confirmar={confirmar} />}
-        {aba === 'planos' && <AbaPlanos toast={toast} confirmar={confirmar} />}
-        {aba === 'testes' && <AbaTestesPlano toast={toast} confirmar={confirmar} />}
-        {aba === 'antifraude' && <AbaAntifraude toast={toast} confirmar={confirmar} />}
-        {aba === 'chaves' && <AbaChaves toast={toast} confirmar={confirmar} />}
-        {aba === 'leads' && <AbaLeads toast={toast} confirmar={confirmar} />}
-        {aba === 'suporte' && <AbaSuporte toast={toast} confirmar={confirmar} />}
-        {aba === 'superadmins' && <AbaSuperAdmins toast={toast} confirmar={confirmar} />}
-      </div>
+        <nav style={s.nav}>
+          {GRUPOS_MENU.map((grupo) => (
+            <div key={grupo.titulo} style={s.grupoMenu}>
+              <p style={s.grupoTitulo}>{grupo.titulo}</p>
+              {grupo.itens.map(({ valor, label, icon }) => {
+                const IconeItem = Icons[icon];
+                return (
+                  <button
+                    key={valor}
+                    onClick={() => setAba(valor)}
+                    style={{ ...s.navItem, ...(aba === valor ? s.navItemAtivo : {}) }}
+                  >
+                    <IconeItem color={aba === valor ? '#fff' : '#9ca3af'} /> {label}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+
+        <button onClick={sair} style={s.navSair}><Icons.LogOut color="#f87171" /> Sair</button>
+      </aside>
+
+      <main style={s.main}>
+        <div style={s.container}>
+          <header style={s.header}>
+            <h1 style={s.titulo}>{itemAtivo?.label || 'Painel da plataforma'}</h1>
+            <p style={s.subtitulo}>Controle de empresas, planos e assinaturas da SchedNext</p>
+          </header>
+
+          {aba === 'metricas' && <AbaMetricas toast={toast} />}
+          {aba === 'financeiro' && <AbaFinanceiro toast={toast} />}
+          {aba === 'contas' && <AbaContas toast={toast} confirmar={confirmar} />}
+          {aba === 'empresas' && <AbaEmpresas toast={toast} confirmar={confirmar} />}
+          {aba === 'planos' && <AbaPlanos toast={toast} confirmar={confirmar} />}
+          {aba === 'testes' && <AbaTestesPlano toast={toast} confirmar={confirmar} />}
+          {aba === 'antifraude' && <AbaAntifraude toast={toast} confirmar={confirmar} />}
+          {aba === 'chaves' && <AbaChaves toast={toast} confirmar={confirmar} />}
+          {aba === 'leads' && <AbaLeads toast={toast} confirmar={confirmar} />}
+          {aba === 'suporte' && <AbaSuporte toast={toast} confirmar={confirmar} />}
+          {aba === 'superadmins' && <AbaSuperAdmins toast={toast} confirmar={confirmar} />}
+        </div>
+      </main>
     </div>
   );
 }
@@ -1629,6 +1680,25 @@ function AbaEmpresas({ toast, confirmar }) {
     } catch (err) { toast.error('Erro de conexão. Tente novamente.'); }
   };
 
+  const alternarExclusao = async (empresa) => {
+    const excluir = !empresa.excluida_em;
+    const ok = await confirmar(`${excluir ? 'Excluir' : 'Restaurar'} a empresa "${empresa.nome}"?`, {
+      detail: excluir
+        ? 'O login do admin dessa empresa fica bloqueado, qualquer cobrança recorrente é cancelada, e o e-mail dela fica livre pra um novo cadastro. Os dados não são apagados — dá pra restaurar depois.'
+        : 'O login volta a funcionar. Confira o plano e o status da assinatura dela em seguida.',
+      confirmText: excluir ? 'Excluir' : 'Restaurar',
+      danger: excluir
+    });
+    if (!ok) return;
+
+    try {
+      const res = await fetch(`${API_URL}/super-admin/empresas/${empresa.id}/${excluir ? 'excluir' : 'restaurar'}`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregar(); }
+      else toast.error(data.error || 'Não foi possível atualizar a empresa.');
+    } catch (err) { toast.error('Erro de conexão. Tente novamente.'); }
+  };
+
   return (
     <div>
       <div style={s.barraTop}>
@@ -1645,6 +1715,7 @@ function AbaEmpresas({ toast, confirmar }) {
           <option value="inadimplente">Inadimplente</option>
           <option value="suspensa">Suspensa</option>
           <option value="cancelada">Cancelada</option>
+          <option value="excluida">Excluída</option>
         </select>
       </div>
 
@@ -1682,13 +1753,21 @@ function AbaEmpresas({ toast, confirmar }) {
                         <span style={{ ...s.badge, background: status.bg, color: status.fg }}>{status.label}</span>
                       </td>
                       <td style={{ ...s.td, textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                           <button onClick={() => setDetalheId(e.id)} style={s.btnOutline}>Detalhes</button>
+                          {!e.excluida_em && (
+                            <button
+                              onClick={() => alternarSuspensao(e)}
+                              style={{ ...s.btnOutline, ...(e.status_assinatura === 'suspensa' ? s.btnOutlineVerde : s.btnOutlineVermelho) }}
+                            >
+                              {e.status_assinatura === 'suspensa' ? 'Reativar' : 'Suspender'}
+                            </button>
+                          )}
                           <button
-                            onClick={() => alternarSuspensao(e)}
-                            style={{ ...s.btnOutline, ...(e.status_assinatura === 'suspensa' ? s.btnOutlineVerde : s.btnOutlineVermelho) }}
+                            onClick={() => alternarExclusao(e)}
+                            style={{ ...s.btnOutline, ...(e.excluida_em ? s.btnOutlineVerde : s.btnOutlineVermelho) }}
                           >
-                            {e.status_assinatura === 'suspensa' ? 'Reativar' : 'Suspender'}
+                            {e.excluida_em ? 'Restaurar' : 'Excluir'}
                           </button>
                         </div>
                       </td>
@@ -1745,6 +1824,10 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
   const [editandoVencimento, setEditandoVencimento] = useState(false);
   const [novoVencimento, setNovoVencimento] = useState('');
   const [salvandoVencimento, setSalvandoVencimento] = useState(false);
+  const [editandoVertical, setEditandoVertical] = useState(false);
+  const [novoVertical, setNovoVertical] = useState('');
+  const [salvandoVertical, setSalvandoVertical] = useState(false);
+  const [alterandoExclusao, setAlterandoExclusao] = useState(false);
   useEscToClose(true, onFechar);
 
   const carregar = useCallback(async () => {
@@ -1821,6 +1904,53 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
     }
   };
 
+  const salvarVertical = async () => {
+    if (!novoVertical || novoVertical === empresa.vertical) { setEditandoVertical(false); return; }
+    setSalvandoVertical(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/empresas/${id}/vertical`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vertical: novoVertical })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message);
+        setEditandoVertical(false);
+        carregar();
+        aoAtualizar?.();
+      } else toast.error(data.error || 'Não foi possível trocar o tipo de negócio.');
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setSalvandoVertical(false);
+    }
+  };
+
+  const alternarExclusao = async () => {
+    const excluir = !empresa.excluida_em;
+    const ok = await confirmar(`${excluir ? 'Excluir' : 'Restaurar'} a empresa "${empresa.nome}"?`, {
+      detail: excluir
+        ? 'O login do admin dessa empresa fica bloqueado, qualquer cobrança recorrente é cancelada, e o e-mail dela fica livre pra um novo cadastro. Os dados não são apagados — dá pra restaurar depois.'
+        : 'O login volta a funcionar. Confira o plano e o status da assinatura dela em seguida.',
+      confirmText: excluir ? 'Excluir' : 'Restaurar',
+      danger: excluir
+    });
+    if (!ok) return;
+
+    setAlterandoExclusao(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/empresas/${id}/${excluir ? 'excluir' : 'restaurar'}`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); carregar(); aoAtualizar?.(); }
+      else toast.error(data.error || 'Não foi possível atualizar a empresa.');
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setAlterandoExclusao(false);
+    }
+  };
+
   const status = empresa ? infoStatusEmpresa(empresa) : null;
 
   return (
@@ -1838,9 +1968,38 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
               <button onClick={onFechar} style={s.btnFechar}><Icons.Close /></button>
             </div>
 
+            {empresa.excluida_em && (
+              <div style={{ ...s.avisoSeguranca, background: '#f3f4f6', borderColor: '#e5e7eb', marginTop: 0 }}>
+                <Icons.Close color="#6b7280" size={16} />
+                <div style={{ fontSize: '13px', color: '#374151' }}>
+                  Empresa excluída em {formatarData(empresa.excluida_em)}. O login dela está bloqueado e o e-mail já está livre pra um novo cadastro.
+                </div>
+              </div>
+            )}
+
             <div style={s.infoGrid}>
               <InfoItem label="Cadastrada em" valor={formatarData(empresa.criado_em)} />
-              <InfoItem label="Vertical" valor={empresa.vertical || '-'} />
+
+              <div>
+                <div style={s.infoLabel}>Tipo de negócio</div>
+                {!editandoVertical ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '14px', color: '#111827' }}>{VERTICAL_LABELS[empresa.vertical] || empresa.vertical || '-'}</span>
+                    {!empresa.excluida_em && (
+                      <button onClick={() => { setNovoVertical(empresa.vertical || ''); setEditandoVertical(true); }} style={s.btnLink}>Trocar</button>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <select style={s.selectFiltro} value={novoVertical} onChange={(e) => setNovoVertical(e.target.value)}>
+                      {VERTICAL_OPCOES.map(([valor, label]) => <option key={valor} value={valor}>{label}</option>)}
+                    </select>
+                    <LoadingButton loading={salvandoVertical} onClick={salvarVertical} style={s.btnPrimario}>Salvar</LoadingButton>
+                    <button onClick={() => setEditandoVertical(false)} style={s.btnOutline}>Cancelar</button>
+                  </div>
+                )}
+              </div>
+
               <InfoItem label="CPF/CNPJ" valor={empresa.cpf_cnpj || '-'} />
               <InfoItem label="Status da assinatura" badge={status} />
 
@@ -1849,7 +2008,9 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
                 {!editandoPlano ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '14px', color: '#111827' }}>{empresa.plano_plataforma?.nome || '-'} · {formatarPreco(empresa.plano_plataforma?.preco_mensal)}</span>
-                    <button onClick={() => { setNovoPlanoId(String(empresa.plano_plataforma_id || '')); setEditandoPlano(true); }} style={s.btnLink}>Trocar</button>
+                    {!empresa.excluida_em && (
+                      <button onClick={() => { setNovoPlanoId(String(empresa.plano_plataforma_id || '')); setEditandoPlano(true); }} style={s.btnLink}>Trocar</button>
+                    )}
                   </div>
                 ) : (
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1875,7 +2036,9 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
                       <span style={{ fontSize: '14px', fontWeight: empresa.cancelamento_agendado ? 700 : 400, color: empresa.cancelamento_agendado ? '#92400e' : '#111827' }}>
                         {empresa.proxima_cobranca_em ? formatarData(empresa.proxima_cobranca_em) : 'sem cobrança recorrente ativa'}
                       </span>
-                      <button onClick={() => { setNovoVencimento(paraInputData(empresa.proxima_cobranca_em)); setEditandoVencimento(true); }} style={s.btnLink}>Alterar</button>
+                      {!empresa.excluida_em && (
+                        <button onClick={() => { setNovoVencimento(paraInputData(empresa.proxima_cobranca_em)); setEditandoVencimento(true); }} style={s.btnLink}>Alterar</button>
+                      )}
                     </div>
                   ) : (
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1905,11 +2068,18 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
 
             <div style={s.card}>
               <h4 style={s.cardTitulo}>Consumo do plano</h4>
-              <BarraUso label="Barbeiros/profissionais cadastrados" usado={empresa.uso.barbeiros} limite={empresa.plano_plataforma?.limite_profissionais ?? null} />
+              <BarraUso label="Profissionais cadastrados" usado={empresa.uso.barbeiros} limite={empresa.plano_plataforma?.limite_profissionais ?? null} />
               <BarraUso label="Agendamentos neste mês" usado={empresa.uso.agendamentos_mes} limite={empresa.plano_plataforma?.limite_agendamentos_mes ?? null} />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', flexWrap: 'wrap', gap: '10px' }}>
+              <LoadingButton
+                loading={alterandoExclusao}
+                onClick={alternarExclusao}
+                style={{ ...s.btnOutline, ...(empresa.excluida_em ? s.btnOutlineVerde : s.btnOutlineVermelho) }}
+              >
+                {empresa.excluida_em ? 'Restaurar empresa' : 'Excluir empresa'}
+              </LoadingButton>
               <button onClick={onFechar} style={s.btnOutline}>Fechar</button>
             </div>
           </>
@@ -2111,7 +2281,7 @@ function AbaPlanos({ toast, confirmar }) {
   );
 }
 
-// Área de teste de planos: aplica um plano (mesmo desligado ou oculto do site) numa barbearia
+// Área de teste de planos: aplica um plano (mesmo desligado ou oculto do site) numa empresa
 // ESCOLHIDA por alguns dias. Quando o prazo acaba, ela volta sozinha ao plano anterior. É o jeito
 // seguro de testar um plano "completo" de R$0 sem que qualquer visitante consiga assiná-lo.
 function AbaTestesPlano({ toast, confirmar }) {
@@ -2146,7 +2316,7 @@ function AbaTestesPlano({ toast, confirmar }) {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  // Busca de barbearia com debounce: por nome, slug ou e-mail.
+  // Busca de empresa com debounce: por nome, slug ou e-mail.
   useEffect(() => {
     if (busca.trim().length < 2) { setResultados([]); return undefined; }
     const t = setTimeout(async () => {
@@ -2160,11 +2330,11 @@ function AbaTestesPlano({ toast, confirmar }) {
   }, [busca]);
 
   const aplicar = async () => {
-    if (!empresaSel) return toast.error('Escolha a barbearia que vai receber o teste.');
+    if (!empresaSel) return toast.error('Escolha a empresa que vai receber o teste.');
     if (!planoId) return toast.error('Escolha o plano a testar.');
     const plano = planos.find((p) => String(p.id) === String(planoId));
     const ok = await confirmar(`Aplicar o plano "${plano?.nome}" em "${empresaSel.nome}" por ${dias} dia(s)?`, {
-      detail: 'Ao acabar o prazo, a barbearia volta automaticamente ao plano anterior.',
+      detail: 'Ao acabar o prazo, a empresa volta automaticamente ao plano anterior.',
       confirmText: 'Aplicar teste'
     });
     if (!ok) return;
@@ -2208,18 +2378,18 @@ function AbaTestesPlano({ toast, confirmar }) {
   return (
     <div>
       <div style={s.card}>
-        <h3 style={{ margin: '0 0 4px', fontSize: '16px', color: '#111827' }}>Testar um plano em uma barbearia</h3>
+        <h3 style={{ margin: '0 0 4px', fontSize: '16px', color: '#111827' }}>Testar um plano em uma empresa</h3>
         <p style={{ ...s.subTexto, marginBottom: '12px' }}>
           Para testar um plano completo de R$0 sem risco, crie-o na aba Planos e desmarque "Visível no site". Ele nunca aparece
-          para visitantes e não pode ser contratado; só você aplica aqui, na barbearia que escolher, por tempo limitado.
+          para visitantes e não pode ser contratado; só você aplica aqui, na empresa que escolher, por tempo limitado.
         </p>
 
-        <label style={s.label}>1. Barbearia do teste</label>
+        <label style={s.label}>1. Empresa do teste</label>
         {empresaSel ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <span style={s.badgeRoxo}>{empresaSel.nome} ({empresaSel.slug})</span>
             <span style={s.subTexto}>Plano atual: {empresaSel.plano_plataforma?.nome || '-'}</span>
-            <button onClick={() => setEmpresaSel(null)} style={s.btnLink}>Trocar barbearia</button>
+            <button onClick={() => setEmpresaSel(null)} style={s.btnLink}>Trocar empresa</button>
           </div>
         ) : (
           <>
@@ -2267,7 +2437,7 @@ function AbaTestesPlano({ toast, confirmar }) {
           <table style={s.table}>
             <thead>
               <tr>
-                {['Barbearia', 'Plano em teste', 'Volta para', 'Termina em', ''].map((h) => <th key={h} style={s.th}>{h}</th>)}
+                {['Empresa', 'Plano em teste', 'Volta para', 'Termina em', ''].map((h) => <th key={h} style={s.th}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -3228,15 +3398,28 @@ const Icons = {
 };
 
 const s = {
-  pagina: { minHeight: '100vh', background: '#f8f9fa', fontFamily: "'Inter', sans-serif" },
+  pagina: { minHeight: '100vh', background: '#f8f9fa', fontFamily: "'Inter', sans-serif", display: 'flex' },
   container: { maxWidth: '1200px', margin: '0 auto', padding: '40px 24px' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '24px', borderBottom: '1px solid #e5e7eb', paddingBottom: '20px' },
+  header: { marginBottom: '24px', borderBottom: '1px solid #e5e7eb', paddingBottom: '20px' },
   titulo: { fontSize: '26px', color: '#111827', fontWeight: 800, margin: '0 0 4px 0', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center' },
   subtitulo: { color: '#6b7280', fontSize: '14px', margin: 0 },
-  btnSair: { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', padding: '9px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' },
 
-  tabsRow: { display: 'flex', gap: '6px', marginBottom: '24px', flexWrap: 'wrap', background: '#fff', padding: '6px', borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' },
-  tab: { display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', color: '#6b7280', border: 'none', borderRadius: '8px', padding: '9px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: '0.2s' },
+  // Sidebar fixa, mesma paleta escura da sidebar do admin de empresa (ver components/Layout.js:
+  // #16161a + realce azul rgba(37,84,235,..) no item ativo), sempre expandida (não colapsa em
+  // hover como a de lá — aqui são poucos usuários internos, não precisa economizar espaço).
+  sidebar: { width: '250px', flexShrink: 0, background: '#16161a', color: '#fff', minHeight: '100vh', position: 'sticky', top: 0, alignSelf: 'flex-start', display: 'flex', flexDirection: 'column', padding: '20px 14px', boxSizing: 'border-box', overflowY: 'auto' },
+  sidebarTopo: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  sidebarTitulo: { margin: 0, fontSize: '14px', fontWeight: 800, color: '#fff' },
+  sidebarSubtitulo: { margin: 0, fontSize: '11px', color: '#9ca3af' },
+  main: { flex: 1, minWidth: 0 },
+
+  nav: { display: 'flex', flexDirection: 'column', flex: 1 },
+  grupoMenu: { marginBottom: '14px' },
+  grupoTitulo: { fontSize: '10px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 6px 10px' },
+  navItem: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', boxSizing: 'border-box', background: 'transparent', color: '#d1d5db', border: 'none', borderRadius: '8px', padding: '9px 10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left', marginBottom: '2px', transition: '0.15s' },
+  navItemAtivo: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff' },
+  navSair: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', boxSizing: 'border-box', background: 'transparent', color: '#f87171', border: 'none', borderRadius: '8px', padding: '9px 10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' },
+
   tabAtivo: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff' },
 
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' },
