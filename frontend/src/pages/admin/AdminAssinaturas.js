@@ -17,18 +17,26 @@ function AdminAssinaturas({ empresaId }) {
 
     const [form, setForm] = useState({ nome: '', preco: '', descricao: '', servicos: [] });
 
+    const [permiteCampanhas, setPermiteCampanhas] = useState(false);
+    const [campanhas, setCampanhas] = useState([]);
+    const [editandoCampanha, setEditandoCampanha] = useState(null);
+    const [salvandoCampanha, setSalvandoCampanha] = useState(false);
+
     const carregar = useCallback(async () => {
         if (!idEfetivo) return;
         try {
-            const [resPlanos, resServicos, resEmpresa] = await Promise.all([
+            const [resPlanos, resServicos, resEmpresa, resCampanhas] = await Promise.all([
                 fetch(`${API_URL}/admin/assinaturas/${idEfetivo}`),
                 fetch(`${API_URL}/admin/servicos?empresa=${idEfetivo}`),
-                fetch(`${API_URL}/admin/empresa/${idEfetivo}`)
+                fetch(`${API_URL}/admin/empresa/${idEfetivo}`),
+                fetch(`${API_URL}/admin/campanhas-assinatura`)
             ]);
             setPlanos(await resPlanos.json() || []);
             setServicos(await resServicos.json() || []);
             const dadosEmpresa = await resEmpresa.json();
             if (dadosEmpresa?.vertical) setVertical(dadosEmpresa.vertical);
+            setPermiteCampanhas(!!dadosEmpresa?.plano_plataforma?.permite_campanhas_assinatura);
+            setCampanhas(await resCampanhas.json() || []);
         } catch (err) { console.error(err); }
     }, [idEfetivo]);
 
@@ -141,6 +149,91 @@ function AdminAssinaturas({ empresaId }) {
                 const dados = await res.json().catch(() => ({}));
                 mostrarFeedback(dados.error || 'Não foi possível excluir o plano.', 'erro');
             }
+        } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
+    };
+
+    const formatarValor = (v) => `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
+
+    const abrirNovaCampanha = () => setEditandoCampanha({
+        plano_assinatura_id: planos.find(p => Number(p.preco) > 0)?.id || '',
+        nome: '',
+        inicio: '',
+        fim: '',
+        precos_por_ciclo: [{ numero_ciclo: 1, valor: '' }]
+    });
+
+    const abrirEdicaoCampanha = (c) => setEditandoCampanha({
+        id: c.id,
+        plano_assinatura_id: c.plano_assinatura?.id || '',
+        nome: c.nome,
+        inicio: c.inicio.slice(0, 10),
+        fim: c.fim.slice(0, 10),
+        precos_por_ciclo: c.campanha_assinatura_precos_ciclo.map(p => ({ numero_ciclo: p.numero_ciclo, valor: p.valor }))
+    });
+
+    const atualizarCicloCampanha = (idx, campo, valor) => {
+        setEditandoCampanha(prev => ({ ...prev, precos_por_ciclo: prev.precos_por_ciclo.map((p, i) => i === idx ? { ...p, [campo]: valor } : p) }));
+    };
+    const addCicloCampanha = () => setEditandoCampanha(prev => ({ ...prev, precos_por_ciclo: [...prev.precos_por_ciclo, { numero_ciclo: prev.precos_por_ciclo.length + 1, valor: '' }] }));
+    const removerCicloCampanha = (idx) => setEditandoCampanha(prev => ({ ...prev, precos_por_ciclo: prev.precos_por_ciclo.filter((_, i) => i !== idx) }));
+
+    const salvarCampanha = async () => {
+        if (!editandoCampanha.nome.trim() || !editandoCampanha.plano_assinatura_id || !editandoCampanha.inicio || !editandoCampanha.fim) {
+            return mostrarFeedback('Preencha nome, plano e o período da campanha.', 'erro');
+        }
+        if (!editandoCampanha.precos_por_ciclo.length || editandoCampanha.precos_por_ciclo.some(p => p.valor === '' || p.numero_ciclo === '')) {
+            return mostrarFeedback('Preencha o número e o valor de cada ciclo.', 'erro');
+        }
+        setSalvandoCampanha(true);
+        try {
+            const url = editandoCampanha.id ? `${API_URL}/admin/campanhas-assinatura/${editandoCampanha.id}` : `${API_URL}/admin/campanhas-assinatura`;
+            const res = await fetch(url, {
+                method: editandoCampanha.id ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    plano_assinatura_id: editandoCampanha.plano_assinatura_id,
+                    nome: editandoCampanha.nome,
+                    inicio: editandoCampanha.inicio,
+                    fim: editandoCampanha.fim,
+                    precos_por_ciclo: editandoCampanha.precos_por_ciclo.map(p => ({ numero_ciclo: Number(p.numero_ciclo), valor: Number(p.valor) }))
+                })
+            });
+            const data = await res.json();
+            if (res.ok) { mostrarFeedback(data.message || 'Campanha salva.'); setEditandoCampanha(null); carregar(); }
+            else mostrarFeedback(data.error || 'Não foi possível salvar a campanha.', 'erro');
+        } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
+        finally { setSalvandoCampanha(false); }
+    };
+
+    const alternarAtivaCampanha = async (c) => {
+        const ok = await confirmar(`${c.ativa ? 'Desativar' : 'Ativar'} a campanha "${c.nome}"?`, {
+            detail: c.ativa
+                ? 'Quem já entrou nela cai no preço cheio a partir do próximo ciclo. Novos assinantes deixam de ver essa promoção.'
+                : 'Volta a valer pra novas assinaturas dentro da janela de datas já definida.',
+            confirmText: c.ativa ? 'Desativar' : 'Ativar',
+            danger: !!c.ativa
+        });
+        if (!ok) return;
+        try {
+            const res = await fetch(`${API_URL}/admin/campanhas-assinatura/${c.id}/ativa`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ativa: !c.ativa })
+            });
+            const data = await res.json();
+            if (res.ok) { mostrarFeedback(data.message || 'Campanha atualizada.'); carregar(); } else mostrarFeedback(data.error || 'Erro ao atualizar.', 'erro');
+        } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
+    };
+
+    const excluirCampanha = async (c) => {
+        const ok = await confirmar(`Excluir a campanha "${c.nome}"?`, {
+            detail: 'Assinantes que já entraram nela caem no preço cheio a partir do próximo ciclo.',
+            confirmText: 'Excluir',
+            danger: true
+        });
+        if (!ok) return;
+        try {
+            const res = await fetch(`${API_URL}/admin/campanhas-assinatura/${c.id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (res.ok) { mostrarFeedback(data.message || 'Campanha excluída.'); carregar(); } else mostrarFeedback(data.error || 'Erro ao excluir.', 'erro');
         } catch (err) { mostrarFeedback('Erro de conexão.', 'erro'); }
     };
 
@@ -356,6 +449,136 @@ function AdminAssinaturas({ empresaId }) {
                 </table>
                 </div>
             </div>
+
+            {/* CAMPANHAS PROMOCIONAIS DE PREÇO ESCALONADO */}
+            <div style={{ marginTop: '30px' }}>
+                <header style={s.header}>
+                    <div>
+                        <h2 style={s.title}><Icons.Diamond color="#111827" /> Campanhas Promocionais</h2>
+                        <p style={s.subtitle}>Preço diferente por ciclo pra atrair novos assinantes (ex: 1º mês R$19,90, 2º R$29,90, demais no preço cheio).</p>
+                    </div>
+                </header>
+
+                {!permiteCampanhas ? (
+                    <div style={s.upsell}>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+                            Criar campanhas promocionais de preço escalonado é um recurso exclusivo de planos superiores. Fale com o suporte para fazer upgrade.
+                        </p>
+                    </div>
+                ) : (
+                    <>
+                        <div style={{ marginBottom: '16px' }}>
+                            <button onClick={abrirNovaCampanha} style={s.btnPrincipal}>+ Nova campanha</button>
+                        </div>
+
+                        <div style={s.cardTabela}>
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={s.table}>
+                                    <thead>
+                                        <tr>
+                                            {['Campanha', 'Plano', 'Período', 'Preços por ciclo', 'Status', 'Ações'].map(h => (
+                                                <th key={h} style={{ ...s.th, ...(h === 'Ações' ? { textAlign: 'right' } : {}) }}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {campanhas.length > 0 ? campanhas.map(c => {
+                                            const expirada = new Date(c.fim) < new Date();
+                                            return (
+                                                <tr key={c.id} style={s.tr}>
+                                                    <td style={s.td}><strong style={{ color: '#111827' }}>{c.nome}</strong></td>
+                                                    <td style={s.td}>{c.plano_assinatura?.nome || '-'}</td>
+                                                    <td style={s.td}>{new Date(c.inicio).toLocaleDateString('pt-BR')} - {new Date(c.fim).toLocaleDateString('pt-BR')}</td>
+                                                    <td style={s.td}>{c.campanha_assinatura_precos_ciclo.map(p => `${p.numero_ciclo}º: ${formatarValor(p.valor)}`).join(' · ')}, demais: cheio</td>
+                                                    <td style={s.td}>
+                                                        <span style={{
+                                                            padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase',
+                                                            backgroundColor: c.ativa && !expirada ? '#ecfdf5' : '#f3f4f6',
+                                                            color: c.ativa && !expirada ? '#065f46' : '#6b7280'
+                                                        }}>
+                                                            {!c.ativa ? 'Desativada' : expirada ? 'Expirada' : 'Ativa'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ ...s.td, textAlign: 'right' }}>
+                                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                                            <button onClick={() => abrirEdicaoCampanha(c)} style={s.btnIcone} title="Editar"><Icons.Edit color="#4b5563" /></button>
+                                                            <button onClick={() => alternarAtivaCampanha(c)} style={{ ...s.btnIcone, backgroundColor: c.ativa ? '#fef2f2' : '#ecfdf5' }} title={c.ativa ? 'Desativar' : 'Ativar'}>
+                                                                <Icons.Power color={c.ativa ? '#dc2626' : '#059669'} />
+                                                            </button>
+                                                            <button onClick={() => excluirCampanha(c)} style={{ ...s.btnIcone, backgroundColor: '#fef2f2' }} title="Excluir"><Icons.Trash color="#dc2626" /></button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        }) : (
+                                            <tr>
+                                                <td colSpan="6" style={{ padding: '50px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                                                    Nenhuma campanha criada ainda.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {editandoCampanha && (
+                    <div style={s.overlay} onClick={() => setEditandoCampanha(null)}>
+                        <div style={s.modal} onClick={ev => ev.stopPropagation()}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{editandoCampanha.id ? 'Editar campanha' : 'Nova campanha'}</h3>
+                                <button onClick={() => setEditandoCampanha(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#9ca3af', lineHeight: 1 }}>×</button>
+                            </div>
+
+                            <div style={s.inputGroup}>
+                                <label style={s.label}>Nome da campanha</label>
+                                <input style={s.input} value={editandoCampanha.nome} onChange={e => setEditandoCampanha({ ...editandoCampanha, nome: e.target.value })} placeholder="Ex: Promoção de Verão" />
+                            </div>
+
+                            <div style={s.inputGroup}>
+                                <label style={s.label}>Plano</label>
+                                <select style={s.input} value={editandoCampanha.plano_assinatura_id} onChange={e => setEditandoCampanha({ ...editandoCampanha, plano_assinatura_id: e.target.value })}>
+                                    {planos.filter(p => Number(p.preco) > 0).map(p => <option key={p.id} value={p.id}>{p.nome} · {formatarValor(p.preco)}</option>)}
+                                </select>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <div style={{ ...s.inputGroup, flex: 1 }}>
+                                    <label style={s.label}>Início</label>
+                                    <input type="date" style={s.input} value={editandoCampanha.inicio} onChange={e => setEditandoCampanha({ ...editandoCampanha, inicio: e.target.value })} />
+                                </div>
+                                <div style={{ ...s.inputGroup, flex: 1 }}>
+                                    <label style={s.label}>Fim</label>
+                                    <input type="date" style={s.input} value={editandoCampanha.fim} onChange={e => setEditandoCampanha({ ...editandoCampanha, fim: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <div style={s.inputGroup}>
+                                <label style={s.label}>Preço por ciclo</label>
+                                {editandoCampanha.precos_por_ciclo.map((p, idx) => (
+                                    <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+                                        <input type="number" min="1" style={{ ...s.input, width: '70px' }} value={p.numero_ciclo} onChange={e => atualizarCicloCampanha(idx, 'numero_ciclo', e.target.value)} title="Número do ciclo" />
+                                        <span style={{ fontSize: '12px', color: '#9ca3af', whiteSpace: 'nowrap' }}>º ciclo →</span>
+                                        <input type="number" min="0" step="0.01" style={{ ...s.input, flex: 1 }} value={p.valor} onChange={e => atualizarCicloCampanha(idx, 'valor', e.target.value)} placeholder="Valor (R$)" />
+                                        {editandoCampanha.precos_por_ciclo.length > 1 && (
+                                            <button onClick={() => removerCicloCampanha(idx)} style={{ background: 'none', border: 'none', color: '#2554eb', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Remover</button>
+                                        )}
+                                    </div>
+                                ))}
+                                <button onClick={addCicloCampanha} style={{ background: 'none', border: 'none', color: '#2554eb', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}>+ Adicionar ciclo</button>
+                                <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>Ciclos além do último definido aqui cobram o preço cheio do plano automaticamente.</p>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                <button onClick={() => setEditandoCampanha(null)} style={{ ...s.btnCancelar, flex: 1 }}>Cancelar</button>
+                                <LoadingButton loading={salvandoCampanha} onClick={salvarCampanha} style={{ ...s.btnPrincipal, flex: 2 }}>Salvar</LoadingButton>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
@@ -394,6 +617,9 @@ const s = {
     td: { padding: '16px 20px', fontSize: '13px', verticalAlign: 'middle', color: '#374151' },
     badgeServico: { background: '#eef2ff', color: '#4f46e5', fontSize: '11px', fontWeight: '600', padding: '3px 8px', borderRadius: '4px' },
     btnIcone: { background: '#f3f4f6', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' },
+    upsell: { background: '#fff', padding: '24px', borderRadius: '12px', border: '1px dashed #d1d5db' },
+    overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(17,24,39,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000, padding: '20px' },
+    modal: { background: '#fff', padding: '28px', borderRadius: '14px', width: '100%', maxWidth: '520px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', boxSizing: 'border-box' },
 };
 
 export default AdminAssinaturas;
