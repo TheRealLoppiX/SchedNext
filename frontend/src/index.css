@@ -540,6 +540,16 @@ code {
   display: none;
 }
 
+/* Rótulos dos filtros de data do admin absoluto: no desktop o wrapper some do layout e os
+   campos ficam em linha como antes; no mobile viram blocos rotulados (ver media query). */
+.sa-campo-filtro {
+  display: contents;
+}
+
+.sa-rotulo-filtro {
+  display: none;
+}
+
 @media (max-width: 768px) {
   /* No mobile a barra lateral vira um painel off-canvas: some da tela por padrão
      (translateX) e só aparece quando o usuário toca no botão de hambúrguer fixo,
@@ -680,29 +690,82 @@ code {
     min-width: 0;
   }
 
+  /* Altura fixa: no iOS o input de data (principalmente vazio) ganhava altura própria e
+     desalinhava dos outros campos. */
   .sa-overlay input[type="date"],
   .sa-overlay input[type="month"],
   .sa-barra-top input[type="date"],
   .sa-barra-top input[type="month"] {
     -webkit-appearance: none;
     appearance: none;
-    min-height: 42px;
+    display: block;
+    width: 100%;
+    height: 44px;
+    padding: 0 12px !important;
+    line-height: 44px;
+    text-align: left;
+    box-sizing: border-box;
+    font-size: 14px !important;
+  }
+
+  .sa-overlay input[type="date"]::-webkit-date-and-time-value,
+  .sa-overlay input[type="month"]::-webkit-date-and-time-value,
+  .sa-barra-top input[type="date"]::-webkit-date-and-time-value,
+  .sa-barra-top input[type="month"]::-webkit-date-and-time-value {
+    text-align: left;
   }
 
   .sa-overlay div[style*="flex: 1"] {
     min-width: 0;
   }
 
-  /* Barra de filtros/ações: cada grupo ocupa a linha toda e os campos dividem o espaço. */
+  /* Barra de filtros/ações: cada grupo ocupa a linha toda. */
   .sa-barra-top > div {
     width: 100%;
     flex-wrap: wrap !important;
   }
 
-  .sa-barra-top input,
-  .sa-barra-top select {
-    flex: 1 1 140px;
+  /* Filtros numa grade de 2 colunas, com rótulo pequeno em cima de cada campo de data (o
+     Safari não mostra placeholder em input de data vazio, então sem rótulo ficava um
+     retângulo em branco). Busca e agrupamento ocupam a linha inteira. */
+  .sa-filtros {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px !important;
+    align-items: end !important;
+  }
+
+  .sa-filtros > .sa-filtro-largo {
+    grid-column: 1 / -1;
+  }
+
+  .sa-filtros input,
+  .sa-filtros select {
+    width: 100%;
     max-width: none !important;
+    height: 44px;
+    box-sizing: border-box;
+    font-size: 14px !important;
+  }
+
+  .sa-campo-filtro {
+    display: flex !important;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .sa-rotulo-filtro {
+    display: block !important;
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .sa-ate {
+    display: none;
   }
 
   .sa-barra-top button {

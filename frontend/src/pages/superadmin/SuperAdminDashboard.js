@@ -551,11 +551,11 @@ function AbaFinanceiro({ toast }) {
   return (
     <div>
       <div className="sa-barra-top" style={s.barraTop}>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
-          <span style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
-          <input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
-          <select style={s.selectFiltro} value={agrupamento} onChange={(e) => setAgrupamento(e.target.value)}>
+        <div className="sa-filtros" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">De</span><input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} /></label>
+          <span className="sa-ate" style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
+          <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">Até</span><input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} /></label>
+          <select className="sa-filtro-largo" style={s.selectFiltro} value={agrupamento} onChange={(e) => setAgrupamento(e.target.value)}>
             <option value="dia">Por dia</option>
             <option value="mes">Por mês</option>
             <option value="ano">Por ano</option>
@@ -987,8 +987,8 @@ function ContasPagarPainel({ toast, confirmar }) {
   return (
     <div>
       <div className="sa-barra-top" style={s.barraTop}>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <input placeholder="Buscar por descrição ou beneficiário..." value={busca} onChange={(e) => setBusca(e.target.value)} style={s.inputBusca} />
+        <div className="sa-filtros" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input placeholder="Buscar por descrição ou beneficiário..." value={busca} onChange={(e) => setBusca(e.target.value)} className="sa-filtro-largo" style={s.inputBusca} />
           <select style={s.selectFiltro} value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)}>
             <option value="">Todos os status</option>
             <option value="pendente">Pendente</option>
@@ -996,10 +996,10 @@ function ContasPagarPainel({ toast, confirmar }) {
             <option value="pago">Pago</option>
             <option value="cancelado">Cancelado</option>
           </select>
-          <input type="month" title="Filtrar por competência" style={s.selectFiltro} value={competenciaFiltro} onChange={(e) => setCompetenciaFiltro(e.target.value)} />
-          <input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
-          <span style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
-          <input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+          <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">Competência</span><input type="month" title="Filtrar por competência" style={s.selectFiltro} value={competenciaFiltro} onChange={(e) => setCompetenciaFiltro(e.target.value)} /></label>
+          <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">De</span><input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} /></label>
+          <span className="sa-ate" style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
+          <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">Até</span><input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} /></label>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={exportarCsv} style={s.btnOutline} disabled={!itens.length}>Exportar CSV</button>
@@ -1327,8 +1327,8 @@ function ContasReceberPainel({ toast, confirmar }) {
       )}
 
       <div className="sa-barra-top" style={s.barraTop}>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <input placeholder="Buscar por descrição ou pagador..." value={busca} onChange={(e) => setBusca(e.target.value)} style={s.inputBusca} />
+        <div className="sa-filtros" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input placeholder="Buscar por descrição ou pagador..." value={busca} onChange={(e) => setBusca(e.target.value)} className="sa-filtro-largo" style={s.inputBusca} />
           <select style={s.selectFiltro} value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)}>
             <option value="">Todos os status</option>
             <option value="pendente">Pendente</option>
@@ -1336,10 +1336,10 @@ function ContasReceberPainel({ toast, confirmar }) {
             <option value="recebido">Recebido</option>
             <option value="cancelado">Cancelado</option>
           </select>
-          <input type="month" title="Filtrar por competência" style={s.selectFiltro} value={competenciaFiltro} onChange={(e) => setCompetenciaFiltro(e.target.value)} />
-          <input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
-          <span style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
-          <input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+          <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">Competência</span><input type="month" title="Filtrar por competência" style={s.selectFiltro} value={competenciaFiltro} onChange={(e) => setCompetenciaFiltro(e.target.value)} /></label>
+          <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">De</span><input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} /></label>
+          <span className="sa-ate" style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
+          <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">Até</span><input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} /></label>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={exportarCsv} style={s.btnOutline} disabled={!itens.length}>Exportar CSV</button>
