@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { obterSlugSubdominio, rotaIndependeDeTenant } from './utils/tenantSubdominio';
 import { API_URL } from './services/api';
+import { rastrearPagina } from './utils/analytics';
 
 // Importação das Páginas de Cliente
 import Landing from './pages/Landing';
@@ -73,6 +74,12 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
       navigate(`${semPrefixo}${location.search}`, { replace: true });
     }
   }, [location, slugSubdominio, navigate]);
+
+  // Funil de conversão do site institucional (ver utils/analytics.js): só registra as rotas
+  // públicas da SchedNext, nunca as de tenant nem as do painel.
+  useEffect(() => {
+    rastrearPagina(location.pathname);
+  }, [location.pathname]);
 
   let pathnameEfetivo = location.pathname;
   if (slugSubdominio && !rotaIndependeDeTenant(location.pathname)) {

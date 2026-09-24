@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/Toast';
 import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
+import { rastrearEvento } from '../../utils/analytics';
 
 function LoginAdmin({ setEmpresaLogada }) {
   const [email, setEmail] = useState('');
@@ -24,6 +25,7 @@ function LoginAdmin({ setEmpresaLogada }) {
       const data = await res.json();
 
       if (data.success) {
+        rastrearEvento('login', { ok: true });
         // Salva para não deslogar no F5 (inclui o JWT usado em toda chamada /admin/*, ver services/authFetch.js)
         localStorage.setItem('adminToken', JSON.stringify({ ...data.admin, token: data.token }));
         // Avisa o App.js que a empresa logou
@@ -32,6 +34,7 @@ function LoginAdmin({ setEmpresaLogada }) {
         // dashboard bem mais enxuta, restrita à própria unidade.
         navigate(data.admin.unidade_id ? '/admin/unidade/dashboard' : '/admin/dashboard');
       } else {
+        rastrearEvento('login', { ok: false });
         toast.error(data.error || "E-mail ou senha incorretos.");
       }
     } catch (err) {
@@ -64,15 +67,15 @@ function LoginAdmin({ setEmpresaLogada }) {
           onChange={(e) => setSenha(e.target.value)}
           required
         />
-        <LoadingButton type="submit" loading={entrando} className="bb-btn">Acessar Dashboard</LoadingButton>
+        <LoadingButton type="submit" data-track="login_acessar" loading={entrando} className="bb-btn">Acessar Dashboard</LoadingButton>
 
-        <p className="bb-link" style={{ marginTop: '15px' }} onClick={() => navigate('/admin/recuperar-senha')}>
+        <p className="bb-link" data-track="login_esqueci_senha" style={{ marginTop: '15px' }} onClick={() => navigate('/admin/recuperar-senha')}>
           Esqueci minha senha
         </p>
 
         <p className="bb-text-muted" style={{ marginTop: '18px' }}>
           Não tem uma conta?{' '}
-          <span className="bb-link" onClick={() => navigate('/cadastrar')}>
+          <span className="bb-link" data-track="login_cadastre_sua_empresa" onClick={() => navigate('/cadastrar')}>
             Cadastre sua empresa aqui
           </span>
         </p>

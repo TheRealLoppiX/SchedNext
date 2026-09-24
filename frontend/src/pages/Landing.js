@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import './Landing.css';
 import useRevelarAoRolar from '../hooks/useRevelarAoRolar';
 import { API_URL } from '../services/api';
+import { observarSecoes } from '../utils/analytics';
 
 const PASSOS = [
   { numero: '01', titulo: 'Crie sua conta', desc: 'Escolha o nome do seu negócio e o tipo de serviço: barbearia, salão, estúdio de unhas ou outro.' },
@@ -170,6 +171,10 @@ function Landing() {
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 
+  // Profundidade de rolagem pro funil do admin absoluto: quais seções (data-track-secao) a
+  // pessoa chegou a ver (ver utils/analytics.js).
+  useEffect(() => observarSecoes(), []);
+
   const refHeroVideo = useRef(null);
   useEffect(() => {
     // Autoplay declarativo (autoPlay+muted+playsInline) às vezes não "pega" no Safari iOS quando
@@ -225,16 +230,16 @@ function Landing() {
       <header style={s.header}>
         <img src="/logo-schednext.png" alt="SchedNext" style={s.logoHeader} />
         <nav style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-          <a href="#recursos" className="ln-nav-link ln-nav-scroll" style={s.linkHeader}>Recursos</a>
-          <a href="#planos" className="ln-nav-link ln-nav-scroll" style={s.linkHeader}>Planos</a>
-          <a href="#faq" className="ln-nav-link ln-nav-scroll" style={s.linkHeader}>FAQ</a>
-          <Link to="/docs" className="ln-nav-link ln-nav-scroll" style={s.linkHeader}>Docs</Link>
-          <Link to="/admin/login" className="ln-nav-link" style={s.linkHeader}>Entrar</Link>
-          <Link to="/cadastrar" className="ln-cta-primary" style={s.btnHeader}>Criar conta grátis</Link>
+          <a href="#recursos" data-track="menu_recursos" className="ln-nav-link ln-nav-scroll" style={s.linkHeader}>Recursos</a>
+          <a href="#planos" data-track="menu_planos" className="ln-nav-link ln-nav-scroll" style={s.linkHeader}>Planos</a>
+          <a href="#faq" data-track="menu_faq" className="ln-nav-link ln-nav-scroll" style={s.linkHeader}>FAQ</a>
+          <Link to="/docs" data-track="menu_docs" className="ln-nav-link ln-nav-scroll" style={s.linkHeader}>Docs</Link>
+          <Link to="/admin/login" data-track="menu_entrar" className="ln-nav-link" style={s.linkHeader}>Entrar</Link>
+          <Link to="/cadastrar" data-track="menu_criar_conta" className="ln-cta-primary" style={s.btnHeader}>Criar conta grátis</Link>
         </nav>
       </header>
 
-      <section style={s.hero}>
+      <section data-track-secao="1_topo" style={s.hero}>
         {reduzirMovimento ? (
           <img src="/videos/hero-barbearia-poster.jpg" alt="" aria-hidden="true" style={s.heroVideo} />
         ) : (
@@ -267,11 +272,11 @@ function Landing() {
               {diasTesteGratis > 0 ? `Teste grátis por ${diasTesteGratis} dias, sem cartão, sem complicação.` : 'Grátis pra sempre, sem cartão, sem complicação.'}
             </p>
             <div className="ln-hero-cta" style={s.heroCtaRow}>
-              <Link to="/cadastrar" className="ln-cta-primary" style={s.ctaPrincipal}>
+              <Link to="/cadastrar" data-track="hero_criar_conta" className="ln-cta-primary" style={s.ctaPrincipal}>
                 Criar conta grátis
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
               </Link>
-              <a href="#recursos" className="ln-cta-secondary" style={s.ctaSecundarioHero}>Ver como funciona</a>
+              <a href="#recursos" data-track="hero_ver_como_funciona" className="ln-cta-secondary" style={s.ctaSecundarioHero}>Ver como funciona</a>
             </div>
           </div>
 
@@ -292,7 +297,7 @@ function Landing() {
         </div>
       </section>
 
-      <section ref={refComoFunciona} className={`ln-reveal ${visivelComoFunciona ? 'ln-visible' : ''}`} style={s.secao}>
+      <section data-track-secao="2_como_funciona" ref={refComoFunciona} className={`ln-reveal ${visivelComoFunciona ? 'ln-visible' : ''}`} style={s.secao}>
         <span style={s.eyebrowCentro}>Como funciona</span>
         <h2 style={s.secaoTitulo}>Do zero à primeira agenda em minutos</h2>
         <div style={s.gridPassos}>
@@ -308,6 +313,7 @@ function Landing() {
 
       <section
         id="recursos"
+        data-track-secao="3_recursos"
         ref={refRecursos}
         className={`ln-reveal ${visivelRecursos ? 'ln-visible' : ''}`}
         style={{ ...s.secao, ...s.secaoAlt, scrollMarginTop: '90px' }}
@@ -325,7 +331,7 @@ function Landing() {
         </div>
       </section>
 
-      <section ref={refCasos} className={`ln-reveal ${visivelCasos ? 'ln-visible' : ''}`} style={s.secao}>
+      <section data-track-secao="4_casos_de_uso" ref={refCasos} className={`ln-reveal ${visivelCasos ? 'ln-visible' : ''}`} style={s.secao}>
         <span style={s.eyebrowCentro}>Feito para diferentes negócios</span>
         <h2 style={s.secaoTitulo}>Um só sistema, vários tipos de negócio</h2>
         <div style={s.gridCasos}>
@@ -342,7 +348,7 @@ function Landing() {
         </div>
       </section>
 
-      <section id="planos" ref={refPlanos} className={`ln-reveal ${visivelPlanos ? 'ln-visible' : ''}`} style={{ ...s.secao, scrollMarginTop: '90px' }}>
+      <section id="planos" data-track-secao="5_planos" ref={refPlanos} className={`ln-reveal ${visivelPlanos ? 'ln-visible' : ''}`} style={{ ...s.secao, scrollMarginTop: '90px' }}>
         <span style={s.eyebrowCentro}>Planos</span>
         <h2 style={s.secaoTitulo}>Um plano para cada fase do seu negócio</h2>
         <div style={s.gridPlanos}>
@@ -375,14 +381,14 @@ function Landing() {
                   {p.permite_api_publica && <ItemPlano texto="API pública" />}
                   {p.permite_dominio_customizado && <ItemPlano texto="Subdomínio personalizado" />}
                 </ul>
-                <Link to="/cadastrar" className="ln-cta-plano" style={destaque ? s.ctaPlanoDestaque : s.ctaPlano}>Começar</Link>
+                <Link to="/cadastrar" data-track={`plano_comecar_${p.nome}`} className="ln-cta-plano" style={destaque ? s.ctaPlanoDestaque : s.ctaPlano}>Começar</Link>
               </div>
             );
           })}
         </div>
       </section>
 
-      <section ref={refConfianca} className={`ln-reveal ${visivelConfianca ? 'ln-visible' : ''}`} style={{ ...s.secao, ...s.secaoAlt }}>
+      <section data-track-secao="6_confianca" ref={refConfianca} className={`ln-reveal ${visivelConfianca ? 'ln-visible' : ''}`} style={{ ...s.secao, ...s.secaoAlt }}>
         <span style={s.eyebrowCentro}>Confiança</span>
         <h2 style={s.secaoTitulo}>Seguro por padrão</h2>
         <div style={s.gridConfianca}>
@@ -396,7 +402,7 @@ function Landing() {
         </div>
       </section>
 
-      <section id="faq" ref={refFaq} className={`ln-reveal ${visivelFaq ? 'ln-visible' : ''}`} style={{ ...s.secao, scrollMarginTop: '90px' }}>
+      <section id="faq" data-track-secao="7_faq" ref={refFaq} className={`ln-reveal ${visivelFaq ? 'ln-visible' : ''}`} style={{ ...s.secao, scrollMarginTop: '90px' }}>
         <span style={s.eyebrowCentro}>Dúvidas</span>
         <h2 style={s.secaoTitulo}>Perguntas frequentes</h2>
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
@@ -409,7 +415,7 @@ function Landing() {
         </div>
       </section>
 
-      <section ref={refCtaFinal} className={`ln-reveal ${visivelCtaFinal ? 'ln-visible' : ''}`} style={s.ctaFinal}>
+      <section data-track-secao="8_chamada_final" ref={refCtaFinal} className={`ln-reveal ${visivelCtaFinal ? 'ln-visible' : ''}`} style={s.ctaFinal}>
         <div className="ln-hero-visual-grid" style={s.ctaFinalGrid} />
         <div style={s.ctaFinalGlow} />
         <div style={s.ctaFinalConteudo}>
@@ -420,7 +426,7 @@ function Landing() {
             <span style={s.ctaFinalTrustItem}><IconeCheck /> Cancele quando quiser</span>
             <span style={s.ctaFinalTrustItem}><IconeCheck /> Pronto em 5 minutos</span>
           </div>
-          <Link to="/cadastrar" className="ln-cta-final" style={s.ctaFinalBotao}>Criar conta grátis</Link>
+          <Link to="/cadastrar" data-track="cta_final_criar_conta" className="ln-cta-final" style={s.ctaFinalBotao}>Criar conta grátis</Link>
         </div>
       </section>
 
@@ -434,20 +440,20 @@ function Landing() {
           </div>
           <div>
             <h4 style={s.footerTitulo}>Produto</h4>
-            <a href="#recursos" style={s.footerLink}>Recursos</a>
-            <a href="#planos" style={s.footerLink}>Planos</a>
-            <Link to="/cadastrar" style={s.footerLink}>Criar conta</Link>
+            <a href="#recursos" data-track="rodape_recursos" style={s.footerLink}>Recursos</a>
+            <a href="#planos" data-track="rodape_planos" style={s.footerLink}>Planos</a>
+            <Link to="/cadastrar" data-track="rodape_criar_conta" style={s.footerLink}>Criar conta</Link>
           </div>
           <div>
             <h4 style={s.footerTitulo}>Empresa</h4>
-            <a href="#faq" style={s.footerLink}>FAQ</a>
-            <Link to="/docs" style={s.footerLink}>Docs</Link>
-            <Link to="/admin/login" style={s.footerLink}>Entrar</Link>
+            <a href="#faq" data-track="rodape_faq" style={s.footerLink}>FAQ</a>
+            <Link to="/docs" data-track="rodape_docs" style={s.footerLink}>Docs</Link>
+            <Link to="/admin/login" data-track="rodape_entrar" style={s.footerLink}>Entrar</Link>
           </div>
           <div>
             <h4 style={s.footerTitulo}>Legal</h4>
-            <a href="/legal/termos-de-uso.pdf" target="_blank" rel="noopener noreferrer" style={s.footerLink}>Termos de uso</a>
-            <a href="/legal/politica-de-privacidade.pdf" target="_blank" rel="noopener noreferrer" style={s.footerLink}>Privacidade</a>
+            <a href="/legal/termos-de-uso.pdf" data-track="rodape_termos" target="_blank" rel="noopener noreferrer" style={s.footerLink}>Termos de uso</a>
+            <a href="/legal/politica-de-privacidade.pdf" data-track="rodape_privacidade" target="_blank" rel="noopener noreferrer" style={s.footerLink}>Privacidade</a>
           </div>
         </div>
         <p style={{ textAlign: 'center', color: s.CORES.textoFraco, fontSize: '13px', marginTop: '30px' }}>

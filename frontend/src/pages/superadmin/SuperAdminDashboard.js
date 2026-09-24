@@ -125,7 +125,8 @@ const PLANO_VAZIO = {
 // espaço de tela.
 const GRUPOS_MENU = [
   { titulo: 'Visão geral', itens: [
-    { valor: 'metricas', label: 'Métricas', icon: 'BarChart' }
+    { valor: 'metricas', label: 'Métricas', icon: 'BarChart' },
+    { valor: 'funil', label: 'Funil de conversão', icon: 'Funnel' }
   ] },
   { titulo: 'Financeiro', itens: [
     { valor: 'financeiro', label: 'Financeiro', icon: 'DollarSign' },
@@ -281,6 +282,7 @@ function SuperAdminDashboard() {
           </header>
 
           {aba === 'metricas' && <AbaMetricas toast={toast} />}
+          {aba === 'funil' && <AbaFunil toast={toast} />}
           {aba === 'financeiro' && <AbaFinanceiro toast={toast} />}
           {aba === 'contas' && <AbaContas toast={toast} confirmar={confirmar} />}
           {aba === 'empresas' && <AbaEmpresas toast={toast} confirmar={confirmar} />}
@@ -415,6 +417,554 @@ function inicioDoMesLocal() {
 // financeiro do admin de empresa (pages/admin/AdminRelatorios.js: resumo + faturamento por
 // período + detalhamento + exportação), mas só existe dado a partir do dia em que o livro-caixa
 // da plataforma passou a ser alimentado; períodos anteriores a isso vêm vazios.
+// ============================ Funil de conversão ============================
+// Analytics próprio do site institucional (ver frontend/src/utils/analytics.js e backend
+// routes/analytics.js). Mostra o funil do cadastro de empresa comparado ao período anterior de
+// mesmo tamanho, de onde vêm as visitas, localização, dispositivos, cliques e abandono.
+
+const ROTULO_CANAL = {
+  direto: 'Direto (digitou o site / favorito)',
+  organico: 'Busca orgânica (Google, Bing...)',
+  pago: 'Anúncios pagos',
+  social: 'Redes sociais',
+  referencia: 'Links de outros sites',
+  email: 'E-mail'
+};
+
+const ROTULO_DISPOSITIVO = { mobile: 'Celular', desktop: 'Computador', tablet: 'Tablet' };
+
+const ROTULO_CLIQUE = {
+  menu_criar_conta: 'Topo: Criar conta grátis',
+  menu_entrar: 'Topo: Entrar',
+  menu_recursos: 'Topo: Recursos',
+  menu_planos: 'Topo: Planos',
+  menu_faq: 'Topo: FAQ',
+  menu_docs: 'Topo: Docs',
+  hero_criar_conta: 'Banner: Criar conta grátis',
+  hero_ver_como_funciona: 'Banner: Ver como funciona',
+  cta_final_criar_conta: 'Chamada final: Criar conta grátis',
+  rodape_recursos: 'Rodapé: Recursos',
+  rodape_planos: 'Rodapé: Planos',
+  rodape_criar_conta: 'Rodapé: Criar conta',
+  rodape_faq: 'Rodapé: FAQ',
+  rodape_docs: 'Rodapé: Docs',
+  rodape_entrar: 'Rodapé: Entrar',
+  rodape_termos: 'Rodapé: Termos de uso',
+  rodape_privacidade: 'Rodapé: Privacidade',
+  cadastro_continuar: 'Cadastro: Continuar (etapa 1)',
+  cadastro_etapa2_continuar: 'Cadastro: Continuar (etapa 2)',
+  cadastro_etapa2_voltar: 'Cadastro: Voltar (etapa 2)',
+  cadastro_etapa3_voltar: 'Cadastro: Voltar (etapa 3)',
+  cadastro_criar_conta: 'Cadastro: Criar conta',
+  cadastro_confirmar_codigo: 'Cadastro: Confirmar código',
+  cadastro_codigo_voltar: 'Cadastro: Voltar (código)',
+  cadastro_ja_tenho_conta_entrar: 'Cadastro: Já tenho conta (Entrar)',
+  login_acessar: 'Login: Acessar Dashboard',
+  login_esqueci_senha: 'Login: Esqueci minha senha',
+  login_cadastre_sua_empresa: 'Login: Cadastre sua empresa'
+};
+
+const ROTULO_PAGINA = {
+  '/': 'Página inicial',
+  '/docs': 'Docs',
+  '/cadastrar': 'Cadastro de empresa',
+  '/admin/login': 'Login do admin',
+  '/admin/recuperar-senha': 'Recuperar senha'
+};
+
+function rotuloClique(nome) {
+  if (ROTULO_CLIQUE[nome]) return ROTULO_CLIQUE[nome];
+  if (nome.startsWith('plano_comecar_')) return `Planos: Começar (${nome.slice('plano_comecar_'.length)})`;
+  if (nome.startsWith('cadastro_plano_')) return `Cadastro: escolheu ${nome.slice('cadastro_plano_'.length)}`;
+  if (nome.startsWith('cadastro_tipo_')) return `Cadastro: tipo ${nome.slice('cadastro_tipo_'.length).replace(/_/g, ' ')}`;
+  return nome.replace(/_/g, ' ');
+}
+
+let nomesPaises = null;
+function rotuloPais(codigo) {
+  try {
+    nomesPaises = nomesPaises || new Intl.DisplayNames(['pt-BR'], { type: 'region' });
+    return nomesPaises.of(codigo) || codigo;
+  } catch (_) {
+    return codigo;
+  }
+}
+
+const numeroBr = (n) => Number(n || 0).toLocaleString('pt-BR');
+const pctBr = (v, casas = 1) => `${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })}%`;
+const taxa = (parte, todo) => (todo ? (parte / todo) * 100 : 0);
+
+function dataLocalIso(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function useTelaEstreita(limite = 760) {
+  const consulta = `(max-width: ${limite}px)`;
+  const [estreita, setEstreita] = useState(() => typeof window !== 'undefined' && window.matchMedia(consulta).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(consulta);
+    const aoMudar = () => setEstreita(mq.matches);
+    mq.addEventListener ? mq.addEventListener('change', aoMudar) : mq.addListener(aoMudar);
+    return () => (mq.removeEventListener ? mq.removeEventListener('change', aoMudar) : mq.removeListener(aoMudar));
+  }, [consulta]);
+  return estreita;
+}
+
+// Variação contra o período anterior, sempre com seta + texto (nunca só cor).
+function Variacao({ atual, anterior }) {
+  if (!anterior && !atual) return <span style={{ color: '#9ca3af' }}>sem dados antes</span>;
+  if (!anterior) return <span style={{ color: '#059669', fontWeight: 700 }}>novo</span>;
+  const delta = ((atual - anterior) / anterior) * 100;
+  const subiu = delta >= 0;
+  return (
+    <span style={{ color: subiu ? '#059669' : '#dc2626', fontWeight: 700, whiteSpace: 'nowrap' }}>
+      {subiu ? '▲' : '▼'} {pctBr(Math.abs(delta))}
+    </span>
+  );
+}
+
+function CardKpi({ label, valor, atual, anterior, cor, detalhe }) {
+  return (
+    <div style={{ ...s.statCard, borderTopColor: cor }}>
+      <div style={s.statLabel}>{label}</div>
+      <div style={{ ...s.statNumero, color: '#111827', marginTop: '8px' }}>{valor}</div>
+      <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+        {anterior !== undefined && <><Variacao atual={atual} anterior={anterior} /> vs período anterior</>}
+        {detalhe}
+      </div>
+    </div>
+  );
+}
+
+const COR_FLUXO = '#bfcffb';
+const COR_ETAPA = '#2554eb';
+const COR_PERDA = '#e5484d';
+
+// Funil em faixa (estilo Sankey): a faixa azul segue pra etapa seguinte com a espessura de quem
+// continuou; quem saiu desce em vermelho. Rótulos ficam em HTML numa grade com as mesmas colunas
+// do SVG (o SVG estica na horizontal, então texto dentro dele ficaria deformado).
+function FunilFaixas({ etapas }) {
+  const n = etapas.length;
+  const L = 1000;
+  const colW = L / n;
+  const noW = 6;
+  const y0 = 8;
+  const alturaMax = 96;
+  const yPerda = 128;
+  const topo = etapas[0]?.sessoes || 0;
+  const altura = (v) => (topo ? Math.max(v > 0 ? 2 : 0, (v / topo) * alturaMax) : 0);
+  const xDe = (i) => i * colW + 2;
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <div style={{ minWidth: '860px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${n}, 1fr)`, gap: 0, marginBottom: '10px' }}>
+          {etapas.map((e, i) => {
+            const anterior = i > 0 ? etapas[i - 1].sessoes : null;
+            return (
+              <div key={e.chave} style={{ paddingRight: '10px', fontSize: '12px', color: '#6b7280', lineHeight: 1.45 }}>
+                <div style={{ fontWeight: 700, color: '#111827', fontSize: '12.5px', minHeight: '34px' }}>{e.label}</div>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#111827' }}>{numeroBr(e.sessoes)}</div>
+                <div>ant. {numeroBr(e.sessoes_anterior)} · <Variacao atual={e.sessoes} anterior={e.sessoes_anterior} /></div>
+                {anterior !== null && <div title="Dos que chegaram na etapa anterior, quantos chegaram nesta">▸ {pctBr(taxa(e.sessoes, anterior))} da etapa anterior</div>}
+              </div>
+            );
+          })}
+        </div>
+
+        <svg viewBox={`0 0 ${L} 240`} preserveAspectRatio="none" style={{ width: '100%', height: '240px', display: 'block' }} role="img" aria-label="Funil de conversão">
+          {etapas.map((e, i) => {
+            const h = altura(e.sessoes);
+            const proxima = etapas[i + 1];
+            const hProx = proxima ? altura(proxima.sessoes) : 0;
+            const x = xDe(i);
+            const perda = proxima ? e.sessoes - proxima.sessoes : 0;
+            const xa = x + noW;
+            const xb = x + colW * 0.62;
+            const meio = (xa + xb) / 2;
+            const espessuraPerda = h - hProx;
+            return (
+              <g key={e.chave}>
+                {proxima && hProx > 0 && (
+                  <rect x={xa} y={y0} width={xDe(i + 1) - xa} height={hProx} fill={COR_FLUXO}>
+                    <title>{`${numeroBr(proxima.sessoes)} seguiram para "${proxima.label}"`}</title>
+                  </rect>
+                )}
+                {proxima && perda > 0 && espessuraPerda > 0 && (
+                  <path
+                    d={`M ${xa} ${y0 + hProx} C ${meio} ${y0 + hProx}, ${meio} ${yPerda}, ${xb} ${yPerda} L ${xb} ${yPerda + espessuraPerda} C ${meio} ${yPerda + espessuraPerda}, ${meio} ${y0 + h}, ${xa} ${y0 + h} Z`}
+                    fill={COR_PERDA}
+                    fillOpacity={0.55}
+                  >
+                    <title>{`Saíram em "${e.label}": ${numeroBr(perda)} (${pctBr(taxa(perda, e.sessoes))})`}</title>
+                  </path>
+                )}
+                {proxima && perda > 0 && espessuraPerda > 0 && (
+                  <rect x={xb} y={yPerda} width={4} height={espessuraPerda} fill={COR_PERDA} />
+                )}
+                <rect x={x} y={y0} width={noW} height={Math.max(h, 1)} rx={1} fill={COR_ETAPA}>
+                  <title>{`${e.label}: ${numeroBr(e.sessoes)}`}</title>
+                </rect>
+              </g>
+            );
+          })}
+        </svg>
+
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${n}, 1fr)`, marginTop: '4px' }}>
+          {etapas.map((e, i) => {
+            const proxima = etapas[i + 1];
+            const perda = proxima ? e.sessoes - proxima.sessoes : 0;
+            return (
+              <div key={e.chave} style={{ fontSize: '12px', paddingLeft: '30%', color: '#6b7280' }}>
+                {proxima && perda > 0 && (
+                  <>
+                    <div style={{ color: '#b91c1c', fontWeight: 700 }}>−{numeroBr(perda)}</div>
+                    <div>{pctBr(taxa(perda, e.sessoes))} saíram</div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Versão do funil pra tela estreita: uma etapa por linha, barra proporcional ao topo do funil
+// e a perda pra próxima etapa logo abaixo.
+function FunilLista({ etapas }) {
+  const topo = etapas[0]?.sessoes || 0;
+  return (
+    <div>
+      {etapas.map((e, i) => {
+        const proxima = etapas[i + 1];
+        const perda = proxima ? e.sessoes - proxima.sessoes : 0;
+        return (
+          <div key={e.chave} style={{ padding: '10px 0', borderBottom: i < etapas.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>{i + 1}. {e.label}</span>
+              <span style={{ fontSize: '16px', fontWeight: 800, color: '#111827' }}>{numeroBr(e.sessoes)}</span>
+            </div>
+            <div style={{ height: '10px', background: '#f3f4f6', borderRadius: '4px', margin: '6px 0', overflow: 'hidden' }}>
+              <div style={{ width: `${taxa(e.sessoes, topo)}%`, minWidth: e.sessoes ? '3px' : 0, height: '100%', background: COR_ETAPA, borderRadius: '4px' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 10px', fontSize: '12px', color: '#6b7280' }}>
+              <span>{pctBr(taxa(e.sessoes, topo))} do total · <Variacao atual={e.sessoes} anterior={e.sessoes_anterior} /></span>
+              {proxima && perda > 0 && <span style={{ color: '#b91c1c', fontWeight: 700 }}>▼ {numeroBr(perda)} saíram ({pctBr(taxa(perda, e.sessoes))})</span>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Lista com barra horizontal: funciona igual no desktop e no celular (sem tabela larga).
+function ListaBarras({ itens, rotulo = (c) => c, vazio = 'Sem dados nesse período.', colunas }) {
+  if (!itens || itens.length === 0) return <p style={s.textoVazio}>{vazio}</p>;
+  const cols = colunas || [{ chave: 'sessoes', titulo: 'Sessões' }];
+  const principal = cols[0].chave;
+  const max = Math.max(...itens.map((i) => i[principal] || 0), 1);
+  return (
+    <div>
+      {itens.map((item) => (
+        <div key={item.chave} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6' }} title={cols.map((c) => `${c.titulo}: ${c.formatar ? c.formatar(item) : numeroBr(item[c.chave])}`).join(' · ')}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '13px' }}>
+            <span style={{ color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{rotulo(item.chave)}</span>
+            <span style={{ display: 'flex', gap: '12px', flexShrink: 0, color: '#6b7280', fontVariantNumeric: 'tabular-nums' }}>
+              {cols.map((c, i) => (
+                <span key={c.chave} style={i === 0 ? { color: '#111827', fontWeight: 700 } : undefined}>
+                  {c.formatar ? c.formatar(item) : numeroBr(item[c.chave])}
+                </span>
+              ))}
+            </span>
+          </div>
+          <div style={{ height: '6px', background: '#f3f4f6', borderRadius: '3px', marginTop: '5px', overflow: 'hidden' }}>
+            <div style={{ width: `${taxa(item[principal] || 0, max)}%`, height: '100%', background: COR_ETAPA, borderRadius: '3px' }} />
+          </div>
+        </div>
+      ))}
+      <p style={{ fontSize: '11px', color: '#9ca3af', margin: '8px 0 0' }}>Colunas: {cols.map((c) => c.titulo).join(' · ')}</p>
+    </div>
+  );
+}
+
+const COLUNAS_CONVERSAO = [
+  { chave: 'sessoes', titulo: 'Sessões' },
+  { chave: 'cadastro', titulo: 'Abriram o cadastro' },
+  { chave: 'contas', titulo: 'Criaram conta' },
+  { chave: 'conv', titulo: 'Conversão', formatar: (i) => pctBr(taxa(i.contas, i.sessoes)) }
+];
+
+function SerieDiaria({ serie }) {
+  if (!serie?.length) return null;
+  const max = Math.max(...serie.map((d) => d.sessoes), 1);
+  const passoRotulo = Math.max(1, Math.ceil(serie.length / 10));
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '140px', minWidth: `${Math.min(serie.length * 10, 900)}px` }}>
+        {serie.map((d, i) => (
+          <div key={d.dia} title={`${formatarDataSemFuso(d.dia)}: ${numeroBr(d.sessoes)} sessões, ${numeroBr(d.contas)} conta(s) criada(s)`} style={{ flex: '1 0 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+            <div style={{ width: '100%', maxWidth: '22px', height: `${taxa(d.sessoes, max)}%`, minHeight: d.sessoes ? '2px' : 0, background: d.contas ? COR_ETAPA : '#93acf6', borderRadius: '3px 3px 0 0' }} />
+            <span style={{ fontSize: '9.5px', color: '#9ca3af', marginTop: '4px', height: '12px', whiteSpace: 'nowrap' }}>
+              {i % passoRotulo === 0 ? d.dia.slice(8, 10) + '/' + d.dia.slice(5, 7) : ''}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p style={{ fontSize: '11px', color: '#9ca3af', margin: '6px 0 0' }}>Sessões por dia. Barras em azul escuro = dias com pelo menos uma conta criada.</p>
+    </div>
+  );
+}
+
+function AbaFunil({ toast }) {
+  const hoje = new Date();
+  const [dataFim, setDataFim] = useState(dataLocalIso(hoje));
+  const [dataInicio, setDataInicio] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 29); return dataLocalIso(d); });
+  const [dispositivo, setDispositivo] = useState('');
+  const [canal, setCanal] = useState('');
+  const [abaLocal, setAbaLocal] = useState('estados');
+  const [dados, setDados] = useState(null);
+  const [carregando, setCarregando] = useState(true);
+  const estreita = useTelaEstreita();
+
+  useEffect(() => {
+    if (!dataInicio || !dataFim) return;
+    setCarregando(true);
+    const params = new URLSearchParams({ inicio: dataInicio, fim: dataFim });
+    if (dispositivo) params.set('dispositivo', dispositivo);
+    if (canal) params.set('canal', canal);
+    fetch(`${API_URL}/super-admin/analytics/funil?${params.toString()}`)
+      .then(async (r) => {
+        const corpo = await r.json();
+        if (!r.ok) throw new Error(corpo.error || 'Erro ao carregar o funil.');
+        setDados(corpo);
+      })
+      .catch((e) => { toast.error(e.message); setDados(null); })
+      .finally(() => setCarregando(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataInicio, dataFim, dispositivo, canal]);
+
+  const aplicarAtalho = (dias) => {
+    const fim = new Date();
+    const inicio = new Date();
+    inicio.setDate(inicio.getDate() - (dias - 1));
+    setDataInicio(dataLocalIso(inicio));
+    setDataFim(dataLocalIso(fim));
+  };
+
+  const r = dados?.resumo;
+  const secoesOrdenadas = dados ? [...dados.secoes].sort((a, b) => a.chave.localeCompare(b.chave)) : [];
+  const listaLocal = dados ? { paises: dados.paises, estados: dados.estados, cidades: dados.cidades }[abaLocal] : [];
+
+  return (
+    <div>
+      <div className="sa-barra-top" style={s.barraTop}>
+        <div className="sa-filtros" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">De</span><input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} /></label>
+          <span className="sa-ate" style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
+          <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">Até</span><input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} /></label>
+          <select style={s.selectFiltro} value={dispositivo} onChange={(e) => setDispositivo(e.target.value)}>
+            <option value="">Todos os dispositivos</option>
+            <option value="mobile">Celular</option>
+            <option value="desktop">Computador</option>
+            <option value="tablet">Tablet</option>
+          </select>
+          <select style={s.selectFiltro} value={canal} onChange={(e) => setCanal(e.target.value)}>
+            <option value="">Todos os canais</option>
+            {Object.entries(ROTULO_CANAL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {[7, 30, 90].map((d) => (
+            <button key={d} onClick={() => aplicarAtalho(d)} style={s.btnOutline}>{d} dias</button>
+          ))}
+        </div>
+      </div>
+
+      {carregando ? <p style={s.textoCarregando}>Carregando...</p> : !dados ? (
+        <p style={s.textoVazio}>Não foi possível carregar o funil.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <p style={{ fontSize: '12px', color: '#9ca3af', margin: 0 }}>
+            Comparando com {formatarDataSemFuso(dados.periodo.inicio_anterior)} a {formatarDataSemFuso(dados.periodo.fim_anterior)} (período anterior de mesmo tamanho).
+            Cada "sessão" é uma visita: termina depois de 30 minutos parada.
+          </p>
+
+          <div style={{ ...s.statsGrid, marginBottom: 0 }}>
+            <CardKpi label="Visitas (sessões)" valor={numeroBr(r.sessoes)} atual={r.sessoes} anterior={r.sessoes_anterior} cor="#2563eb" />
+            <CardKpi label="Pessoas diferentes" valor={numeroBr(r.visitantes)} atual={r.visitantes} anterior={r.visitantes_anterior} cor="#7c3aed" />
+            <CardKpi label="Contas criadas" valor={numeroBr(r.contas)} atual={r.contas} anterior={r.contas_anterior} cor="#059669" />
+            <CardKpi
+              label="Conversão do site"
+              valor={pctBr(taxa(r.contas, r.sessoes), 2)}
+              cor="#d97706"
+              detalhe={<>antes: {pctBr(taxa(r.contas_anterior, r.sessoes_anterior), 2)}</>}
+            />
+            <CardKpi
+              label="Clicaram em Entrar"
+              valor={numeroBr(r.entrar)}
+              cor="#0891b2"
+              detalhe={<>{numeroBr(r.logins)} fizeram login ({pctBr(taxa(r.logins, r.entrar))})</>}
+            />
+          </div>
+
+          <div style={s.card}>
+            <h3 style={s.cardTitulo}>Funil do cadastro</h3>
+            {r.sessoes === 0 ? (
+              <p style={s.textoVazio}>Nenhuma visita registrada nesse período ainda. Os dados começam a aparecer a partir das primeiras visitas depois da ativação.</p>
+            ) : estreita ? <FunilLista etapas={dados.funil} /> : <FunilFaixas etapas={dados.funil} />}
+          </div>
+
+          {dados.por_dispositivo.length > 0 && (
+            <div style={s.card}>
+              <h3 style={s.cardTitulo}>Funil por dispositivo</h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="sa-tabela" style={{ ...s.table, minWidth: '640px' }}>
+                  <thead>
+                    <tr>
+                      <th style={s.th}>Dispositivo</th>
+                      {dados.funil.map((e) => <th key={e.chave} style={s.th}>{e.label}</th>)}
+                      <th style={s.th}>Conversão</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dados.por_dispositivo.map((d) => (
+                      <tr key={d.dispositivo} style={s.tr}>
+                        <td style={s.td}><strong>{ROTULO_DISPOSITIVO[d.dispositivo] || d.dispositivo}</strong></td>
+                        {d.etapas.map((v, i) => (
+                          <td key={i} style={s.td}>
+                            {numeroBr(v)}
+                            {i > 0 && <div style={s.subTexto}>{pctBr(taxa(v, d.etapas[i - 1]))}</div>}
+                          </td>
+                        ))}
+                        <td style={s.td}><strong>{pctBr(taxa(d.etapas[d.etapas.length - 1], d.etapas[0]), 2)}</strong></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div style={s.card}>
+            <h3 style={s.cardTitulo}>Visitas por dia</h3>
+            <SerieDiaria serie={dados.serie} />
+          </div>
+
+          <div style={s.gridDuasColunas}>
+            <div style={s.card}>
+              <h3 style={s.cardTitulo}>Canais (de onde vieram)</h3>
+              <ListaBarras itens={dados.canais} rotulo={(c) => ROTULO_CANAL[c] || c} colunas={COLUNAS_CONVERSAO} />
+            </div>
+            <div style={s.card}>
+              <h3 style={s.cardTitulo}>Origens (Instagram, Google, sites...)</h3>
+              <ListaBarras itens={dados.origens} colunas={COLUNAS_CONVERSAO} vazio="Todas as visitas foram diretas nesse período." />
+            </div>
+          </div>
+
+          <div style={s.card}>
+            <h3 style={s.cardTitulo}>Campanhas (links com utm_campaign)</h3>
+            <ListaBarras itens={dados.campanhas} colunas={COLUNAS_CONVERSAO} vazio="Nenhuma visita por link de campanha nesse período." />
+            <p style={{ fontSize: '12px', color: '#6b7280', margin: '10px 0 0', lineHeight: 1.5 }}>
+              Pra separar cada divulgação, use links como <code>schednext.com.br/?utm_source=instagram&amp;utm_medium=bio&amp;utm_campaign=lancamento</code>.
+              Anúncios do Google e do Meta já chegam marcados sozinhos (gclid/fbclid) e entram como "Anúncios pagos".
+            </p>
+          </div>
+
+          <div style={s.card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+              <h3 style={{ ...s.cardTitulo, margin: 0 }}>Localização</h3>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {[['paises', 'Países'], ['estados', 'Estados'], ['cidades', 'Cidades']].map(([v, l]) => (
+                  <button key={v} onClick={() => setAbaLocal(v)} style={{ ...s.btnOutline, ...(abaLocal === v ? s.tabAtivo : {}) }}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <ListaBarras
+              itens={listaLocal}
+              rotulo={abaLocal === 'paises' ? rotuloPais : (c) => c}
+              colunas={COLUNAS_CONVERSAO}
+              vazio="Sem localização registrada nesse período."
+            />
+            {r.sem_localizacao > 0 && (
+              <p style={{ fontSize: '12px', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '8px 10px', margin: '10px 0 0' }}>
+                {numeroBr(r.sem_localizacao)} visita(s) sem localização. Ela vem do Cloudflare: em Rules → Settings → Managed Transforms, ative "Add visitor location headers" pra aparecer estado e cidade.
+              </p>
+            )}
+          </div>
+
+          <div style={s.gridDuasColunas}>
+            <div style={s.card}>
+              <h3 style={s.cardTitulo}>Dispositivos</h3>
+              <ListaBarras itens={dados.dispositivos} rotulo={(c) => ROTULO_DISPOSITIVO[c] || c} colunas={COLUNAS_CONVERSAO} />
+            </div>
+            <div style={s.card}>
+              <h3 style={s.cardTitulo}>Navegadores</h3>
+              <ListaBarras itens={dados.navegadores} colunas={COLUNAS_CONVERSAO} />
+            </div>
+          </div>
+
+          <div style={s.card}>
+            <h3 style={s.cardTitulo}>Cliques em botões e links</h3>
+            <ListaBarras
+              itens={dados.cliques}
+              rotulo={rotuloClique}
+              colunas={[{ chave: 'sessoes', titulo: 'Pessoas que clicaram (sessões)' }, { chave: 'total', titulo: 'Cliques no total' }]}
+              vazio="Nenhum clique registrado nesse período."
+            />
+          </div>
+
+          <div style={s.gridDuasColunas}>
+            <div style={s.card}>
+              <h3 style={s.cardTitulo}>Até onde rolaram a página inicial</h3>
+              <ListaBarras
+                itens={secoesOrdenadas}
+                rotulo={(c) => c.replace(/^\d+_/, '').replace(/_/g, ' ')}
+                colunas={[{ chave: 'sessoes', titulo: 'Sessões que viram a seção' }]}
+                vazio="Sem dados de rolagem nesse período."
+              />
+            </div>
+            <div style={s.card}>
+              <h3 style={s.cardTitulo}>Páginas vistas</h3>
+              <ListaBarras
+                itens={dados.paginas}
+                rotulo={(c) => ROTULO_PAGINA[c] || c}
+                colunas={[{ chave: 'sessoes', titulo: 'Sessões' }, { chave: 'total', titulo: 'Visualizações' }]}
+              />
+            </div>
+          </div>
+
+          <div style={s.card}>
+            <h3 style={s.cardTitulo}>Onde desistem do cadastro</h3>
+            <div style={s.gridDuasColunas}>
+              <div>
+                <p style={{ ...s.subTexto, marginBottom: '6px' }}>Último campo tocado por quem começou a preencher e não criou a conta</p>
+                <ListaBarras itens={dados.abandono.ultimo_campo} colunas={[{ chave: 'sessoes', titulo: 'Sessões' }]} vazio="Ninguém abandonou no meio do formulário." />
+              </div>
+              <div>
+                <p style={{ ...s.subTexto, marginBottom: '6px' }}>Erros de validação ao clicar em Continuar (campo com problema)</p>
+                <ListaBarras itens={dados.abandono.erros_validacao} colunas={[{ chave: 'sessoes', titulo: 'Sessões' }, { chave: 'total', titulo: 'Vezes' }]} vazio="Nenhum erro de validação." />
+              </div>
+            </div>
+            <div style={{ ...s.gridDuasColunas, marginTop: '14px' }}>
+              <div>
+                <p style={{ ...s.subTexto, marginBottom: '6px' }}>Erros ao enviar o cadastro (resposta do servidor)</p>
+                <ListaBarras itens={dados.abandono.erros_envio} colunas={[{ chave: 'sessoes', titulo: 'Sessões' }, { chave: 'total', titulo: 'Vezes' }]} vazio="Nenhum erro no envio." />
+              </div>
+              <div>
+                <p style={{ ...s.subTexto, marginBottom: '6px' }}>Código de confirmação errado/expirado</p>
+                <p style={{ fontSize: '22px', fontWeight: 800, color: '#111827', margin: 0 }}>{numeroBr(dados.abandono.erros_codigo)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AbaFinanceiro({ toast }) {
   const [dataInicio, setDataInicio] = useState(inicioDoMesLocal());
   const [dataFim, setDataFim] = useState(new Date().toISOString().slice(0, 10));
@@ -3702,6 +4252,7 @@ function AbaSuperAdmins({ toast, confirmar }) {
 }
 
 const Icons = {
+  Funnel: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>,
   Menu: ({ color = 'currentColor' }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
   Building: ({ color = 'currentColor' }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: '4px' }}><path d="M6 22V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v18"></path><path d="M2 22h20"></path><path d="M9 6h1M14 6h1M9 10h1M14 10h1M9 14h1M14 14h1"></path></svg>,
   BarChart: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><rect x="7" y="12" width="3" height="6"></rect><rect x="12" y="8" width="3" height="10"></rect><rect x="17" y="5" width="3" height="13"></rect></svg>,

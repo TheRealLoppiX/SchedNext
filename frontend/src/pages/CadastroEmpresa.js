@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from '../components/Toast';
 import LoadingButton from '../components/LoadingButton';
@@ -7,6 +7,7 @@ import { obterTerminologia } from '../utils/terminologia';
 import { emailValido, formatarDocumento, documentoTemTamanhoValido } from '../utils/validacao';
 import { formatarTelefone } from '../utils/telefone';
 import { API_URL } from '../services/api';
+import { rastrearEvento } from '../utils/analytics';
 
 function gerarSlug(nome) {
   return nome
@@ -43,6 +44,24 @@ function CadastroEmpresa({ setEmpresaLogada }) {
   const [formEnterprise, setFormEnterprise] = useState({ cnpj: '', localizacao: '', clientes_esperados: '', observacoes: '', email_contato: '', telefone_contato: '' });
   const [enviandoEnterprise, setEnviandoEnterprise] = useState(false);
 
+  // Funil de conversão (ver utils/analytics.js): cada etapa vista e cada campo tocado (só o
+  // NOME do campo, nunca o valor), pra saber em que ponto quem começou a preencher desistiu.
+  useEffect(() => {
+    rastrearEvento('cadastro_etapa', { etapa });
+  }, [etapa]);
+
+  const ultimoCampoTocado = useRef(null);
+  const propsCampo = (campo) => ({
+    name: campo,
+    onFocus: () => {
+      if (ultimoCampoTocado.current === campo) return;
+      ultimoCampoTocado.current = campo;
+      rastrearEvento('cadastro_campo', { campo });
+    },
+    // Validação nativa (required/type=email) barra o envio sem chamar o onSubmit.
+    onInvalid: () => rastrearEvento('cadastro_campo_invalido', { campo })
+  });
+
   const slugDebounced = useDebouncedValue(slug, 400);
   const [statusSlug, setStatusSlug] = useState({ checando: false, disponivel: null, motivo: '' });
 
@@ -75,12 +94,17 @@ function CadastroEmpresa({ setEmpresaLogada }) {
   }, []);
 
   const avancarDe1 = () => {
-    if (!nome.trim()) return toast.error('Informe o nome do seu negócio.');
-    if (!emailValido(email)) return toast.error('Informe um e-mail válido.');
-    if (senha.length < 6) return toast.error('A senha precisa ter ao menos 6 caracteres.');
-    if (telefone.replace(/\D/g, '').length < 10) return toast.error('Informe um telefone com DDD.');
-    if (!documentoTemTamanhoValido(documento)) return toast.error('Informe um CPF ou CNPJ válido.');
-    if (statusSlug.disponivel === false) return toast.error(statusSlug.motivo || 'Esse endereço já está em uso.');
+    const recusar = (campo, mensagem) => {
+      rastrearEvento('cadastro_continuar', { ok: false, campo });
+      toast.error(mensagem);
+    };
+    if (!nome.trim()) return recusar('nome', 'Informe o nome do seu negócio.');
+    if (!emailValido(email)) return recusar('email', 'Informe um e-mail válido.');
+    if (senha.length < 6) return recusar('senha', 'A senha precisa ter ao menos 6 caracteres.');
+    if (telefone.replace(/\D/g, '').length < 10) return recusar('telefone', 'Informe um telefone com DDD.');
+    if (!documentoTemTamanhoValido(documento)) return recusar('documento', 'Informe um CPF ou CNPJ válido.');
+    if (statusSlug.disponivel === false) return recusar('slug', statusSlug.motivo || 'Esse endereço já está em uso.');
+    rastrearEvento('cadastro_continuar', { ok: true });
     setEtapa(2);
   };
 
@@ -94,6 +118,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
       });
       const data = await res.json();
       if (res.ok) {
+        rastrearEvento('cadastro_enterprise', { ok: true });
         toast.success(data.message || 'Recebemos seu contato!');
         setEnterpriseEnviado(true);
       } else {
@@ -117,13 +142,16 @@ function CadastroEmpresa({ setEmpresaLogada }) {
       const dataCadastro = await resCadastro.json();
 
       if (!resCadastro.ok) {
+        rastrearEvento('cadastro_enviado', { ok: false, erro: String(dataCadastro.error || 'Erro ' + resCadastro.status).slice(0, 80) });
         toast.error(dataCadastro.error || 'Não foi possível criar sua conta.');
         return;
       }
 
+      rastrearEvento('cadastro_enviado', { ok: true, plano: planos.find((p) => p.id === planoId)?.nome || null, vertical });
       toast.success(dataCadastro.message || 'Enviamos um código de confirmação pro seu e-mail.');
       setEtapa(4);
     } catch (err) {
+      rastrearEvento('cadastro_enviado', { ok: false, erro: 'Sem conexão com o servidor' });
       toast.error('Não foi possível conectar ao servidor. Tente novamente em instantes.');
     } finally {
       setEnviando(false);
@@ -141,10 +169,12 @@ function CadastroEmpresa({ setEmpresaLogada }) {
       const data = await res.json();
 
       if (!res.ok) {
+        rastrearEvento('cadastro_codigo', { ok: false });
         toast.error(data.error || 'Código inválido ou expirado.');
         return;
       }
 
+      rastrearEvento('cadastro_concluido', { plano: planos.find((p) => p.id === planoId)?.nome || null, vertical });
       localStorage.setItem('adminToken', JSON.stringify({ ...data.admin, token: data.token }));
       setEmpresaLogada(data.admin.empresa_id);
       toast.success(data.message || `Conta criada! Bem-vindo(a), ${nome}.`);
@@ -172,6 +202,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
             <input
               className="bb-input"
               placeholder="Nome do seu negócio"
+              {...propsCampo('nome')}
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               required
@@ -182,6 +213,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
             <input
               className="bb-input"
               placeholder="Endereço personalizado (slug)"
+              {...propsCampo('slug')}
               value={slug}
               onChange={(e) => { setSlug(gerarSlug(e.target.value)); setSlugEditadoManualmente(true); }}
               required
@@ -199,6 +231,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
               type="email"
               className="bb-input"
               placeholder="Seu e-mail"
+              {...propsCampo('email')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -207,6 +240,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
               type="tel"
               className="bb-input"
               placeholder="Telefone / WhatsApp com DDD"
+              {...propsCampo('telefone')}
               value={telefone}
               onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
               required
@@ -216,6 +250,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
               inputMode="numeric"
               className="bb-input"
               placeholder="CPF ou CNPJ"
+              {...propsCampo('documento')}
               value={documento}
               onChange={(e) => setDocumento(formatarDocumento(e.target.value))}
               required
@@ -224,11 +259,12 @@ function CadastroEmpresa({ setEmpresaLogada }) {
               type="password"
               className="bb-input"
               placeholder="Crie uma senha"
+              {...propsCampo('senha')}
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               required
             />
-            <button type="submit" className="bb-btn">Continuar</button>
+            <button type="submit" data-track="cadastro_continuar" className="bb-btn">Continuar</button>
           </form>
         )}
 
@@ -243,6 +279,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
                   <button
                     key={v}
                     type="button"
+                    data-track={`cadastro_tipo_${v}`}
                     onClick={() => setVertical(v)}
                     style={{
                       padding: '14px 10px', borderRadius: '10px', cursor: 'pointer', textAlign: 'center',
@@ -257,8 +294,8 @@ function CadastroEmpresa({ setEmpresaLogada }) {
               })}
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="button" className="bb-btn-secondary" onClick={() => setEtapa(1)}>Voltar</button>
-              <button type="button" className="bb-btn" onClick={() => setEtapa(3)}>Continuar</button>
+              <button type="button" data-track="cadastro_etapa2_voltar" className="bb-btn-secondary" onClick={() => setEtapa(1)}>Voltar</button>
+              <button type="button" data-track="cadastro_etapa2_continuar" className="bb-btn" onClick={() => setEtapa(3)}>Continuar</button>
             </div>
           </div>
         )}
@@ -274,6 +311,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
                   <button
                     key={p.id}
                     type="button"
+                    data-track={`cadastro_plano_${p.nome}`}
                     onClick={() => ehEnterprise ? setMostrarFormEnterprise(true) : setPlanoId(p.id)}
                     style={{
                       padding: '14px', borderRadius: '10px', cursor: 'pointer', textAlign: 'left',
@@ -339,8 +377,8 @@ function CadastroEmpresa({ setEmpresaLogada }) {
               {' '}da SchedNext.
             </p>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="button" className="bb-btn-secondary" onClick={() => setEtapa(2)} disabled={enviando}>Voltar</button>
-              <LoadingButton type="button" loading={enviando} className="bb-btn" onClick={finalizarCadastro}>Criar conta</LoadingButton>
+              <button type="button" data-track="cadastro_etapa3_voltar" className="bb-btn-secondary" onClick={() => setEtapa(2)} disabled={enviando}>Voltar</button>
+              <LoadingButton type="button" data-track="cadastro_criar_conta" loading={enviando} className="bb-btn" onClick={finalizarCadastro}>Criar conta</LoadingButton>
             </div>
           </div>
         )}
@@ -351,18 +389,19 @@ function CadastroEmpresa({ setEmpresaLogada }) {
               className="bb-input"
               style={{ textAlign: 'center', fontSize: '24px', letterSpacing: '5px' }}
               placeholder="000000"
+              {...propsCampo('codigo')}
               maxLength="6"
               value={codigo}
               onChange={(e) => setCodigo(e.target.value)}
               autoFocus
             />
-            <LoadingButton type="submit" loading={confirmando} className="bb-btn">Confirmar e criar conta</LoadingButton>
-            <button type="button" className="bb-btn-secondary" onClick={() => setEtapa(3)} disabled={confirmando}>Voltar</button>
+            <LoadingButton type="submit" data-track="cadastro_confirmar_codigo" loading={confirmando} className="bb-btn">Confirmar e criar conta</LoadingButton>
+            <button type="button" data-track="cadastro_codigo_voltar" className="bb-btn-secondary" onClick={() => setEtapa(3)} disabled={confirmando}>Voltar</button>
           </form>
         )}
 
         <p style={{ marginTop: '20px', fontSize: '13px' }}>
-          Já tem conta? <Link to="/admin/login" className="bb-link">Entrar</Link>
+          Já tem conta? <Link to="/admin/login" data-track="cadastro_ja_tenho_conta_entrar" className="bb-link">Entrar</Link>
         </p>
       </div>
     </div>
