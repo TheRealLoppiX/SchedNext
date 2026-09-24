@@ -600,6 +600,38 @@ code {
     width: 100% !important;
     box-sizing: border-box !important;
   }
+
+  /* Admin absoluto (pages/superadmin/SuperAdminDashboard.js): o .bb-main já cuida do respiro
+     da página, então o container interno perde o padding de 40px/24px do desktop. */
+  .sa-container {
+    padding: 0 0 80px !important;
+  }
+
+  .sa-header {
+    margin-bottom: 18px !important;
+    padding-bottom: 14px !important;
+  }
+
+  .sa-header h1 {
+    font-size: 22px !important;
+  }
+
+  .sa-overlay {
+    padding: 10px !important;
+  }
+
+  .sa-overlay > div {
+    padding: 20px 16px !important;
+    max-height: 92vh !important;
+    max-height: 92dvh !important;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Grids de formulário/detalhe do admin absoluto (2 e 3 colunas fixas) viram uma coluna só. */
+  .sa-grid-form {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 @media (max-width: 380px) {

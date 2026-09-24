@@ -158,6 +158,7 @@ const TODOS_ITENS_MENU = GRUPOS_MENU.flatMap((g) => g.itens);
 // telas do painel.
 function SuperAdminDashboard() {
   const [aba, setAba] = useState('metricas');
+  const [menuAberto, setMenuAberto] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
   const confirmar = useConfirm();
@@ -169,30 +170,67 @@ function SuperAdminDashboard() {
 
   const itemAtivo = TODOS_ITENS_MENU.find((i) => i.valor === aba);
 
+  // Mesmo comportamento da sidebar do admin de empresa (ver components/Layout.js): no desktop
+  // fica recolhida numa faixa de ícones e abre no hover; em telas touch não existe hover de
+  // verdade, então abre/fecha só pelo clique (e no mobile vira painel off-canvas via CSS
+  // .bb-sidebar/.bb-main em index.css, com o botão de hambúrguer fixo).
+  const podeUsarHover = () =>
+    typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  const escolherAba = (valor) => {
+    setAba(valor);
+    if (!podeUsarHover()) setMenuAberto(false);
+    window.scrollTo(0, 0);
+  };
+
   return (
     <div style={s.pagina}>
-      <aside style={s.sidebar}>
-        <div style={s.sidebarTopo}>
-          <Icons.Building color="#fff" />
-          <div>
-            <p style={s.sidebarTitulo}>SchedNext</p>
-            <p style={s.sidebarSubtitulo}>Admin absoluto</p>
+      {menuAberto && (
+        <div className="bb-sidebar-overlay" onClick={() => setMenuAberto(false)} />
+      )}
+
+      <button
+        className="bb-mobile-menu-btn"
+        onClick={() => setMenuAberto((prev) => !prev)}
+        aria-label="Abrir menu"
+      >
+        <Icons.Menu color="#fff" />
+      </button>
+
+      <aside
+        className={`bb-sidebar${menuAberto ? ' aberto' : ''}`}
+        style={{ ...s.sidebar, width: menuAberto ? '250px' : '70px', padding: menuAberto ? '14px 14px 20px' : '14px 10px 20px' }}
+        onMouseEnter={() => { if (podeUsarHover()) setMenuAberto(true); }}
+        onMouseLeave={() => { if (podeUsarHover()) setMenuAberto(false); }}
+      >
+        <button style={s.btnMenu} onClick={() => setMenuAberto((prev) => !prev)} aria-label={menuAberto ? 'Fechar menu' : 'Abrir menu'}>
+          <Icons.Menu color="#fff" />
+        </button>
+
+        {menuAberto && (
+          <div style={s.sidebarTopo}>
+            <Icons.Building color="#fff" />
+            <div>
+              <p style={s.sidebarTitulo}>SchedNext</p>
+              <p style={s.sidebarSubtitulo}>Admin absoluto</p>
+            </div>
           </div>
-        </div>
+        )}
 
         <nav style={s.nav}>
           {GRUPOS_MENU.map((grupo) => (
-            <div key={grupo.titulo} style={s.grupoMenu}>
-              <p style={s.grupoTitulo}>{grupo.titulo}</p>
+            <div key={grupo.titulo} style={menuAberto ? s.grupoMenu : s.grupoMenuRecolhido}>
+              {menuAberto && <p style={s.grupoTitulo}>{grupo.titulo}</p>}
               {grupo.itens.map(({ valor, label, icon }) => {
                 const IconeItem = Icons[icon];
                 return (
                   <button
                     key={valor}
-                    onClick={() => setAba(valor)}
-                    style={{ ...s.navItem, ...(aba === valor ? s.navItemAtivo : {}) }}
+                    onClick={() => escolherAba(valor)}
+                    title={label}
+                    style={{ ...s.navItem, ...(menuAberto ? {} : s.navItemRecolhido), ...(aba === valor ? s.navItemAtivo : {}) }}
                   >
-                    <IconeItem color={aba === valor ? '#fff' : '#9ca3af'} /> {label}
+                    <IconeItem color={aba === valor ? '#fff' : '#9ca3af'} /> {menuAberto && label}
                   </button>
                 );
               })}
@@ -200,12 +238,14 @@ function SuperAdminDashboard() {
           ))}
         </nav>
 
-        <button onClick={sair} style={s.navSair}><Icons.LogOut color="#f87171" /> Sair</button>
+        <button onClick={sair} title="Sair" style={{ ...s.navSair, ...(menuAberto ? {} : s.navItemRecolhido) }}>
+          <Icons.LogOut color="#f87171" /> {menuAberto && 'Sair'}
+        </button>
       </aside>
 
-      <main style={s.main}>
-        <div style={s.container}>
-          <header style={s.header}>
+      <main className="bb-main" style={s.main}>
+        <div className="sa-container" style={s.container}>
+          <header className="sa-header" style={s.header}>
             <h1 style={s.titulo}>{itemAtivo?.label || 'Painel da plataforma'}</h1>
             <p style={s.subtitulo}>Controle de empresas, planos e assinaturas da SchedNext</p>
           </header>
@@ -1048,7 +1088,7 @@ function ModalContaPagar({ conta, onFechar, onSalvo, toast }) {
   };
 
   return (
-    <div style={s.overlay} onClick={onFechar}>
+    <div className="sa-overlay" style={s.overlay} onClick={onFechar}>
       <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
         <div style={s.modalHeader}>
           <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{conta ? 'Editar conta a pagar' : 'Nova conta a pagar'}</h3>
@@ -1061,7 +1101,7 @@ function ModalContaPagar({ conta, onFechar, onSalvo, toast }) {
         <label style={s.label}>Categoria</label>
         <input style={s.input} value={form.categoria} onChange={campo('categoria')} placeholder="Ex: infraestrutura, marketing, folha, impostos..." />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+        <div className="sa-grid-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
           <div>
             <label style={s.label}>Valor (R$) *</label>
             <input type="number" min="0" step="0.01" style={s.input} value={form.valor} onChange={campo('valor')} />
@@ -1095,7 +1135,7 @@ function ModalContaPagar({ conta, onFechar, onSalvo, toast }) {
         )}
 
         {(form.forma_pagamento === 'ted' || form.forma_pagamento === 'boleto') && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+          <div className="sa-grid-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
             <div>
               <label style={s.label}>Banco</label>
               <input style={s.input} value={form.banco} onChange={campo('banco')} />
@@ -1445,7 +1485,7 @@ function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, on
   };
 
   return (
-    <div style={s.overlay} onClick={onFechar}>
+    <div className="sa-overlay" style={s.overlay} onClick={onFechar}>
       <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
         <div style={s.modalHeader}>
           <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{conta ? 'Editar conta a receber' : 'Nova conta a receber'}</h3>
@@ -1467,7 +1507,7 @@ function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, on
         <label style={s.label}>Descrição *</label>
         <input style={s.input} value={form.descricao} onChange={campo('descricao')} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+        <div className="sa-grid-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
           <div>
             <label style={s.label}>Valor (R$) *</label>
             <input type="number" min="0" step="0.01" style={s.input} value={form.valor} onChange={campo('valor')} />
@@ -1544,7 +1584,7 @@ function ModalGerarBoleto({ conta, onFechar, onSalvo, toast }) {
   };
 
   return (
-    <div style={s.overlay} onClick={onFechar}>
+    <div className="sa-overlay" style={s.overlay} onClick={onFechar}>
       <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
         <div style={s.modalHeader}>
           <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>Gerar boleto</h3>
@@ -1556,7 +1596,7 @@ function ModalGerarBoleto({ conta, onFechar, onSalvo, toast }) {
         <label style={s.label}>CPF/CNPJ do pagador *</label>
         <input style={s.input} value={form.pagador_documento} onChange={campo('pagador_documento')} placeholder="Só números" />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+        <div className="sa-grid-form" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
           <div>
             <label style={s.label}>CEP *</label>
             <input style={s.input} value={form.pagador_cep} onChange={campo('pagador_cep')} placeholder="Só números" />
@@ -1567,7 +1607,7 @@ function ModalGerarBoleto({ conta, onFechar, onSalvo, toast }) {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', gap: '12px' }}>
+        <div className="sa-grid-form" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', gap: '12px' }}>
           <div>
             <label style={s.label}>Número *</label>
             <input style={s.input} value={form.pagador_numero} onChange={campo('pagador_numero')} />
@@ -1622,7 +1662,7 @@ function ModalLancamentoEmMassa({ onFechar, onSalvo, toast }) {
   };
 
   return (
-    <div style={s.overlay} onClick={onFechar}>
+    <div className="sa-overlay" style={s.overlay} onClick={onFechar}>
       <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
         <div style={s.modalHeader}>
           <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>Lançamento em massa</h3>
@@ -1963,7 +2003,7 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
   const status = empresa ? infoStatusEmpresa(empresa) : null;
 
   return (
-    <div style={s.overlay} onClick={onFechar}>
+    <div className="sa-overlay" style={s.overlay} onClick={onFechar}>
       <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
         {carregando ? <p style={s.textoCarregando}>Carregando...</p> : !empresa ? (
           <p style={s.textoVazio}>Não foi possível carregar os detalhes.</p>
@@ -1986,7 +2026,7 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
               </div>
             )}
 
-            <div style={s.infoGrid}>
+            <div className="sa-grid-form" style={s.infoGrid}>
               <InfoItem label="Cadastrada em" valor={formatarData(empresa.criado_em)} />
 
               <div>
@@ -2241,7 +2281,7 @@ function AbaPlanos({ toast, confirmar }) {
       )}
 
       {editando && (
-        <div style={s.overlay} onClick={() => { setEditando(null); setCriandoNovo(false); }}>
+        <div className="sa-overlay" style={s.overlay} onClick={() => { setEditando(null); setCriandoNovo(false); }}>
           <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
             <div style={s.modalHeader}>
               <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{criandoNovo ? 'Novo plano' : `Editar: ${editando.nome}`}</h3>
@@ -2651,7 +2691,7 @@ function AbaCampanhas({ toast, confirmar }) {
       )}
 
       {editando && (
-        <div style={s.overlay} onClick={() => setEditando(null)}>
+        <div className="sa-overlay" style={s.overlay} onClick={() => setEditando(null)}>
           <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
             <div style={s.modalHeader}>
               <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{editando.id ? 'Editar campanha' : 'Nova campanha'}</h3>
@@ -2916,7 +2956,7 @@ function AbaChaves({ toast, confirmar }) {
       )}
 
       {criando && (
-        <div style={s.overlay} onClick={() => { setCriando(false); setUltimasGeradas(null); }}>
+        <div className="sa-overlay" style={s.overlay} onClick={() => { setCriando(false); setUltimasGeradas(null); }}>
           <div style={{ ...s.modal, maxWidth: '460px' }} onClick={(ev) => ev.stopPropagation()}>
             {ultimasGeradas ? (
               <>
@@ -3034,7 +3074,7 @@ function AbaLeads({ toast, confirmar }) {
               <span style={{ ...s.badge, background: status.bg, color: status.fg }}>{status.label}</span>
             </div>
 
-            <div style={{ fontSize: '13px', marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', color: '#374151' }}>
+            <div className="sa-grid-form" style={{ fontSize: '13px', marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', color: '#374151' }}>
               <span><strong>Clientes esperados:</strong> {lead.clientes_esperados}</span>
               <span><strong>E-mail:</strong> {lead.email_contato}</span>
               {lead.telefone_contato && <span><strong>Telefone:</strong> {lead.telefone_contato}</span>}
@@ -3254,7 +3294,7 @@ function ModalConversaSuporte({ conversaId, onFechar, onResolvido, toast, confir
   };
 
   return (
-    <div style={s.overlay} onClick={onFechar}>
+    <div className="sa-overlay" style={s.overlay} onClick={onFechar}>
       <div style={{ ...s.modal, maxWidth: '560px', display: 'flex', flexDirection: 'column', height: '660px' }} onClick={(ev) => ev.stopPropagation()}>
         <div style={s.modalHeader}>
           <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{conversa?.nome_empresa || 'Conversa'}</h3>
@@ -3543,7 +3583,7 @@ function AbaSuperAdmins({ toast, confirmar }) {
       )}
 
       {criandoModal && (
-        <div style={s.overlay} onClick={() => setCriandoModal(false)}>
+        <div className="sa-overlay" style={s.overlay} onClick={() => setCriandoModal(false)}>
           <div style={{ ...s.modal, maxWidth: '440px' }} onClick={(ev) => ev.stopPropagation()}>
             <div style={s.modalHeader}>
               <h3 style={{ margin: 0, fontSize: '18px', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}><Icons.Shield color="#111827" /> Novo super admin</h3>
@@ -3586,7 +3626,7 @@ function AbaSuperAdmins({ toast, confirmar }) {
       )}
 
       {editandoModal && (
-        <div style={s.overlay} onClick={() => setEditandoModal(false)}>
+        <div className="sa-overlay" style={s.overlay} onClick={() => setEditandoModal(false)}>
           <div style={{ ...s.modal, maxWidth: '440px' }} onClick={(ev) => ev.stopPropagation()}>
             <div style={s.modalHeader}>
               <h3 style={{ margin: 0, fontSize: '18px', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}><Icons.Shield color="#111827" /> Editar meu perfil</h3>
@@ -3632,6 +3672,7 @@ function AbaSuperAdmins({ toast, confirmar }) {
 }
 
 const Icons = {
+  Menu: ({ color = 'currentColor' }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
   Building: ({ color = 'currentColor' }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: '4px' }}><path d="M6 22V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v18"></path><path d="M2 22h20"></path><path d="M9 6h1M14 6h1M9 10h1M14 10h1M9 14h1M14 14h1"></path></svg>,
   BarChart: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><rect x="7" y="12" width="3" height="6"></rect><rect x="12" y="8" width="3" height="10"></rect><rect x="17" y="5" width="3" height="13"></rect></svg>,
   TrendingUp: ({ color = 'currentColor' }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>,
@@ -3654,19 +3695,22 @@ const s = {
   titulo: { fontSize: '26px', color: '#111827', fontWeight: 800, margin: '0 0 4px 0', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center' },
   subtitulo: { color: '#6b7280', fontSize: '14px', margin: 0 },
 
-  // Sidebar fixa, mesma paleta escura da sidebar do admin de empresa (ver components/Layout.js:
-  // #16161a + realce azul rgba(37,84,235,..) no item ativo), sempre expandida (não colapsa em
-  // hover como a de lá — aqui são poucos usuários internos, não precisa economizar espaço).
-  sidebar: { width: '250px', flexShrink: 0, background: '#16161a', color: '#fff', minHeight: '100vh', position: 'sticky', top: 0, alignSelf: 'flex-start', display: 'flex', flexDirection: 'column', padding: '20px 14px', boxSizing: 'border-box', overflowY: 'auto' },
-  sidebarTopo: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  // Sidebar com a mesma paleta escura e o mesmo comportamento da sidebar do admin de empresa
+  // (ver components/Layout.js): fixa, recolhida em 70px e expandida pra 250px por cima do
+  // conteúdo (a largura vem do estado menuAberto no componente).
+  sidebar: { flexShrink: 0, background: '#16161a', color: '#fff', height: '100vh', position: 'fixed', top: 0, left: 0, zIndex: 1000, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflowY: 'auto', overflowX: 'hidden', transition: 'width 0.3s', borderRight: '1px solid rgba(37, 84, 235,0.25)' },
+  btnMenu: { background: 'none', border: 'none', padding: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', marginBottom: '8px', flexShrink: 0 },
+  sidebarTopo: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' },
   sidebarTitulo: { margin: 0, fontSize: '14px', fontWeight: 800, color: '#fff' },
   sidebarSubtitulo: { margin: 0, fontSize: '11px', color: '#9ca3af' },
-  main: { flex: 1, minWidth: 0 },
+  main: { flex: 1, minWidth: 0, marginLeft: '70px' },
 
   nav: { display: 'flex', flexDirection: 'column', flex: 1 },
   grupoMenu: { marginBottom: '14px' },
+  grupoMenuRecolhido: { marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)' },
+  navItemRecolhido: { justifyContent: 'center', padding: '10px 0', gap: 0 },
   grupoTitulo: { fontSize: '10px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 6px 10px' },
-  navItem: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', boxSizing: 'border-box', background: 'transparent', color: '#d1d5db', border: 'none', borderRadius: '8px', padding: '9px 10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left', marginBottom: '2px', transition: '0.15s' },
+  navItem: { display: 'flex', alignItems: 'center', gap: '10px', whiteSpace: 'nowrap', width: '100%', boxSizing: 'border-box', background: 'transparent', color: '#d1d5db', border: 'none', borderRadius: '8px', padding: '9px 10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left', marginBottom: '2px', transition: '0.15s' },
   navItemAtivo: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff' },
   navSair: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', boxSizing: 'border-box', background: 'transparent', color: '#f87171', border: 'none', borderRadius: '8px', padding: '9px 10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' },
 
