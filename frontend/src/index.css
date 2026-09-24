@@ -535,6 +535,17 @@ code {
   display: none;
 }
 
+/* Menu do admin absoluto continua rolando (roda do mouse / toque) quando não cabe na tela,
+   mas sem a barra de rolagem visível, que ficava cinza no meio da faixa escura de ícones. */
+.sa-sidebar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sa-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Faixa do topo do admin absoluto: só aparece no mobile (ver media query abaixo). */
 .sa-topbar {
   display: none;

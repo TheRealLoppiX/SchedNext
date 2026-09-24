@@ -229,7 +229,7 @@ function SuperAdminDashboard() {
       </button>
 
       <aside
-        className={`bb-sidebar${menuAberto ? ' aberto' : ''}`}
+        className={`bb-sidebar sa-sidebar${menuAberto ? ' aberto' : ''}`}
         style={{ ...s.sidebar, width: menuAberto ? '250px' : '70px', padding: menuAberto ? '14px 14px 20px' : '14px 10px 20px' }}
         onMouseEnter={() => { if (podeUsarHover()) setMenuAberto(true); }}
         onMouseLeave={() => { if (podeUsarHover()) setMenuAberto(false); }}
@@ -890,7 +890,7 @@ function AbaFunil({ toast }) {
             />
             {r.sem_localizacao > 0 && (
               <p style={{ fontSize: '12px', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '8px 10px', margin: '10px 0 0' }}>
-                {numeroBr(r.sem_localizacao)} visita(s) sem localização. Ela vem do Cloudflare: em Rules → Settings → Managed Transforms, ative "Add visitor location headers" pra aparecer estado e cidade.
+                {numeroBr(r.sem_localizacao)} visita(s) sem localização (IP não identificado ou consulta de localização indisponível no momento).
               </p>
             )}
           </div>
