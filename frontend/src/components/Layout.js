@@ -231,6 +231,56 @@ function Layout({ setEmpresaId }) {
   const podeUsarHover = () =>
     typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
+  // No touch o menu cobre a tela; escolher um item fecha ele (no desktop quem fecha é o mouse
+  // saindo da barra).
+  const irPara = (destino) => {
+    navigate(destino);
+    if (!podeUsarHover()) setAberto(false);
+  };
+
+  // Menu agrupado por seção, mesmo modelo do admin absoluto (pages/superadmin/
+  // SuperAdminDashboard.js): recolhido mostra só os ícones, aberto mostra ícone + nome.
+  const item = (label, icone, destino, ativo) => ({ label, icone, destino, ativo });
+  const gruposMenu = isAdminPath
+    ? (adminUnidadeId
+      ? [{ titulo: 'Unidade', itens: [item('Dashboard da unidade', Icons.Stats, '/admin/unidade/dashboard', isRotaAdminAtiva('/admin/unidade/dashboard'))] }]
+      : [
+        { titulo: 'Visão geral', itens: [
+          item('Dashboard', Icons.Stats, '/admin/dashboard', isRotaAdminAtiva('/admin/dashboard') && !location.search)
+        ] },
+        { titulo: 'Atendimento', itens: [
+          item('Agendamentos', Icons.Calendar, '/admin/agendamentos', isRotaAdminAtiva('/admin/agendamentos')),
+          item('Clientes', Icons.Users, '/admin/clientes', isRotaAdminAtiva('/admin/clientes')),
+          item('Assinaturas', Icons.Diamond, '/admin/assinaturas', isRotaAdminAtiva('/admin/assinaturas')),
+          item('Ações & Fidelidade', Icons.Star, '/admin/acoes', isRotaAdminAtiva('/admin/acoes'))
+        ] },
+        { titulo: 'Gestão', itens: [
+          item(`Gestão de ${termos.profissionalPlural}`, Icons.Users, '/admin/barbeiros', isRotaAdminAtiva('/admin/barbeiros')),
+          item('Gestão de Serviços', Icons.Scissors, '/admin/servicos', isRotaAdminAtiva('/admin/servicos')),
+          item('Gestão de Estoque', Icons.Package, '/admin/estoque', isRotaAdminAtiva('/admin/estoque')),
+          item('Unidades', Icons.Store, '/admin/unidades', isRotaAdminAtiva('/admin/unidades'))
+        ] },
+        { titulo: 'Análises', itens: [
+          item('Relatórios', Icons.Chart, '/admin/relatorios', isRotaAdminAtiva('/admin/relatorios'))
+        ] },
+        { titulo: 'Integrações', itens: [
+          item('WhatsApp', Icons.MessageCircle, '/admin/whatsapp', isRotaAdminAtiva('/admin/whatsapp')),
+          item('Mercado Pago', Icons.CreditCard, '/admin/mercadopago', isRotaAdminAtiva('/admin/mercadopago')),
+          item('Domínio', Icons.Globe, '/admin/dominio', isRotaAdminAtiva('/admin/dominio')),
+          item('API', Icons.Code, '/admin/api-keys', isRotaAdminAtiva('/admin/api-keys'))
+        ] },
+        { titulo: 'Conta', itens: [
+          item('Perfil', Icons.Settings, '/admin/conta', isRotaAdminAtiva('/admin/conta'))
+        ] }
+      ])
+    : [{ titulo: null, itens: [
+      item('Início', Icons.Home, `/${empresaSlug}/barbeiros`, location.pathname === `/${empresaSlug}/barbeiros`),
+      item('Agendamentos', Icons.Calendar, `/${empresaSlug}/perfil?aba=agendamentos`, isAtiva('agendamentos')),
+      item('Minha Conta', Icons.User, `/${empresaSlug}/perfil?aba=dados`, isAtiva('dados')),
+      item('Assinatura', Icons.CreditCard, `/${empresaSlug}/assinatura`, location.pathname === `/${empresaSlug}/assinatura`),
+      item('Privacidade', Icons.Lock, `/${empresaSlug}/perfil?aba=privacidade`, isAtiva('privacidade'))
+    ] }];
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
       {aberto && (
@@ -246,151 +296,57 @@ function Layout({ setEmpresaId }) {
       </button>
 
       <aside
-        className={`bb-sidebar${aberto ? ' aberto' : ''}`}
-        style={{
-          width: aberto ? '250px' : '70px',
-          background: '#16161a', color: '#fff', transition: '0.3s',
-          borderRight: '1px solid rgba(37, 84, 235,0.25)',
-          position: 'fixed', height: '100vh', zIndex: 1000,
-          overflowY: 'auto', overflowX: 'hidden'
-        }}
+        className={`bb-sidebar sa-sidebar${aberto ? ' aberto' : ''}`}
+        style={{ ...s.sidebar, width: aberto ? '250px' : '70px', padding: aberto ? '14px 14px 20px' : '14px 10px 20px' }}
         onMouseEnter={() => { if (podeUsarHover()) setAberto(true); }}
         onMouseLeave={() => { if (podeUsarHover()) setAberto(false); }}
       >
-        <button style={s.btnMenu} onClick={() => setAberto(prev => !prev)}>
-           <Icons.Menu />
+        <button style={s.btnMenu} onClick={() => setAberto(prev => !prev)} aria-label={aberto ? 'Fechar menu' : 'Abrir menu'}>
+          <Icons.Menu />
         </button>
-        <div style={{...s.sidebarContent, display: aberto ? 'block' : 'none'}}>
-             <div style={s.fotoCirculo}>
-                {dados?.foto_url ? <img src={dados.foto_url} alt="Perfil" style={s.imgPerfil} /> : <Icons.User color="#fff" />}
-             </div>
-             <p style={s.nomeTexto}>{dados?.nome_completo || 'Carregando...'}</p>
-             {!isAdminPath && dadosAssinante.assinante && (
-               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', marginTop: '-8px', marginBottom: '8px' }}>
-                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={dadosAssinante.inadimplente ? '#dc2626' : '#6d28d9'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"></path><path d="M11 3L8 9l4 13 4-13-3-6"></path><line x1="2" y1="9" x2="22" y2="9"></line></svg>
-                 <span style={{ fontSize: '11px', fontWeight: '700', color: dadosAssinante.inadimplente ? '#dc2626' : '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                   {dadosAssinante.inadimplente ? 'Mensalidade em atraso' : dadosAssinante.plano_nome}
-                 </span>
-               </div>
-             )}
-             <nav style={s.nav}>
-                {isAdminPath ? (
-                  adminUnidadeId ? (
-                    <button
-                       onClick={() => navigate('/admin/unidade/dashboard')}
-                       style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/unidade/dashboard') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
-                    >
-                       <Icons.Stats /> Dashboard da unidade
-                    </button>
-                  ) : (
-                  <>
-                    <button
-                       onClick={() => navigate('/admin/dashboard')}
-                       style={{...s.navItem, backgroundColor: (isRotaAdminAtiva('/admin/dashboard') && !location.search) ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
-                    >
-                       <Icons.Stats /> Dashboard
-                    </button>
 
-                    <button 
-                       onClick={() => navigate('/admin/agendamentos')} 
-                       style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/agendamentos') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
-                    >
-                       <Icons.Calendar /> Agendamentos
-                    </button>
+        {aberto && (
+          <div style={s.sidebarTopo}>
+            <div style={s.fotoCirculo}>
+              {dados?.foto_url ? <img src={dados.foto_url} alt="Perfil" style={s.imgPerfil} /> : <Icons.User color="#fff" />}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p style={s.nomeTexto}>{dados?.nome_completo || 'Carregando...'}</p>
+              {isAdminPath ? (
+                <p style={s.subtituloTopo}>{adminUnidadeId ? 'Painel da unidade' : 'Painel administrativo'}</p>
+              ) : dadosAssinante.assinante ? (
+                <p style={{ ...s.subtituloTopo, color: dadosAssinante.inadimplente ? '#f87171' : '#a78bfa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  {dadosAssinante.inadimplente ? 'Mensalidade em atraso' : dadosAssinante.plano_nome}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        )}
 
-                    <button 
-                       onClick={() => navigate('/admin/clientes')} 
-                       style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/clientes') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
-                    >
-                       <Icons.Users /> Clientes
-                    </button>
+        <nav style={s.nav}>
+          {gruposMenu.map((grupo, gi) => (
+            <div key={grupo.titulo || gi} style={aberto ? s.grupoMenu : s.grupoMenuRecolhido}>
+              {aberto && grupo.titulo && <p style={s.grupoTitulo}>{grupo.titulo}</p>}
+              {grupo.itens.map((item) => {
+                const Icone = item.icone;
+                return (
+                  <button
+                    key={item.label}
+                    onClick={() => irPara(item.destino)}
+                    title={item.label}
+                    style={{ ...s.navItem, ...(aberto ? {} : s.navItemRecolhido), ...(item.ativo ? s.navItemAtivo : {}) }}
+                  >
+                    <Icone /> {aberto && item.label}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
 
-                    <button 
-                       onClick={() => navigate('/admin/assinaturas')} 
-                       style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/assinaturas') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
-                    >
-                       <Icons.Diamond /> Assinaturas
-                    </button>
-
-                    <button 
-                       onClick={() => navigate('/admin/barbeiros')} 
-                       style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/barbeiros') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
-                    >
-                        <Icons.Users /> Gestão de {termos.profissionalPlural}
-                    </button>
-
-                    <button 
-                       onClick={() => navigate('/admin/servicos')} 
-                       style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/servicos') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
-                    >
-                       <Icons.Scissors /> Gestão de Serviços
-                    </button>
-
-                    <button onClick={() => navigate('/admin/estoque')} style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/estoque') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
-                      <Icons.Package /> Gestão de Estoque
-                    </button>
-
-                    <button onClick={() => navigate('/admin/acoes')} style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/acoes') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
-                      <Icons.Star /> Ações & Fidelidade
-                    </button>
-
-                    <button onClick={() => navigate('/admin/unidades')} style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/unidades') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
-                      <Icons.Store /> Unidades
-                    </button>
-
-                    <button onClick={() => navigate('/admin/api-keys')} style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/api-keys') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
-                      <Icons.Settings /> API
-                    </button>
-
-                    <button onClick={() => navigate('/admin/relatorios')} style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/relatorios') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
-                      <Icons.Chart /> Relatórios
-                    </button>
-
-                    <button onClick={() => navigate('/admin/dominio')} style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/dominio') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
-                      <Icons.Globe /> Domínio
-                    </button>
-
-                    <button onClick={() => navigate('/admin/whatsapp')} style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/whatsapp') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
-                      <Icons.MessageCircle /> WhatsApp
-                    </button>
-
-                    <button onClick={() => navigate('/admin/mercadopago')} style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/mercadopago') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
-                      <Icons.CreditCard /> Mercado Pago
-                    </button>
-
-                    <button
-                       onClick={() => navigate('/admin/conta')}
-                       style={{...s.navItem, backgroundColor: isRotaAdminAtiva('/admin/conta') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}
-                    >
-                       <Icons.Settings /> Perfil
-                    </button>
-                  </>
-                  )
-                ) : (
-                  <>
-                    <button onClick={() => navigate(`/${empresaSlug}/barbeiros`)} style={s.navItem}>
-                      <Icons.Home /> Início
-                    </button>
-                    <button onClick={() => navigate(`/${empresaSlug}/perfil?aba=agendamentos`)} style={{...s.navItem, backgroundColor: isAtiva('agendamentos') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
-                      <Icons.Calendar /> Agendamentos
-                    </button>
-                    <button onClick={() => navigate(`/${empresaSlug}/perfil?aba=dados`)} style={{...s.navItem, backgroundColor: isAtiva('dados') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
-                      <Icons.User color="currentColor" /> Minha Conta
-                    </button>
-                    <button onClick={() => navigate(`/${empresaSlug}/assinatura`)} style={{...s.navItem, backgroundColor: location.pathname === `/${empresaSlug}/assinatura` ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
-                      <Icons.CreditCard /> Assinatura
-                    </button>
-                    <button onClick={() => navigate(`/${empresaSlug}/perfil?aba=privacidade`)} style={{...s.navItem, backgroundColor: isAtiva('privacidade') ? 'rgba(37, 84, 235,0.18)' : 'transparent'}}>
-                      <Icons.Lock /> Privacidade
-                    </button>
-                  </>
-                )}
-                <hr style={{opacity: 0.1, margin: '15px 0'}} />
-                <button onClick={handleSair} style={{...s.navItem, color: '#ff4444', fontWeight: 'bold'}}>
-                  <Icons.Logout /> Sair
-                </button>
-             </nav>
-        </div>
+        <button onClick={handleSair} title="Sair" style={{ ...s.navSair, ...(aberto ? {} : s.navItemRecolhido) }}>
+          <Icons.Logout /> {aberto && 'Sair'}
+        </button>
       </aside>
 
       {/* A MÁGICA FOI DESFEITA AQUI: Agora a aba agendamentos do cliente é repassada para o Dashboard Original dele */}
@@ -486,18 +442,29 @@ const Icons = {
   Chart: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><rect x="7" y="12" width="3" height="6"></rect><rect x="12" y="8" width="3" height="10"></rect><rect x="17" y="5" width="3" height="13"></rect></svg>,
   Globe: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>,
   MessageCircle: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>,
+  Code: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>,
   CreditCard: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>,
 
 };
 
 const s = {
-  sidebarContent: { padding: '20px 10px' },
-  btnMenu: { background: 'none', border: 'none', color: '#fff', padding: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  fotoCirculo: { width: '60px', height: '60px', borderRadius: '50%', background: '#333', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #5d3fd3', flexShrink: 0 },
+  // Mesma estrutura visual da sidebar do admin absoluto (SuperAdminDashboard.js): fixa,
+  // recolhida em 70px e expandida pra 250px por cima do conteúdo (largura vem do estado `aberto`).
+  sidebar: { background: '#16161a', color: '#fff', position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 1000, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflowY: 'auto', overflowX: 'hidden', transition: 'width 0.3s', borderRight: '1px solid rgba(37, 84, 235,0.25)' },
+  btnMenu: { background: 'none', border: 'none', padding: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', marginBottom: '8px', flexShrink: 0 },
+  sidebarTopo: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  fotoCirculo: { width: '40px', height: '40px', borderRadius: '50%', background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #2554eb', flexShrink: 0 },
   imgPerfil: { width: '100%', height: '100%', objectFit: 'cover' },
-  nomeTexto: { textAlign: 'center', fontSize: '14px', marginBottom: '25px', color: '#fff', fontWeight: '500' },
-  nav: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  navItem: { padding: '12px', border: 'none', borderRadius: '8px', color: '#fff', background: 'none', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', width: '100%', fontSize: '14px', transition: '0.2s' },
+  nomeTexto: { margin: 0, fontSize: '14px', color: '#fff', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  subtituloTopo: { margin: 0, fontSize: '11px', color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  nav: { display: 'flex', flexDirection: 'column', flex: 1 },
+  grupoMenu: { marginBottom: '14px' },
+  grupoMenuRecolhido: { marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)' },
+  grupoTitulo: { fontSize: '10px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 6px 10px', whiteSpace: 'nowrap' },
+  navItem: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', boxSizing: 'border-box', background: 'transparent', color: '#d1d5db', border: 'none', borderRadius: '8px', padding: '9px 10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left', marginBottom: '2px', transition: '0.15s', whiteSpace: 'nowrap' },
+  navItemAtivo: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff' },
+  navItemRecolhido: { justifyContent: 'center', padding: '10px 0', gap: 0 },
+  navSair: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', boxSizing: 'border-box', background: 'transparent', color: '#f87171', border: 'none', borderRadius: '8px', padding: '9px 10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', whiteSpace: 'nowrap' },
   containerPrivacidade: { display: 'flex', justifyContent: 'center', paddingTop: '50px' },
   cardPrivacidade: { background: '#fff', padding: '30px', borderRadius: '15px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', width: '100%', maxWidth: '450px', textAlign: 'center' },
   boxCinza: { background: '#f9f9f9', padding: '20px', borderRadius: '10px' },

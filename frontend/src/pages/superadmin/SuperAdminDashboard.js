@@ -6,6 +6,7 @@ import useEscToClose from '../../hooks/useEscToClose';
 import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
 import { formatarDataSemFuso, partesDataSemFuso } from '../../utils/dataSemFuso';
+import { formatarDocumento } from '../../utils/validacao';
 
 const STATUS_LEAD_INFO = {
   novo: { label: 'Novo', bg: '#dbeafe', fg: '#1e40af' },
@@ -213,6 +214,62 @@ function SuperAdminDashboard() {
     window.scrollTo(0, 0);
   };
 
+  // Pendências de suporte (ver GET /super-admin/suporte/pendencias): conversas escaladas sem
+  // ninguém atendendo + as repassadas pra você que você ainda não aceitou. Viram o número no
+  // balão do menu "Suporte", no botão de menu do celular e no título da aba do navegador, e cada
+  // pendência NOVA (que não estava na consulta anterior) gera um aviso na tela. Some sozinho
+  // quando alguém aceita/responde; volta se o caso for liberado ou repassado de novo.
+  const [pendenciasSuporte, setPendenciasSuporte] = useState([]);
+  const pendenciasConhecidas = useRef(null);
+  const carregarPendenciasSuporte = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/super-admin/suporte/pendencias`);
+      if (!res.ok) return;
+      const lista = await res.json();
+      if (!Array.isArray(lista)) return;
+      const chave = (p) => `${p.id}:${p.motivo}`;
+      if (pendenciasConhecidas.current === null) {
+        if (lista.length) {
+          toast.info(`Suporte: ${lista.length} conversa(s) aguardando atendimento.`, { duration: 10000 });
+        }
+      } else {
+        lista.filter((p) => !pendenciasConhecidas.current.has(chave(p))).forEach((p) => {
+          toast.info(
+            p.motivo === 'repassada_para_voce'
+              ? `Suporte: o caso de ${p.nome_empresa} foi repassado para você.`
+              : `Suporte: ${p.nome_empresa} está aguardando atendimento.`,
+            { duration: 10000 }
+          );
+        });
+      }
+      pendenciasConhecidas.current = new Set(lista.map(chave));
+      setPendenciasSuporte(lista);
+    } catch (err) {
+      // Falha de rede numa consulta de fundo: tenta de novo no próximo ciclo, sem incomodar.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    carregarPendenciasSuporte();
+    const intervalo = setInterval(() => {
+      if (document.visibilityState === 'visible') carregarPendenciasSuporte();
+    }, 20000);
+    const aoVoltarPraAba = () => { if (document.visibilityState === 'visible') carregarPendenciasSuporte(); };
+    document.addEventListener('visibilitychange', aoVoltarPraAba);
+    return () => {
+      clearInterval(intervalo);
+      document.removeEventListener('visibilitychange', aoVoltarPraAba);
+    };
+  }, [carregarPendenciasSuporte]);
+
+  const totalPendencias = pendenciasSuporte.length;
+  useEffect(() => {
+    const tituloBase = 'SchedNext · Admin absoluto';
+    document.title = totalPendencias ? `(${totalPendencias}) ${tituloBase}` : tituloBase;
+  }, [totalPendencias]);
+  const contadorDoItem = (valor) => (valor === 'suporte' ? totalPendencias : 0);
+
   return (
     <div style={s.pagina}>
       {menuAberto && (
@@ -228,9 +285,10 @@ function SuperAdminDashboard() {
       <button
         className="bb-mobile-menu-btn"
         onClick={() => setMenuAberto((prev) => !prev)}
-        aria-label="Abrir menu"
+        aria-label={totalPendencias ? `Abrir menu (${totalPendencias} pendência(s) no suporte)` : 'Abrir menu'}
       >
         <Icons.Menu color="#fff" />
+        {totalPendencias > 0 && <span style={{ ...s.balaoContador, ...s.balaoContadorSobreIcone }}>{totalPendencias}</span>}
       </button>
 
       <aside
@@ -245,7 +303,7 @@ function SuperAdminDashboard() {
 
         {menuAberto && (
           <div style={s.sidebarTopo}>
-            <Icons.Building color="#fff" />
+            <img src="/icon-schednext.png" alt="SchedNext" style={s.logoSidebar} />
             <div>
               <p style={s.sidebarTitulo}>SchedNext</p>
               <p style={s.sidebarSubtitulo}>Admin absoluto</p>
@@ -259,14 +317,20 @@ function SuperAdminDashboard() {
               {menuAberto && <p style={s.grupoTitulo}>{grupo.titulo}</p>}
               {grupo.itens.map(({ valor, label, icon }) => {
                 const IconeItem = Icons[icon];
+                const contador = contadorDoItem(valor);
                 return (
                   <button
                     key={valor}
                     onClick={() => escolherAba(valor)}
-                    title={label}
+                    title={contador ? `${label} (${contador} aguardando)` : label}
                     style={{ ...s.navItem, ...(menuAberto ? {} : s.navItemRecolhido), ...(aba === valor ? s.navItemAtivo : {}) }}
                   >
-                    <IconeItem color={aba === valor ? '#fff' : '#9ca3af'} /> {menuAberto && label}
+                    <span style={{ position: 'relative', display: 'inline-flex' }}>
+                      <IconeItem color={aba === valor ? '#fff' : '#9ca3af'} />
+                      {contador > 0 && !menuAberto && <span style={{ ...s.balaoContador, ...s.balaoContadorSobreIcone }}>{contador}</span>}
+                    </span>
+                    {menuAberto && label}
+                    {contador > 0 && menuAberto && <span style={{ ...s.balaoContador, marginLeft: 'auto' }}>{contador}</span>}
                   </button>
                 );
               })}
@@ -297,7 +361,7 @@ function SuperAdminDashboard() {
           {aba === 'antifraude' && <AbaAntifraude toast={toast} confirmar={confirmar} />}
           {aba === 'chaves' && <AbaChaves toast={toast} confirmar={confirmar} />}
           {aba === 'leads' && <AbaLeads toast={toast} confirmar={confirmar} />}
-          {aba === 'suporte' && <AbaSuporte toast={toast} confirmar={confirmar} />}
+          {aba === 'suporte' && <AbaSuporte toast={toast} confirmar={confirmar} pendencias={pendenciasSuporte} onAlterou={carregarPendenciasSuporte} />}
           {aba === 'superadmins' && <AbaSuperAdmins toast={toast} confirmar={confirmar} />}
         </div>
       </main>
@@ -1634,7 +1698,7 @@ function ModalContaPagar({ conta, onFechar, onSalvo, toast }) {
     descricao: conta?.descricao || '',
     categoria: conta?.categoria || '',
     beneficiario_nome: conta?.beneficiario_nome || '',
-    beneficiario_documento: conta?.beneficiario_documento || '',
+    beneficiario_documento: formatarDocumento(conta?.beneficiario_documento || ''),
     forma_pagamento: conta?.forma_pagamento || '',
     chave_pix: conta?.chave_pix || '',
     banco: conta?.banco || '',
@@ -1705,7 +1769,7 @@ function ModalContaPagar({ conta, onFechar, onSalvo, toast }) {
         <input style={s.input} value={form.beneficiario_nome} onChange={campo('beneficiario_nome')} placeholder="Quem vai receber o pagamento" />
 
         <label style={s.label}>CPF/CNPJ do beneficiário</label>
-        <input style={s.input} value={form.beneficiario_documento} onChange={campo('beneficiario_documento')} />
+        <input style={s.input} inputMode="numeric" maxLength={18} placeholder="000.000.000-00 ou 00.000.000/0000-00" value={form.beneficiario_documento} onChange={(e) => setForm({ ...form, beneficiario_documento: formatarDocumento(e.target.value) })} />
 
         <label style={s.label}>Forma de pagamento</label>
         <select style={s.input} value={form.forma_pagamento} onChange={campo('forma_pagamento')}>
@@ -2129,7 +2193,7 @@ function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, on
 // da primeira emissão, então reabrir esse modal já vem pré-preenchido.
 function ModalGerarBoleto({ conta, onFechar, onSalvo, toast }) {
   const [form, setForm] = useState({
-    pagador_documento: conta.pagador_documento || '',
+    pagador_documento: formatarDocumento(conta.pagador_documento || ''),
     pagador_cep: conta.pagador_cep || '',
     pagador_endereco: conta.pagador_endereco || '',
     pagador_numero: conta.pagador_numero || '',
@@ -2179,7 +2243,7 @@ function ModalGerarBoleto({ conta, onFechar, onSalvo, toast }) {
         <p style={s.subTexto}>Dados exigidos pelo Mercado Pago pra emitir o boleto. Ficam salvos nessa conta pra não pedir de novo.</p>
 
         <label style={s.label}>CPF/CNPJ do pagador *</label>
-        <input style={s.input} value={form.pagador_documento} onChange={campo('pagador_documento')} placeholder="Só números" />
+        <input style={s.input} inputMode="numeric" maxLength={18} value={form.pagador_documento} onChange={(e) => setForm({ ...form, pagador_documento: formatarDocumento(e.target.value) })} placeholder="000.000.000-00 ou 00.000.000/0000-00" />
 
         <div className="sa-grid-form" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
           <div>
@@ -3693,7 +3757,7 @@ const STATUS_SUPORTE_INFO = {
 // Módulo de suporte (Admin -> Suporte, ver backend/src/routes/suporte.js e superAdminSuporte.js).
 // Lista conversas que a empresa escalou pra um humano; a IA responde sozinha enquanto o admin da
 // empresa não clica em "Falar com o time", então conversas ainda só com a IA nem aparecem aqui.
-function AbaSuporte({ toast, confirmar }) {
+function AbaSuporte({ toast, confirmar, pendencias = [], onAlterou }) {
   const [conversas, setConversas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [conversaAberta, setConversaAberta] = useState(null); // { id } — abre o modal
@@ -3728,8 +3792,9 @@ function AbaSuporte({ toast, confirmar }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {conversas.map((c) => {
         const status = STATUS_SUPORTE_INFO[c.status] || { label: c.status, bg: '#f3f4f6', fg: '#6b7280' };
+        const pendencia = pendencias.find((p) => p.id === c.id);
         return (
-          <div key={c.id} style={s.card}>
+          <div key={c.id} style={{ ...s.card, ...(pendencia ? { borderLeft: '4px solid #ef4444' } : {}) }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
               <div>
                 <strong style={{ fontSize: '15px', color: '#111827' }}>{c.nome_empresa}</strong>
@@ -3738,7 +3803,14 @@ function AbaSuporte({ toast, confirmar }) {
                   {c.atendido_por_nome && ` · Atendido por ${c.atendido_por_nome}`}
                 </div>
               </div>
-              <span style={{ ...s.badge, background: status.bg, color: status.fg }}>{status.label}</span>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {pendencia && (
+                  <span style={{ ...s.badge, background: '#fee2e2', color: '#b91c1c' }}>
+                    {pendencia.motivo === 'repassada_para_voce' ? 'Repassado para você' : 'Sem atendente'}
+                  </span>
+                )}
+                <span style={{ ...s.badge, background: status.bg, color: status.fg }}>{status.label}</span>
+              </div>
             </div>
             <div style={{ marginTop: '14px' }}>
               <button onClick={() => setConversaAberta({ id: c.id })} style={s.btnPrimario}>Abrir conversa</button>
@@ -3751,7 +3823,8 @@ function AbaSuporte({ toast, confirmar }) {
         <ModalConversaSuporte
           conversaId={conversaAberta.id}
           onFechar={() => setConversaAberta(null)}
-          onResolvido={() => { setConversaAberta(null); carregarConversas(); }}
+          onResolvido={() => { setConversaAberta(null); carregarConversas(); onAlterou?.(); }}
+          onAlterou={onAlterou}
           toast={toast}
           confirmar={confirmar}
         />
@@ -3760,7 +3833,7 @@ function AbaSuporte({ toast, confirmar }) {
   );
 }
 
-function ModalConversaSuporte({ conversaId, onFechar, onResolvido, toast, confirmar }) {
+function ModalConversaSuporte({ conversaId, onFechar, onResolvido, onAlterou, toast, confirmar }) {
   const [conversa, setConversa] = useState(null);
   const [mensagens, setMensagens] = useState([]);
   const [voceMesmoId, setVoceMesmoId] = useState(null);
@@ -3814,7 +3887,7 @@ function ModalConversaSuporte({ conversaId, onFechar, onResolvido, toast, confir
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ texto: msg })
       });
-      if (res.ok) { setTexto(''); carregar(); }
+      if (res.ok) { setTexto(''); carregar(); onAlterou?.(); }
       else {
         const dados = await res.json().catch(() => ({}));
         toast.error(dados.error || 'Não foi possível enviar a mensagem.');
@@ -3831,7 +3904,7 @@ function ModalConversaSuporte({ conversaId, onFechar, onResolvido, toast, confir
     setAceitando(true);
     try {
       const res = await fetch(`${API_URL}/super-admin/suporte/${conversaId}/aceitar`, { method: 'POST' });
-      if (res.ok) { toast.success('Caso aceito — só você pode responder agora.'); carregar(); }
+      if (res.ok) { toast.success('Caso aceito. Só você pode responder agora.'); carregar(); onAlterou?.(); }
       else {
         const dados = await res.json().catch(() => ({}));
         toast.error(dados.error || 'Não foi possível aceitar o caso.');
@@ -3853,7 +3926,7 @@ function ModalConversaSuporte({ conversaId, onFechar, onResolvido, toast, confir
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ super_admin_id: destinoRepasse })
       });
-      if (res.ok) { toast.success('Caso repassado.'); setDestinoRepasse(''); carregar(); }
+      if (res.ok) { toast.success('Caso repassado.'); setDestinoRepasse(''); carregar(); onAlterou?.(); }
       else toast.error('Não foi possível repassar agora.');
     } catch (err) {
       toast.error('Erro de conexão. Tente novamente.');
@@ -4287,6 +4360,9 @@ const s = {
   sidebar: { flexShrink: 0, background: '#16161a', color: '#fff', height: '100vh', position: 'fixed', top: 0, left: 0, zIndex: 1000, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflowY: 'auto', overflowX: 'hidden', transition: 'width 0.3s', borderRight: '1px solid rgba(37, 84, 235,0.25)' },
   btnMenu: { background: 'none', border: 'none', padding: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', marginBottom: '8px', flexShrink: 0 },
   sidebarTopo: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' },
+  balaoContador: { minWidth: '18px', height: '18px', padding: '0 5px', borderRadius: '9px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 800, lineHeight: '18px', textAlign: 'center', boxSizing: 'border-box', boxShadow: '0 0 0 2px #16161a' },
+  balaoContadorSobreIcone: { position: 'absolute', top: '-8px', right: '-10px' },
+  logoSidebar: { width: '34px', height: '34px', borderRadius: '8px', background: '#fff', padding: '2px', boxSizing: 'border-box', objectFit: 'contain', flexShrink: 0 },
   sidebarTitulo: { margin: 0, fontSize: '14px', fontWeight: 800, color: '#fff' },
   sidebarSubtitulo: { margin: 0, fontSize: '11px', color: '#9ca3af' },
   main: { flex: 1, minWidth: 0, marginLeft: '70px' },
