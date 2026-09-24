@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import useEscToClose from '../../hooks/useEscToClose';
@@ -158,7 +158,12 @@ const TODOS_ITENS_MENU = GRUPOS_MENU.flatMap((g) => g.itens);
 // (ver components/Layout.js), agrupada por seção pra ficar mais fácil de navegar entre as 11
 // telas do painel.
 function SuperAdminDashboard() {
-  const [aba, setAba] = useState('metricas');
+  // A aba aberta fica na URL (?aba=funil): assim atualizar a página (F5) mantém a tela atual,
+  // o botão voltar do navegador volta pra aba anterior e dá pra mandar o link de uma aba.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const abaDaUrl = searchParams.get('aba');
+  const aba = TODOS_ITENS_MENU.some((i) => i.valor === abaDaUrl) ? abaDaUrl : 'metricas';
+  const setAba = (valor) => setSearchParams({ aba: valor });
   const [menuAberto, setMenuAberto] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
