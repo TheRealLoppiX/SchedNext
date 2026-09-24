@@ -535,6 +535,11 @@ code {
   display: none;
 }
 
+/* Faixa do topo do admin absoluto: só aparece no mobile (ver media query abaixo). */
+.sa-topbar {
+  display: none;
+}
+
 @media (max-width: 768px) {
   /* No mobile a barra lateral vira um painel off-canvas: some da tela por padrão
      (translateX) e só aparece quando o usuário toca no botão de hambúrguer fixo,
@@ -616,6 +621,47 @@ code {
     font-size: 22px !important;
   }
 
+  .sa-header p {
+    display: none;
+  }
+
+  /* Faixa fixa atrás do hambúrguer: sem ela o botão flutuava por cima de tabelas e textos
+     ao rolar a página. */
+  .sa-topbar {
+    display: flex;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    padding-left: 70px;
+    padding-right: 16px;
+    background: rgba(248, 249, 250, 0.96);
+    border-bottom: 1px solid #e5e7eb;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 900;
+    box-sizing: border-box;
+  }
+
+  .sa-topbar-titulo {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sa-topbar ~ .bb-mobile-menu-btn {
+    top: 10px;
+  }
+
+  .sa-topbar ~ .bb-main {
+    padding-top: 80px !important;
+  }
+
   .sa-overlay {
     padding: 10px !important;
   }
@@ -624,6 +670,134 @@ code {
     padding: 20px 16px !important;
     max-height: 92vh !important;
     max-height: 92dvh !important;
+  }
+
+  /* No iOS o input de data tem largura mínima própria e estourava o modal/linha de filtros. */
+  .sa-overlay input,
+  .sa-overlay select,
+  .sa-barra-top input,
+  .sa-barra-top select {
+    min-width: 0;
+  }
+
+  .sa-overlay input[type="date"],
+  .sa-overlay input[type="month"],
+  .sa-barra-top input[type="date"],
+  .sa-barra-top input[type="month"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 42px;
+  }
+
+  .sa-overlay div[style*="flex: 1"] {
+    min-width: 0;
+  }
+
+  /* Barra de filtros/ações: cada grupo ocupa a linha toda e os campos dividem o espaço. */
+  .sa-barra-top > div {
+    width: 100%;
+    flex-wrap: wrap !important;
+  }
+
+  .sa-barra-top input,
+  .sa-barra-top select {
+    flex: 1 1 140px;
+    max-width: none !important;
+  }
+
+  .sa-barra-top button {
+    flex: 1 1 auto;
+  }
+
+  /* Tabelas viram cards: cabeçalho some e cada célula mostra o nome da coluna (data-label,
+     preenchido pelo SuperAdminDashboard a partir do <th>). */
+  table.sa-tabela {
+    min-width: 0 !important;
+  }
+
+  table.sa-tabela thead {
+    display: none;
+  }
+
+  table.sa-tabela,
+  table.sa-tabela tbody,
+  table.sa-tabela tr,
+  table.sa-tabela td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  table.sa-tabela tr {
+    padding: 12px 14px;
+    border-bottom: 8px solid #f3f4f6 !important;
+  }
+
+  table.sa-tabela tr:last-child {
+    border-bottom: none !important;
+  }
+
+  table.sa-tabela td {
+    position: relative;
+    padding: 6px 0 6px 40% !important;
+    text-align: right !important;
+    word-break: break-word;
+    min-height: 20px;
+  }
+
+  table.sa-tabela td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 38%;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  /* Primeira coluna (nome/identificação) vira o título do card. */
+  table.sa-tabela td:first-child {
+    padding: 0 0 8px !important;
+    margin-bottom: 4px;
+    text-align: left !important;
+    font-size: 15px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  table.sa-tabela td:first-child::before {
+    display: none;
+  }
+
+  /* Coluna de ações (ou sem título) ocupa a largura toda, com botões lado a lado. */
+  table.sa-tabela td[data-label="Ações"],
+  table.sa-tabela td[data-label=""] {
+    padding: 10px 0 0 !important;
+    text-align: left !important;
+  }
+
+  table.sa-tabela td[data-label="Ações"]::before,
+  table.sa-tabela td[data-label=""]::before {
+    display: none;
+  }
+
+  table.sa-tabela td[data-label="Ações"] > div,
+  table.sa-tabela td[data-label=""] > div {
+    justify-content: flex-start !important;
+  }
+
+  table.sa-tabela td[data-label="Ações"] button,
+  table.sa-tabela td[data-label=""] button {
+    flex: 1 1 auto;
+    padding: 9px 12px !important;
+  }
+
+  /* Com um modal do admin absoluto aberto, o botão de ajuda flutuante cobria os botões dele. */
+  body:has(.sa-overlay) .bb-help-fab {
+    display: none !important;
   }
 }
 

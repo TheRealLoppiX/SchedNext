@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -170,6 +170,30 @@ function SuperAdminDashboard() {
 
   const itemAtivo = TODOS_ITENS_MENU.find((i) => i.valor === aba);
 
+  // No mobile as tabelas (.sa-tabela) viram cards via CSS (index.css), e cada célula mostra o
+  // nome da coluna a partir do atributo data-label. Em vez de repetir o rótulo em cada <td> das
+  // várias abas, copia aqui o texto do <th> correspondente sempre que o conteúdo muda.
+  const mainRef = useRef(null);
+  useEffect(() => {
+    const raiz = mainRef.current;
+    if (!raiz) return undefined;
+    const rotular = () => {
+      raiz.querySelectorAll('table.sa-tabela').forEach((tabela) => {
+        const cabecalhos = Array.from(tabela.querySelectorAll('thead th')).map((th) => th.textContent.trim());
+        tabela.querySelectorAll('tbody tr').forEach((tr) => {
+          Array.from(tr.children).forEach((td, i) => {
+            const rotulo = cabecalhos[i] || '';
+            if (td.getAttribute('data-label') !== rotulo) td.setAttribute('data-label', rotulo);
+          });
+        });
+      });
+    };
+    rotular();
+    const observador = new MutationObserver(rotular);
+    observador.observe(raiz, { childList: true, subtree: true });
+    return () => observador.disconnect();
+  }, []);
+
   // Mesmo comportamento da sidebar do admin de empresa (ver components/Layout.js): no desktop
   // fica recolhida numa faixa de ícones e abre no hover; em telas touch não existe hover de
   // verdade, então abre/fecha só pelo clique (e no mobile vira painel off-canvas via CSS
@@ -188,6 +212,12 @@ function SuperAdminDashboard() {
       {menuAberto && (
         <div className="bb-sidebar-overlay" onClick={() => setMenuAberto(false)} />
       )}
+
+      {/* Faixa fixa atrás do botão de hambúrguer no mobile (só aparece via CSS), pra o botão não
+          ficar flutuando por cima do conteúdo quando a página rola. */}
+      <div className="sa-topbar">
+        <span className="sa-topbar-titulo">{itemAtivo?.label || 'Admin absoluto'}</span>
+      </div>
 
       <button
         className="bb-mobile-menu-btn"
@@ -243,7 +273,7 @@ function SuperAdminDashboard() {
         </button>
       </aside>
 
-      <main className="bb-main" style={s.main}>
+      <main ref={mainRef} className="bb-main" style={s.main}>
         <div className="sa-container" style={s.container}>
           <header className="sa-header" style={s.header}>
             <h1 style={s.titulo}>{itemAtivo?.label || 'Painel da plataforma'}</h1>
@@ -300,7 +330,7 @@ function AbaMetricas({ toast }) {
 
   return (
     <div>
-      <div style={{ ...s.barraTop, alignItems: 'center' }}>
+      <div className="sa-barra-top" style={{ ...s.barraTop, alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {['ano', 'mes'].map((periodo) => (
             <button
@@ -520,7 +550,7 @@ function AbaFinanceiro({ toast }) {
 
   return (
     <div>
-      <div style={s.barraTop}>
+      <div className="sa-barra-top" style={s.barraTop}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           <input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
           <span style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
@@ -569,7 +599,7 @@ function AbaFinanceiro({ toast }) {
               <>
                 <BarraGrafico dados={financeiro.serie_periodo} />
                 <div style={{ overflowX: 'auto', marginTop: '14px' }}>
-                  <table style={s.table}>
+                  <table className="sa-tabela" style={s.table}>
                     <thead>
                       <tr>{['Período', 'Bruto', 'Líquido', 'Qtd'].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr>
                     </thead>
@@ -602,7 +632,7 @@ function AbaFinanceiro({ toast }) {
             <h3 style={s.cardTitulo}>Detalhamento</h3>
             {financeiro.detalhamento.length === 0 ? <p style={s.textoVazio}>Nenhuma transação nesse período.</p> : (
               <div style={{ overflowX: 'auto', maxHeight: '360px', overflowY: 'auto' }}>
-                <table style={s.table}>
+                <table className="sa-tabela" style={s.table}>
                   <thead>
                     <tr>{['Data', 'Empresa', 'Tipo', 'Forma', 'Bruto', 'Líquido'].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr>
                   </thead>
@@ -956,7 +986,7 @@ function ContasPagarPainel({ toast, confirmar }) {
 
   return (
     <div>
-      <div style={s.barraTop}>
+      <div className="sa-barra-top" style={s.barraTop}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           <input placeholder="Buscar por descrição ou beneficiário..." value={busca} onChange={(e) => setBusca(e.target.value)} style={s.inputBusca} />
           <select style={s.selectFiltro} value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)}>
@@ -992,7 +1022,7 @@ function ContasPagarPainel({ toast, confirmar }) {
       ) : (
         <div style={s.cardTabela}>
           <div style={{ overflowX: 'auto' }}>
-            <table style={s.table}>
+            <table className="sa-tabela" style={s.table}>
               <thead>
                 <tr>{['Competência', 'Vencimento', 'Beneficiário', 'Descrição', 'Categoria', 'Forma', 'Valor', 'Status', 'Ações'].map((h) => (
                   <th key={h} style={{ ...s.th, ...(h === 'Ações' ? { textAlign: 'right' } : {}) }}>{h}</th>
@@ -1296,7 +1326,7 @@ function ContasReceberPainel({ toast, confirmar }) {
         </div>
       )}
 
-      <div style={s.barraTop}>
+      <div className="sa-barra-top" style={s.barraTop}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           <input placeholder="Buscar por descrição ou pagador..." value={busca} onChange={(e) => setBusca(e.target.value)} style={s.inputBusca} />
           <select style={s.selectFiltro} value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)}>
@@ -1333,7 +1363,7 @@ function ContasReceberPainel({ toast, confirmar }) {
       ) : (
         <div style={s.cardTabela}>
           <div style={{ overflowX: 'auto' }}>
-            <table style={s.table}>
+            <table className="sa-tabela" style={s.table}>
               <thead>
                 <tr>{['Competência', 'Previsão', 'Pagador', 'Empresa', 'Descrição', 'Valor', 'Status', 'Cobrança', 'Ações'].map((h) => (
                   <th key={h} style={{ ...s.th, ...(h === 'Ações' ? { textAlign: 'right' } : {}) }}>{h}</th>
@@ -1746,7 +1776,7 @@ function AbaEmpresas({ toast, confirmar }) {
 
   return (
     <div>
-      <div style={s.barraTop}>
+      <div className="sa-barra-top" style={s.barraTop}>
         <input
           placeholder="Buscar por nome, slug ou e-mail..."
           value={busca}
@@ -1769,7 +1799,7 @@ function AbaEmpresas({ toast, confirmar }) {
       ) : (
         <div style={s.cardTabela}>
           <div style={{ overflowX: 'auto' }}>
-            <table style={s.table}>
+            <table className="sa-tabela" style={s.table}>
               <thead>
                 <tr>
                   {['Empresa', 'E-mail', 'Cadastro', 'Plano', 'Status', 'Ações'].map((h) => (
@@ -2242,7 +2272,7 @@ function AbaPlanos({ toast, confirmar }) {
 
   return (
     <div>
-      <div style={s.barraTop}>
+      <div className="sa-barra-top" style={s.barraTop}>
         <span />
         <button onClick={() => { setCriandoNovo(true); setEditando({ ...PLANO_VAZIO }); }} style={s.btnPrimario}>+ Novo plano</button>
       </div>
@@ -2491,7 +2521,7 @@ function AbaTestesPlano({ toast, confirmar }) {
         <p style={s.textoCarregando}>Nenhum teste de plano em andamento.</p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <table style={s.table}>
+          <table className="sa-tabela" style={s.table}>
             <thead>
               <tr>
                 {['Empresa', 'Plano em teste', 'Volta para', 'Termina em', ''].map((h) => <th key={h} style={s.th}>{h}</th>)}
@@ -2641,7 +2671,7 @@ function AbaCampanhas({ toast, confirmar }) {
 
   return (
     <div>
-      <div style={{ ...s.barraTop, justifyContent: 'flex-end' }}>
+      <div className="sa-barra-top" style={{ ...s.barraTop, justifyContent: 'flex-end' }}>
         <button onClick={abrirNova} style={s.btnPrimario}>+ Nova campanha</button>
       </div>
 
@@ -2650,7 +2680,7 @@ function AbaCampanhas({ toast, confirmar }) {
       ) : (
         <div style={s.cardTabela}>
           <div style={{ overflowX: 'auto' }}>
-            <table style={s.table}>
+            <table className="sa-tabela" style={s.table}>
               <thead>
                 <tr>
                   {['Campanha', 'Plano', 'Período', 'Preços por ciclo', 'Status', 'Ações'].map((h) => (
@@ -2920,7 +2950,7 @@ function AbaChaves({ toast, confirmar }) {
 
   return (
     <div>
-      <div style={s.barraTop}>
+      <div className="sa-barra-top" style={s.barraTop}>
         <span />
         <button onClick={() => { setCriando(true); setUltimasGeradas(null); }} style={s.btnPrimario}>+ Gerar chave(s)</button>
       </div>
@@ -3547,7 +3577,7 @@ function AbaSuperAdmins({ toast, confirmar }) {
 
   return (
     <div>
-      <div style={s.barraTop}>
+      <div className="sa-barra-top" style={s.barraTop}>
         <span />
         <button onClick={() => setCriandoModal(true)} style={s.btnPrimario}>+ Novo super admin</button>
       </div>
@@ -3751,7 +3781,7 @@ const s = {
   avatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
   avisoSeguranca: { display: 'flex', gap: '10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', marginTop: '16px', marginBottom: '4px' },
 
-  overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(17,24,39,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000, padding: '20px' },
+  overlay: { position: 'fixed', inset: 0, boxSizing: 'border-box', background: 'rgba(17,24,39,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000, padding: '20px' },
   modal: { background: '#fff', padding: '28px', borderRadius: '14px', width: '100%', maxWidth: '520px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', boxSizing: 'border-box' },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', paddingBottom: '16px', borderBottom: '1px solid #f0f0f0' },
   btnFechar: { background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1, padding: '2px' },
