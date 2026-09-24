@@ -4362,7 +4362,7 @@ const s = {
   sidebarTopo: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' },
   balaoContador: { minWidth: '18px', height: '18px', padding: '0 5px', borderRadius: '9px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 800, lineHeight: '18px', textAlign: 'center', boxSizing: 'border-box', boxShadow: '0 0 0 2px #16161a' },
   balaoContadorSobreIcone: { position: 'absolute', top: '-8px', right: '-10px' },
-  logoSidebar: { width: '34px', height: '34px', borderRadius: '8px', background: '#fff', padding: '2px', boxSizing: 'border-box', objectFit: 'contain', flexShrink: 0 },
+  logoSidebar: { width: '36px', height: '36px', objectFit: 'contain', flexShrink: 0 },
   sidebarTitulo: { margin: 0, fontSize: '14px', fontWeight: 800, color: '#fff' },
   sidebarSubtitulo: { margin: 0, fontSize: '11px', color: '#9ca3af' },
   main: { flex: 1, minWidth: 0, marginLeft: '70px' },
