@@ -114,14 +114,14 @@ function AdminDominio({ empresaId }) {
     }
   };
 
-  if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Carregando...</p>;
+  if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: 'var(--fx-muted)' }}>Carregando...</p>;
 
   if (!permitido) {
     return (
       <div style={styles.container}>
-        <h2 style={styles.title}><Icons.Globe color="#111827" /> Domínio próprio</h2>
+        <h2 style={styles.title}>Domínio próprio</h2>
         <div style={styles.upsell}>
-          <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+          <p style={{ margin: 0, fontSize: '14px', color: 'var(--fx-muted)' }}>
             Usar seu próprio domínio (ex: agenda.suaempresa.com.br) em vez do subdomínio da SchedNext é um recurso exclusivo do <strong>plano Enterprise</strong>.
             Fale com o suporte para fazer upgrade.
           </p>
@@ -132,7 +132,7 @@ function AdminDominio({ empresaId }) {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}><Icons.Globe color="#111827" /> Domínio próprio</h2>
+      <h2 style={styles.title}>Domínio próprio</h2>
       <p style={styles.subtitle}>Use um domínio ou subdomínio seu para os clientes acessarem sua agenda.</p>
 
       {dominioAtual ? (
@@ -141,7 +141,7 @@ function AdminDominio({ empresaId }) {
             <div>
               <strong style={{ fontSize: '16px' }}>{dominioAtual}</strong>
               <div style={{ marginTop: '4px' }}>
-                <span style={{ ...styles.badge, backgroundColor: verificado ? '#d1fae5' : '#fef3c7', color: verificado ? '#065f46' : '#92400e' }}>
+                <span style={{ ...styles.badge, backgroundColor: verificado ? 'var(--fx-green-bg)' : 'var(--fx-amber-bg)', color: verificado ? 'var(--fx-green)' : 'var(--fx-amber)' }}>
                   {verificado ? 'Verificado e ativo' : 'Aguardando verificação de DNS'}
                 </span>
               </div>
@@ -167,10 +167,10 @@ function AdminDominio({ empresaId }) {
                   </tr>
                 </tbody>
               </table>
-              <p style={{ margin: '10px 0 0', fontSize: '12px', color: '#6b7280' }}>
+              <p style={{ margin: '10px 0 0', fontSize: '12px', color: 'var(--fx-muted)' }}>
                 A propagação do DNS pode levar de alguns minutos a algumas horas. Depois de configurar, clique em "Verificar".
               </p>
-              {mensagemVerificacao && <p style={{ margin: '10px 0 0', fontSize: '13px', color: '#92400e' }}>{mensagemVerificacao}</p>}
+              {mensagemVerificacao && <p style={{ margin: '10px 0 0', fontSize: '13px', color: 'var(--fx-amber)' }}>{mensagemVerificacao}</p>}
             </div>
           )}
         </div>
@@ -192,29 +192,26 @@ function AdminDominio({ empresaId }) {
   );
 }
 
-const Icons = {
-  Globe: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>,
-};
 
 const styles = {
   container: { padding: '40px', maxWidth: '800px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },
-  title: { fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 5px 0' },
-  subtitle: { color: '#6b7280', fontSize: '15px', marginBottom: '25px' },
-  upsell: { padding: '20px', backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px dashed #d1d5db' },
-  cardForm: { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6' },
-  label: { display: 'block', fontSize: '13px', color: '#374151', fontWeight: '600', marginBottom: '8px' },
+  title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  subtitle: { color: 'var(--fx-muted)', fontSize: '15px', marginBottom: '25px' },
+  upsell: { padding: '20px', backgroundColor: 'var(--fx-surface-2)', borderRadius: '10px', border: '1px dashed var(--fx-line-2)' },
+  cardForm: { backgroundColor: 'var(--fx-card)', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--fx-line)' },
+  label: { display: 'block', fontSize: '13px', color: 'var(--fx-text)', fontWeight: '600', marginBottom: '8px' },
   formRow: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
-  input: { flex: '1 1 260px', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' },
+  input: { flex: '1 1 260px', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px' },
   btnCadastrar: { padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '600', cursor: 'pointer' },
-  cardAtual: { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6' },
+  cardAtual: { backgroundColor: 'var(--fx-card)', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--fx-line)' },
   linhaTopo: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' },
   badge: { display: 'inline-block', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' },
-  btnSecundario: { padding: '8px 14px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '13px' },
-  btnExcluir: { padding: '8px 14px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontSize: '13px' },
-  instrucoes: { marginTop: '18px', paddingTop: '18px', borderTop: '1px solid #f3f4f6' },
+  btnSecundario: { padding: '8px 14px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', cursor: 'pointer', fontSize: '13px' },
+  btnExcluir: { padding: '8px 14px', borderRadius: '6px', border: '1px solid var(--fx-red-line)', background: 'var(--fx-red-bg)', color: 'var(--fx-red)', cursor: 'pointer', fontSize: '13px' },
+  instrucoes: { marginTop: '18px', paddingTop: '18px', borderTop: '1px solid var(--fx-line)' },
   tabelaDns: { width: '100%', borderCollapse: 'collapse', fontSize: '13px' },
-  th: { textAlign: 'left', padding: '8px', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontWeight: '600' },
-  td: { padding: '8px', borderBottom: '1px solid #f3f4f6', color: '#111827' }
+  th: { textAlign: 'left', padding: '8px', borderBottom: '1px solid var(--fx-line)', color: 'var(--fx-muted)', fontWeight: '600' },
+  td: { padding: '8px', borderBottom: '1px solid var(--fx-line)', color: 'var(--fx-text)' }
 };
 
 export default AdminDominio;

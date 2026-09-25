@@ -436,7 +436,7 @@ function AdminRelatorios({ empresaId }) {
     setTimeout(() => { janela.print(); }, 400);
   };
 
-  if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Carregando...</p>;
+  if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: 'var(--fx-muted)' }}>Carregando...</p>;
 
   const maiorFaturamentoDiario = relatorio ? Math.max(1, ...relatorio.serie_diaria.map((d) => d.faturamento)) : 1;
   const maiorFaturamentoServico = relatorio ? Math.max(1, ...relatorio.top_servicos.map((s) => s.faturamento)) : 1;
@@ -467,7 +467,7 @@ function AdminRelatorios({ empresaId }) {
 
   return (
     <div className="admin-page-container" style={styles.container}>
-      <h2 style={styles.title}><Icons.BarChart color="#111827" /> Relatórios e financeiro</h2>
+      <h2 style={styles.title}>Relatórios e financeiro</h2>
       <p style={styles.subtitle}>Faturamento, taxas de maquineta, comissionamento e desempenho da equipe.</p>
 
       <div style={styles.filtros}>
@@ -501,7 +501,7 @@ function AdminRelatorios({ empresaId }) {
             <button
               type="button"
               onClick={() => setServicosSelecionados([])}
-              style={{ marginTop: '4px', background: 'none', border: 'none', color: '#2554eb', fontSize: '11px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+              style={{ marginTop: '4px', background: 'none', border: 'none', color: 'var(--fx-blue)', fontSize: '11px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
             >
               Limpar seleção
             </button>
@@ -601,17 +601,17 @@ function AdminRelatorios({ empresaId }) {
                         onClick={() => mostrarDetalhamentoAplicado && setProfissionalExpandido(expandido ? null : chave)}
                         style={{ cursor: mostrarDetalhamentoAplicado ? 'pointer' : 'default' }}
                       >
-                        <td style={{ ...styles.td, color: '#9ca3af', width: '20px' }}>{mostrarDetalhamentoAplicado ? (expandido ? '▾' : '▸') : ''}</td>
+                        <td style={{ ...styles.td, color: 'var(--fx-faint)', width: '20px' }}>{mostrarDetalhamentoAplicado ? (expandido ? '▾' : '▸') : ''}</td>
                         <td style={styles.td}>{p.nome}</td>
                         <td style={styles.td}>{p.percentual_comissao}%</td>
                         <td style={styles.td}>{p.quantidade}</td>
                         <td style={styles.td}>{formatarMoeda(p.receita_bruta)}</td>
                         <td style={styles.td}>{formatarMoeda(p.receita_liquida)}</td>
-                        <td style={{ ...styles.td, fontWeight: '700', color: '#059669' }}>{formatarMoeda(p.comissao)}</td>
+                        <td style={{ ...styles.td, fontWeight: '700', color: 'var(--fx-green)' }}>{formatarMoeda(p.comissao)}</td>
                       </tr>
                       {expandido && (
                         <tr>
-                          <td colSpan={7} style={{ padding: '0 8px 14px', borderBottom: '1px solid #f3f4f6' }}>
+                          <td colSpan={7} style={{ padding: '0 8px 14px', borderBottom: '1px solid var(--fx-line)' }}>
                             <div style={{ overflowX: 'auto' }}>
                               <table style={{ ...styles.tabela, minWidth: '520px' }}>
                                 <thead>
@@ -639,13 +639,13 @@ function AdminRelatorios({ empresaId }) {
                                           <span style={styles.tagAvulso}>Avulso</span>
                                         )}
                                         {item.formas_pagamento && item.formas_pagamento.length > 0 && (
-                                          <div style={{ marginTop: '3px', fontSize: '11px', color: '#9ca3af' }}>
+                                          <div style={{ marginTop: '3px', fontSize: '11px', color: 'var(--fx-faint)' }}>
                                             {item.formas_pagamento.map((f) => `${f.forma_pagamento} ${formatarMoeda(f.valor)}`).join(' + ')}
                                           </div>
                                         )}
                                       </td>
                                       <td style={styles.tdDetalhe}>{formatarMoeda(item.receita_liquida)}</td>
-                                      <td style={{ ...styles.tdDetalhe, fontWeight: '700', color: '#059669' }}>{formatarMoeda(item.comissao)}</td>
+                                      <td style={{ ...styles.tdDetalhe, fontWeight: '700', color: 'var(--fx-green)' }}>{formatarMoeda(item.comissao)}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -670,7 +670,7 @@ function AdminRelatorios({ empresaId }) {
       </div>
       )}
 
-      {erro && <p style={{ color: '#dc2626', fontSize: '14px' }}>{erro}</p>}
+      {erro && <p style={{ color: 'var(--fx-red)', fontSize: '14px' }}>{erro}</p>}
 
       {relatorio && (
         <>
@@ -679,7 +679,7 @@ function AdminRelatorios({ empresaId }) {
               <span style={styles.cardLabel}>Faturamento no período</span>
               <span style={styles.cardValor}>{formatarMoeda(relatorio.resumo.faturamento_total)}</span>
               {relatorio.avancado && (
-                <span style={{ ...styles.cardVariacao, color: variacao >= 0 ? '#059669' : '#dc2626' }}>
+                <span style={{ ...styles.cardVariacao, color: variacao >= 0 ? 'var(--fx-green)' : 'var(--fx-red)' }}>
                   {variacao >= 0 ? '▲' : '▼'} {Math.abs(variacao)}% vs período anterior
                 </span>
               )}
@@ -809,13 +809,13 @@ function AdminRelatorios({ empresaId }) {
                   {ia.texto ? 'Gerar de novo' : 'Gerar resumo'}
                 </LoadingButton>
               </div>
-              {ia.texto && <p style={{ margin: '14px 0 0', fontSize: '14px', color: '#374151', lineHeight: '1.6' }}>{ia.texto}</p>}
+              {ia.texto && <p style={{ margin: '14px 0 0', fontSize: '14px', color: 'var(--fx-text)', lineHeight: '1.6' }}>{ia.texto}</p>}
             </div>
           )}
 
           {!relatorio.avancado ? (
             <div style={styles.upsell}>
-              <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+              <p style={{ margin: 0, fontSize: '14px', color: 'var(--fx-muted)' }}>
                 Comparação com o período anterior, top serviços, top profissionais e recorrência de clientes são recursos exclusivos do <strong>plano Enterprise</strong>.
                 Fale com o suporte para fazer upgrade.
               </p>
@@ -875,19 +875,19 @@ function AdminRelatorios({ empresaId }) {
           aria-expanded={taxasExpandido}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Icons.Lock color="#9ca3af" />
+            <Icons.Lock color="var(--fx-faint)" />
             <span>
               <span style={styles.secaoSensivelTitulo}>Taxas de processamento</span>
               <span style={styles.secaoSensivelBadge}>Configuração financeira</span>
             </span>
           </span>
-          <Icons.Chevron color="#9ca3af" aberto={taxasExpandido} />
+          <Icons.Chevron color="var(--fx-faint)" aberto={taxasExpandido} />
         </button>
 
         {taxasExpandido && (
           <div style={styles.secaoSensivelCorpo}>
             <p style={styles.avisoSensivel}>
-              <Icons.AlertTriangle color="#f59e0b" />
+              <Icons.AlertTriangle color="var(--fx-amber)" />
               Percentual descontado por forma de pagamento pra calcular a receita líquida dos relatórios. Não muda o valor cobrado do cliente, mas recalcula
               a receita líquida de TODOS os períodos a partir de agora, inclusive meses já fechados, já que a taxa cadastrada aqui não fica presa a cada pagamento antigo.
             </p>
@@ -923,20 +923,20 @@ const Icons = {
 
 const styles = {
   container: { padding: '40px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },
-  title: { fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 5px 0' },
-  subtitle: { color: '#6b7280', fontSize: '15px', marginBottom: '25px' },
-  upsell: { padding: '20px', backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px dashed #d1d5db' },
+  title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  subtitle: { color: 'var(--fx-muted)', fontSize: '15px', marginBottom: '25px' },
+  upsell: { padding: '20px', backgroundColor: 'var(--fx-surface-2)', borderRadius: '10px', border: '1px dashed var(--fx-line-2)' },
   // alignItems 'flex-start' de propósito — com 'flex-end' o campo "Serviços" (mais alto que os
   // outros por causa do select multiple + "Limpar seleção") empurrava só o próprio rótulo pra
   // cima, desalinhando com os rótulos dos campos vizinhos. Com 'flex-start' todo mundo alinha
   // pelo topo (rótulo), que é o que os olhos comparam primeiro numa barra de filtros.
-  filtros: { display: 'flex', gap: '14px', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '24px', backgroundColor: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #f3f4f6', overflow: 'hidden' },
-  label: { display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '600' },
-  checkboxLabel: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#374151', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
-  input: { padding: '8px 8px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', width: 'calc(100% - 6px)', maxWidth: '100%', boxSizing: 'border-box' },
+  filtros: { display: 'flex', gap: '14px', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '24px', backgroundColor: 'var(--fx-card)', padding: '16px', borderRadius: '12px', border: '1px solid var(--fx-line)', overflow: 'hidden' },
+  label: { display: 'block', fontSize: '12px', color: 'var(--fx-muted)', marginBottom: '4px', fontWeight: '600' },
+  checkboxLabel: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--fx-text)', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
+  input: { padding: '8px 8px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px', width: 'calc(100% - 6px)', maxWidth: '100%', boxSizing: 'border-box' },
   gridTaxas: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px', maxWidth: '520px' },
   btnGerar: { padding: '9px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '600', cursor: 'pointer' },
-  btnExportar: { padding: '9px 18px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', color: '#111827', fontWeight: '600', cursor: 'pointer' },
+  btnExportar: { padding: '9px 18px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', color: 'var(--fx-text)', fontWeight: '600', cursor: 'pointer' },
   // flex '0 1 ...' (sem grow) de propósito — sozinho numa linha (depois que os checkboxes acima
   // ocupam a linha toda), um flex-grow esticava esse grupo pra largura inteira da barra e os
   // botões (flex:1 aqui dentro) ficavam gigantes.
@@ -944,37 +944,37 @@ const styles = {
   btnExportarCsv: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '9px 16px', borderRadius: '8px', border: 'none', background: '#059669', color: '#fff', fontWeight: '600', fontSize: '14px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(5,150,105,0.25)', transition: 'filter 0.15s' },
   btnExportarPdf: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '9px 16px', borderRadius: '8px', border: 'none', background: '#dc2626', color: '#fff', fontWeight: '600', fontSize: '14px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(220,38,38,0.25)', transition: 'filter 0.15s' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '28px' },
-  card: { backgroundColor: '#fff', padding: '18px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: '6px' },
-  cardLabel: { fontSize: '12px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.4px' },
-  cardValor: { fontSize: '22px', color: '#111827', fontWeight: '800' },
-  cardVariacao: { fontSize: '12px', color: '#6b7280', fontWeight: '600' },
-  secao: { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6', marginBottom: '20px' },
-  secaoTitulo: { margin: '0 0 16px', fontSize: '16px', color: '#111827' },
+  card: { backgroundColor: 'var(--fx-card)', padding: '18px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--fx-line)', display: 'flex', flexDirection: 'column', gap: '6px' },
+  cardLabel: { fontSize: '12px', color: 'var(--fx-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.4px' },
+  cardValor: { fontSize: '22px', color: 'var(--fx-text)', fontWeight: '800' },
+  cardVariacao: { fontSize: '12px', color: 'var(--fx-muted)', fontWeight: '600' },
+  secao: { backgroundColor: 'var(--fx-card)', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--fx-line)', marginBottom: '20px' },
+  secaoTitulo: { margin: '0 0 16px', fontSize: '16px', color: 'var(--fx-text)' },
   // Visualmente à parte do resto da página (fundo escuro em vez do branco usado em `secao`) —
   // de propósito, pra marcar que é uma configuração financeira, não um cartão de relatório comum.
-  secaoSensivel: { backgroundColor: '#111827', borderRadius: '12px', marginTop: '36px', overflow: 'hidden', border: '1px solid #1f2937' },
+  secaoSensivel: { backgroundColor: 'var(--fx-strong)', borderRadius: '12px', marginTop: '36px', overflow: 'hidden', border: '1px solid #1f2937' },
   secaoSensivelHeader: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' },
-  secaoSensivelTitulo: { color: '#e5e7eb', fontSize: '14px', fontWeight: '700', marginRight: '10px' },
-  secaoSensivelBadge: { display: 'inline-block', padding: '2px 8px', borderRadius: '999px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px' },
+  secaoSensivelTitulo: { color: 'var(--fx-text)', fontSize: '14px', fontWeight: '700', marginRight: '10px' },
+  secaoSensivelBadge: { display: 'inline-block', padding: '2px 8px', borderRadius: '999px', background: 'rgba(245,158,11,0.15)', color: 'var(--fx-amber)', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px' },
   secaoSensivelCorpo: { padding: '0 20px 20px', borderTop: '1px solid #1f2937' },
   avisoSensivel: { display: 'flex', alignItems: 'flex-start', color: '#d1d5db', fontSize: '12.5px', lineHeight: '1.6', margin: '16px 0', padding: '10px 12px', background: 'rgba(245,158,11,0.08)', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.25)' },
-  vazio: { color: '#9ca3af', fontSize: '13px', margin: 0 },
+  vazio: { color: 'var(--fx-faint)', fontSize: '13px', margin: 0 },
   grafico: { display: 'flex', alignItems: 'flex-end', gap: '6px', height: '150px', overflowX: 'auto', paddingTop: '10px' },
   barraColuna: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', minWidth: '26px' },
   barra: { width: '18px', borderRadius: '4px 4px 0 0', background: 'linear-gradient(180deg, #4c74f0, #2554eb)' },
-  barraLabel: { fontSize: '10px', color: '#9ca3af', marginTop: '4px', whiteSpace: 'nowrap' },
+  barraLabel: { fontSize: '10px', color: 'var(--fx-faint)', marginTop: '4px', whiteSpace: 'nowrap' },
   duasColunas: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' },
   linhaRanking: { marginBottom: '14px' },
-  linhaRankingTopo: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#374151', marginBottom: '4px' },
-  barraFundo: { height: '8px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' },
+  linhaRankingTopo: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--fx-text)', marginBottom: '4px' },
+  barraFundo: { height: '8px', background: 'var(--fx-surface-2)', borderRadius: '4px', overflow: 'hidden' },
   barraPreenchida: { height: '100%', borderRadius: '4px', background: 'linear-gradient(90deg, #4c74f0, #2554eb)' },
   tabela: { width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '600px' },
-  th: { textAlign: 'left', padding: '8px', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontWeight: '600' },
-  td: { padding: '8px', borderBottom: '1px solid #f3f4f6', color: '#111827' },
-  thDetalhe: { textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e5e7eb', color: '#9ca3af', fontWeight: '600', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.3px' },
-  tdDetalhe: { padding: '7px 8px', borderBottom: '1px solid #f3f4f6', color: '#374151', fontSize: '12px' },
-  tagAssinante: { display: 'inline-block', padding: '2px 8px', borderRadius: '999px', background: '#ede9fe', color: '#6d28d9', fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap' },
-  tagAvulso: { display: 'inline-block', padding: '2px 8px', borderRadius: '999px', background: '#f3f4f6', color: '#6b7280', fontSize: '11px', fontWeight: '600' }
+  th: { textAlign: 'left', padding: '8px', borderBottom: '1px solid var(--fx-line)', color: 'var(--fx-muted)', fontWeight: '600' },
+  td: { padding: '8px', borderBottom: '1px solid var(--fx-line)', color: 'var(--fx-text)' },
+  thDetalhe: { textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--fx-line)', color: 'var(--fx-faint)', fontWeight: '600', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.3px' },
+  tdDetalhe: { padding: '7px 8px', borderBottom: '1px solid var(--fx-line)', color: 'var(--fx-text)', fontSize: '12px' },
+  tagAssinante: { display: 'inline-block', padding: '2px 8px', borderRadius: '999px', background: 'var(--fx-violet-bg)', color: 'var(--fx-violet)', fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap' },
+  tagAvulso: { display: 'inline-block', padding: '2px 8px', borderRadius: '999px', background: 'var(--fx-surface-2)', color: 'var(--fx-muted)', fontSize: '11px', fontWeight: '600' }
 };
 
 export default AdminRelatorios;

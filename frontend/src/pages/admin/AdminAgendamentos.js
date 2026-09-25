@@ -46,7 +46,7 @@ function AdminAgendamentos({ empresaId }) {
   };
 
   const getStatusInfo = (ag) => {
-    if (ag.status === 'cancelado') return { label: 'Cancelado', bg: '#f8d7da', cor: '#721c24' };
+    if (ag.status === 'cancelado') return { label: 'Cancelado', bg: 'var(--fx-red-bg)', cor: 'var(--fx-red)' };
     if (ag.status === 'concluido') return { label: 'Concluído', bg: '#d4edda', cor: '#155724' };
 
     const agora = new Date();
@@ -57,13 +57,13 @@ function AdminAgendamentos({ empresaId }) {
 
     if (dataAg > agora) {
       // Se o horário ainda não chegou
-      return { label: 'Agendado', bg: '#eef2ff', cor: '#4f46e5' };
+      return { label: 'Agendado', bg: 'var(--fx-violet-bg)', cor: 'var(--fx-violet)' };
     } else if (agora > tolerancia) {
       // Se já passou o horário E já passou dos 10 minutos de tolerância
-      return { label: 'Não Compareceu', bg: '#ececec', cor: '#555' };
+      return { label: 'Não Compareceu', bg: 'var(--fx-surface-2)', cor: 'var(--fx-muted)' };
     } else {
       // Se passou o horário, mas ainda está dentro dos 10 minutos
-      return { label: 'Em Tolerância', bg: '#fff3cd', cor: '#856404' };
+      return { label: 'Em Tolerância', bg: 'var(--fx-amber-bg)', cor: 'var(--fx-amber)' };
     }
   };
 
@@ -92,7 +92,7 @@ function AdminAgendamentos({ empresaId }) {
     <div className="admin-page-container" style={styles.container}>
       <header style={styles.header}>
         <div>
-          <h2 style={styles.title}><Icons.Calendar color="#1a1a1a" /> Gestão de Agendamentos</h2>
+          <h2 style={styles.title}>Gestão de Agendamentos</h2>
           <p style={styles.subtitle}>Acompanhe e filtre todos os agendamentos da recepção.</p>
         </div>
       </header>
@@ -190,7 +190,7 @@ function AdminAgendamentos({ empresaId }) {
                 <tr key={ag.id} style={styles.tr}>
                   <td style={styles.td}>
                     <strong>{ag.data.split('-').reverse().join('/')}</strong><br />
-                    <span style={{ color: '#666', fontSize: '13px' }}>{ag.hora}</span>
+                    <span style={{ color: 'var(--fx-muted)', fontSize: '13px' }}>{ag.hora}</span>
                   </td>
                   <td style={styles.td}>
                     <strong>{ag.cliente_nome}</strong>
@@ -211,7 +211,7 @@ function AdminAgendamentos({ empresaId }) {
                   </td>
                   <td style={{ ...styles.td, textAlign: 'center' }}>
                     <button onClick={() => abrirWhatsapp(ag.cliente_telefone)} style={styles.btnZap} title="Abrir WhatsApp">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--fx-card)" aria-hidden="true">
                         <path d="M12.01 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.07L2 22l5.07-1.33A9.94 9.94 0 0 0 12.01 22C17.53 22 22 17.52 22 12S17.53 2 12.01 2zm5.85 14.27c-.25.7-1.24 1.27-2.02 1.44-.55.11-1.26.2-3.66-.79-3.07-1.27-5.05-4.38-5.2-4.58-.15-.2-1.24-1.65-1.24-3.15s.78-2.23 1.06-2.54c.28-.31.6-.38.8-.38.2 0 .4.002.57.01.18.008.43-.07.67.51.25.6.85 2.08.92 2.23.07.15.12.33.02.53-.09.2-.14.33-.28.5-.14.17-.29.38-.42.51-.14.14-.28.29-.12.57.16.28.71 1.17 1.52 1.9 1.05.94 1.93 1.23 2.21 1.37.28.14.44.12.6-.07.16-.19.68-.79.86-1.06.18-.27.37-.22.62-.13.25.09 1.6.75 1.87.89.27.14.45.21.52.32.07.11.07.65-.18 1.35z"/>
                       </svg>
                       Chamar
@@ -221,7 +221,7 @@ function AdminAgendamentos({ empresaId }) {
               );
             }) : (
               <tr>
-                <td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: '#888' }}>
+                <td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: 'var(--fx-faint)' }}>
                   Nenhum agendamento encontrado para os filtros selecionados.
                 </td>
               </tr>
@@ -234,31 +234,28 @@ function AdminAgendamentos({ empresaId }) {
   );
 }
 
-const Icons = {
-  Calendar: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
-};
 
 const styles = {
   container: { padding: '40px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Inter', sans-serif" },
-  header: { marginBottom: '30px', borderBottom: '1px solid #e0e0e0', paddingBottom: '20px' },
-  title: { fontSize: '28px', color: '#1a1a1a', fontWeight: '700', marginBottom: '5px' },
-  subtitle: { color: '#666', fontSize: '15px', margin: 0 },
+  header: { marginBottom: '30px', paddingBottom: '4px' },
+  title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  subtitle: { color: 'var(--fx-muted)', fontSize: '15px', margin: 0 },
   
-  cardForm: { background: '#fff', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', marginBottom: '30px' },
+  cardForm: { background: 'var(--fx-card)', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', marginBottom: '30px' },
   form: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', alignItems: 'flex-end' },
   inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  label: { fontSize: '13px', fontWeight: '600', color: '#555' },
-  input: { padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px', boxSizing: 'border-box', background: '#fff' },
+  label: { fontSize: '13px', fontWeight: '600', color: 'var(--fx-muted)' },
+  input: { padding: '12px', borderRadius: '8px', border: '1px solid var(--fx-line)', fontSize: '14px', boxSizing: 'border-box', background: 'var(--fx-card)' },
   
-  btnClear: { padding: '12px 15px', background: '#f8d7da', color: '#721c24', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
-  btnFiltro: { padding: '8px 16px', borderRadius: '20px', border: '1px solid #ddd', background: '#f9f9f9', cursor: 'pointer', fontSize: '13px', color: '#555', fontWeight: '600', transition: '0.2s' },
+  btnClear: { padding: '12px 15px', background: 'var(--fx-red-bg)', color: 'var(--fx-red)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
+  btnFiltro: { padding: '8px 16px', borderRadius: '20px', border: '1px solid var(--fx-line)', background: 'var(--fx-card)', cursor: 'pointer', fontSize: '13px', color: 'var(--fx-muted)', fontWeight: '600', transition: '0.2s' },
   btnFiltroAtivo: { padding: '8px 16px', borderRadius: '20px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', cursor: 'pointer', fontSize: '13px', fontWeight: '700', transition: '0.2s' },
   
-  cardTabela: { background: '#fff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', overflow: 'hidden' },
+  cardTabela: { background: 'var(--fx-card)', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', overflow: 'hidden' },
   table: { width: '100%', minWidth: '640px', borderCollapse: 'collapse', tableLayout: 'fixed' },
-  th: { padding: '15px 20px', background: '#f9fafb', color: '#888', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid #f0f0f0', whiteSpace: 'nowrap' },
-  tr: { borderBottom: '1px solid #f0f0f0', transition: 'background-color 0.2s' },
-  td: { padding: '18px 20px', fontSize: '14px', verticalAlign: 'middle', color: '#333' },
+  th: { padding: '15px 20px', background: 'var(--fx-surface-2)', color: 'var(--fx-faint)', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid var(--fx-line)', whiteSpace: 'nowrap' },
+  tr: { borderBottom: '1px solid var(--fx-line)', transition: 'background-color 0.2s' },
+  td: { padding: '18px 20px', fontSize: '14px', verticalAlign: 'middle', color: 'var(--fx-text)' },
   
   btnZap: { backgroundColor: '#25D366', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13px', transition: '0.2s', margin: '0 auto' }
 };

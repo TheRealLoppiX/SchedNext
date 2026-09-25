@@ -1,13 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { obterSlugSubdominio, rotaIndependeDeTenant } from './utils/tenantSubdominio';
 import { API_URL } from './services/api';
 import { rastrearPagina } from './utils/analytics';
-
-// Importação das Páginas de Cliente
-import Landing from './pages/Landing';
-import Docs from './pages/Docs';
-import CadastroEmpresa from './pages/CadastroEmpresa';
 import Login from './pages/Login';
 import EntrarMagico from './pages/EntrarMagico';
 import Barbeiros from './pages/Barbeiros';
@@ -16,42 +11,61 @@ import Assinatura from './pages/Assinatura';
 import Cadastro from './pages/Cadastro';
 import RecuperarSenha from './pages/RecuperarSenha';
 import Dashboard from './pages/Dashboard';
-
-// IMPORTAÇÃO DO COMPONENTE DE CONTA (BARBEARIA)
-import AdminConta from './AdminConta'; 
-
-// Importação dos Componentes de Estrutura
 import Layout from './components/Layout';
-
-// Importação das Páginas de Admin
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminBarbeiros from './pages/admin/AdminBarbeiros';
 import LoginAdmin from './pages/admin/LoginAdmin';
 import RecuperarSenhaAdmin from './pages/admin/RecuperarSenhaAdmin';
-import GestaoServicos from './pages/admin/GestaoServicos';
-import AdminAgendamentos from './pages/admin/AdminAgendamentos';
-import AdminEstoque from './pages/admin/AdminEstoque';
-import AdminAcoes from './pages/admin/AdminAcoes';
-import AdminAssinaturas from './pages/admin/AdminAssinaturas';
-import AdminClientes from './pages/admin/AdminClientes';
-import AdminUnidades from './pages/admin/AdminUnidades';
-import AdminUnidadeDashboard from './pages/admin/AdminUnidadeDashboard';
-import AdminApiKeys from './pages/admin/AdminApiKeys';
-import AdminRelatorios from './pages/admin/AdminRelatorios';
-import AdminDominio from './pages/admin/AdminDominio';
-import AdminWhatsapp from './pages/admin/AdminWhatsapp';
-import AdminMercadoPago from './pages/admin/AdminMercadoPago';
-
-// Admin absoluto (dono da plataforma) — fora da árvore de tenant, ver
-// src/utils/tenantSubdominio.js (rotaIndependeDeTenant).
 import SuperAdminLogin from './pages/superadmin/SuperAdminLogin';
 import RecuperarSenhaSuperAdmin from './pages/superadmin/RecuperarSenhaSuperAdmin';
-import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
-
-// Base compartilhada de UX (toast, confirmação e ajuda), ver auditoria de heurísticas
 import { ToastProvider } from './components/Toast';
 import { ConfirmProvider } from './components/ConfirmDialog';
 import HelpButton from './components/HelpButton';
+import BotaoTema from './components/BotaoTema';
+
+// Depois de um deploy novo, uma aba aberta antes dele pede pacotes que não existem mais no
+// servidor (os nomes mudam a cada build). Nesse caso recarrega a página uma vez só, pra pegar a
+// versão nova, em vez de quebrar a tela; se já recarregou há pouco e ainda falha, deixa o erro seguir.
+function lazy(carregar) {
+  return React.lazy(() => carregar().catch((erro) => {
+    const chave = 'sn_recarregou_pacote';
+    let ultima = 0;
+    try { ultima = Number(sessionStorage.getItem(chave)) || 0; } catch (_) { /* sem storage */ }
+    if (Date.now() - ultima > 30000) {
+      try { sessionStorage.setItem(chave, String(Date.now())); } catch (_) { /* sem storage */ }
+      window.location.reload();
+      return new Promise(() => {}); // segura o Suspense até a página recarregar
+    }
+    throw erro;
+  }));
+}
+
+// Divisão do código por área (React.lazy): o pacote principal leva só a área do cliente final e
+// os logins. Site institucional, painel da empresa e admin absoluto viram pacotes separados,
+// baixados só por quem entra neles (e pré-carregados em segundo plano, ver AppRoutes). As páginas
+// com o mesmo webpackChunkName saem num arquivo só, pra navegar dentro do painel sem nova espera.
+const Landing = lazy(() => import(/* webpackChunkName: "site" */ './pages/Landing'));
+const Docs = lazy(() => import(/* webpackChunkName: "site" */ './pages/Docs'));
+const CadastroEmpresa = lazy(() => import(/* webpackChunkName: "site" */ './pages/CadastroEmpresa'));
+
+const AdminConta = lazy(() => import(/* webpackChunkName: "painel-admin" */ './AdminConta'));
+const AdminDashboard = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminDashboard'));
+const AdminBarbeiros = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminBarbeiros'));
+const GestaoServicos = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/GestaoServicos'));
+const AdminAgendamentos = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminAgendamentos'));
+const AdminEstoque = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminEstoque'));
+const AdminAcoes = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminAcoes'));
+const AdminAssinaturas = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminAssinaturas'));
+const AdminClientes = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminClientes'));
+const AdminUnidades = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminUnidades'));
+const AdminUnidadeDashboard = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminUnidadeDashboard'));
+const AdminApiKeys = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminApiKeys'));
+const AdminRelatorios = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminRelatorios'));
+const AdminDominio = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminDominio'));
+const AdminWhatsapp = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminWhatsapp'));
+const AdminMercadoPago = lazy(() => import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminMercadoPago'));
+
+// Admin absoluto (dono da plataforma) — fora da árvore de tenant, ver
+// src/utils/tenantSubdominio.js (rotaIndependeDeTenant).
+const SuperAdminDashboard = lazy(() => import(/* webpackChunkName: "admin-absoluto" */ './pages/superadmin/SuperAdminDashboard'));
 
 
 // Faz o roteamento por slug (/:empresaSlug/...) funcionar também quando o
@@ -81,12 +95,21 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
     rastrearPagina(location.pathname);
   }, [location.pathname]);
 
+  // Pré-carrega em segundo plano o pacote da área em que a pessoa está (ex.: na tela de login do
+  // painel já baixa o painel), pra depois de entrar a página abrir sem a tela de carregamento.
+  const areaAtual = location.pathname.startsWith('/admin-absoluto') ? 'absoluto' : location.pathname.startsWith('/admin') ? 'painel' : null;
+  useEffect(() => {
+    if (areaAtual === 'painel') import(/* webpackChunkName: "painel-admin" */ './pages/admin/AdminDashboard').catch(() => {});
+    if (areaAtual === 'absoluto') import(/* webpackChunkName: "admin-absoluto" */ './pages/superadmin/SuperAdminDashboard').catch(() => {});
+  }, [areaAtual]);
+
   let pathnameEfetivo = location.pathname;
   if (slugSubdominio && !rotaIndependeDeTenant(location.pathname)) {
     pathnameEfetivo = `/${slugSubdominio}${location.pathname === '/' ? '' : location.pathname}`;
   }
 
   return (
+    <Suspense fallback={<TelaCarregando />}>
     <Routes location={{ ...location, pathname: pathnameEfetivo }}>
       {/* ================= ROTAS PÚBLICAS (SEM SIDEBAR) ================= */}
       <Route path="/" element={<Landing />} />
@@ -207,6 +230,7 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
       {/* Rota 404 básica ou redirecionamento */}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
+    </Suspense>
   );
 }
 
@@ -288,6 +312,8 @@ function App() {
     <div style={appStyles}>
       <Router>
         <HelpButton />
+        {/* só aparece nas telas de acesso (.bb-page), ver app-oficio.css */}
+        <BotaoTema className="oc-tema-flutuante" />
         <AppRoutes empresaId={empresaId} setEmpresaId={setEmpresaId} deslogarAdmin={deslogarAdmin} />
       </Router>
     </div>

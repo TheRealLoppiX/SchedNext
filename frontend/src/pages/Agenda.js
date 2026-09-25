@@ -1,15 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
-import { useLocation, useParams, useNavigate } from 'react-router-dom';
-import DatePicker, { registerLocale } from 'react-datepicker';
+import { useLocation, useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import ptBR from 'date-fns/locale/pt-BR';
 import {
   setHours, setMinutes, format, isSameDay, startOfMinute,
   addMinutes, isBefore, isAfter, isEqual, parseISO, startOfDay
 } from 'date-fns';
-import 'react-datepicker/dist/react-datepicker.css';
 import { API_URL } from '../services/api';
 
-registerLocale('pt-BR', ptBR);
 
 function Agenda() {
   const location = useLocation();
@@ -49,6 +46,14 @@ function Agenda() {
   const [confirmando, setConfirmando] = useState(false);
   const pixPollRef = useRef(null);
   const [barbeiroNome, setBarbeiroNome] = useState('');
+  const [barbeiroFoto, setBarbeiroFoto] = useState(null);
+  // Guarda o que foi confirmado pra continuar mostrando no bilhete depois que o carrinho limpa.
+  const [bilhete, setBilhete] = useState(null);
+  // Pré-pagamento opcional: só existe se a empresa conectou o Mercado Pago (aceita_pix, ver
+  // GET /empresa/slug/:slug). O cliente escolhe antes de confirmar; sem escolha, paga no local.
+  const { empresa } = useOutletContext() || {};
+  const aceitaPix = !!empresa?.aceita_pix;
+  const [pagarAgora, setPagarAgora] = useState(false);
   
   const [notificacoes, setNotificacoes] = useState([]);
   const [exibirNotificacoes, setExibirNotificacoes] = useState(false);
@@ -121,6 +126,7 @@ function Agenda() {
         const barbeiro = data.find(b => String(b.id) === String(barbeiroId));
         if (barbeiro) {
           setBarbeiroNome(barbeiro.nome);
+          setBarbeiroFoto(barbeiro.foto_url || null);
           if (barbeiro.horarios_funcionamento) {
             setEmpresaHorarios(JSON.parse(barbeiro.horarios_funcionamento));
           }
@@ -259,13 +265,21 @@ function Agenda() {
           empresa_slug: empresaSlug,
           data_hora: format(dataHora, 'yyyy-MM-dd HH:mm:00'),
           servicos: carrinho,
-          unidade_id: unidadeId || null
+          unidade_id: unidadeId || null,
+          pagar_agora: aceitaPix && pagarAgora
         })
       });
 
       const data = await res.json();
       if (res.ok) {
           setMensagem('Agendado com sucesso');
+          setBilhete({
+            itens: carrinho.map((c) => servicos.find((sv) => String(sv.id) === String(c.id))).filter(Boolean),
+            data: dataHora,
+            duracao: duracaoTotal,
+            codigo: data.agendamento_id,
+            pagarAgora: aceitaPix && pagarAgora
+          });
           setCarrinho([]);
           const dataFormatada = format(dataHora, 'yyyy-MM-dd');
           fetch(`${API_URL}/horarios-ocupados?barbeiro_id=${barbeiroId}&data=${dataFormatada}`)
@@ -323,9 +337,12 @@ function Agenda() {
     navigator.clipboard.writeText(pixInfo.qr_code).catch(() => {});
   };
 
-  const adicionarAoCarrinho = (servico) => {
+  // Clique no serviço alterna: adiciona se não estiver, remove se já estiver no carrinho.
+  const alternarServico = (servico) => {
+    setBilhete(null);
+    setMensagem('');
     const jaExiste = carrinho.some(item => item.id === servico.id);
-    if (!jaExiste) setCarrinho([...carrinho, { id: servico.id }]);
+    setCarrinho(jaExiste ? carrinho.filter(item => item.id !== servico.id) : [...carrinho, { id: servico.id }]);
   };
 
   const gerarDias = () => {
@@ -370,323 +387,262 @@ function Agenda() {
     return slots;
   };
 
+  const moeda = (v) => `R$ ${(parseFloat(v) || 0).toFixed(2).replace('.', ',')}`;
+  const naoLidas = notificacoes.filter(n => !n.lida).length;
+  const confirmado = !!bilhete && mensagem.includes('sucesso');
+  const etapa = confirmado ? 4 : carrinho.length > 0 && horaSelecionada ? 4 : horaSelecionada ? 3 : 2;
+  const itensBilhete = confirmado ? bilhete.itens : carrinho.map((c) => servicos.find((sv) => String(sv.id) === String(c.id))).filter(Boolean);
+  const dataBilhete = confirmado ? bilhete.data : horaSelecionada;
+  const duracaoBilhete = confirmado ? bilhete.duracao : duracaoTotal;
+  const totalCheio = itensBilhete.reduce((a, sv) => a + (parseFloat(sv.valor) || 0), 0);
+  const totalExtraPlano = itensBilhete.filter((sv) => !servicosPlano.includes(sv.id)).reduce((a, sv) => a + (parseFloat(sv.valor) || 0), 0);
+  const valorAPagar = isAssinante ? totalExtraPlano : totalCheio;
+  const slots = gerarSlotsHorario();
+  const periodos = [
+    { nome: 'Manhã', f: (h) => h < '12:00' },
+    { nome: 'Tarde', f: (h) => h >= '12:00' && h < '18:00' },
+    { nome: 'Noite', f: (h) => h >= '18:00' }
+  ].map((p) => ({ ...p, slots: slots.filter((sl) => p.f(sl.hora)) })).filter((p) => p.slots.length > 0);
+  const ETAPAS = ['Profissional', 'Horário', 'Serviços', 'Confirmar'];
+
   return (
-    <div style={styles.body}>
-      <div style={styles.notificacaoContainer}>
-        <div onClick={toggleNotificacoes} style={styles.sininhoIcon}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-          </svg>
-          {notificacoes.filter(n => !n.lida).length > 0 && (
-            <span style={styles.badge}>{notificacoes.filter(n => !n.lida).length}</span>
-          )}
-        </div>
+    <div className="oc-pagina oc-agenda">
+      <div className="oc-notif">
+        <button type="button" onClick={toggleNotificacoes} className="oc-notif-botao" aria-label="Notificações">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          {naoLidas > 0 && <span className="oc-notif-badge">{naoLidas}</span>}
+        </button>
         {exibirNotificacoes && (
-          <div style={styles.dropdown}>
-            <h4 style={styles.dropdownTitle}>Notificações</h4>
-            <div style={styles.listaNotif}>
-              {notificacoes.length === 0 ? <p style={{fontSize:'12px', textAlign:'center', padding:'10px'}}>Sem avisos.</p> : 
-               notificacoes.map(n => (
-                <div key={n.id} style={{ ...styles.itemNotif, backgroundColor: n.lida ? '#fff' : '#f0faff' }}>
-                  <small style={{fontSize:'10px'}}>{new Date(n.criado_em).toLocaleString()}</small>
-                  <p style={{margin:0, fontSize:'12px'}}>{n.mensagem}</p>
-                </div>
-              ))}
-            </div>
+          <div className="oc-notif-lista">
+            <span className="oc-rotulo">Notificações</span>
+            {notificacoes.length === 0 ? <p className="oc-notif-vazio">Sem avisos.</p> : notificacoes.map(n => (
+              <div key={n.id} className={`oc-notif-item ${n.lida ? '' : 'nova'}`}>
+                <small>{new Date(n.criado_em).toLocaleString()}</small>
+                <p>{n.mensagem}</p>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      <div style={styles.container}>
-        <h2 style={styles.header}>Agendar com: <span style={{color: '#1d4ed8'}}>{barbeiroNome || '...'}</span></h2>
-        
-        {jaFiltrou ? (
-          <div style={styles.filtroResumo}>
-            <p style={{margin: 0, fontSize: '14px', color: '#555'}}>
-              Horário selecionado: <br/>
-              <strong>{format(dataHora, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</strong>
-            </p>
-            <button
-              onClick={() => {
-                // Atualiza a URL via router (não window.history) para o React re-renderizar
-                // sem precisar de reload. Preserva o carrinho e o restante do estado. Mantém
-                // "unidade" na URL: sem isso, o próximo agendamento ia com unidade_id null,
-                // mesmo o cliente tendo escolhido uma unidade específica em Barbeiros.js.
-                const unidadeParam = unidadeId ? `&unidade=${unidadeId}` : '';
-                navigate(`${location.pathname}?barbeiro=${barbeiroId}&data=${format(dataHora, 'yyyy-MM-dd')}${unidadeParam}`, { replace: true });
-                setHoraSelecionada(null);
-              }}
-              style={styles.btnTrocarHorario}
-            >
-              Escolher outro horário neste dia
-            </button>
-          </div>
-        ) : (
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Selecione o melhor horário para você:</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '20px' }}>
-              <button 
-                disabled={isBefore(inicioSemana, startOfDay(new Date()))} 
-                onClick={() => {
-                  const nova = new Date(inicioSemana);
-                  nova.setDate(nova.getDate() - 7);
-                  if (!isBefore(nova, startOfDay(new Date()))) setInicioSemana(nova);
-                }} 
-                style={{ ...styles.btnSeta, opacity: isBefore(inicioSemana, startOfDay(new Date())) ? 0.3 : 1 }}
-              >‹</button>
-              
-              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', flex: 1, padding: '5px' }}>
-                {gerarDias().map((dia, i) => {
-                  const selecionado = isSameDay(dia, dataHora);
-                  const ehDiaPassado = isBefore(startOfDay(dia), startOfDay(new Date()));
-                  return (
-                    <div 
-                      key={i} 
-                      onClick={() => { 
-                        if (!ehDiaPassado) {
-                          setDataHora(dia); 
-                          setHoraSelecionada(null); // Limpa seleção ao trocar dia
-                        }
-                      }}
-                      style={{
-                        minWidth: '60px', padding: '10px 5px', borderRadius: '12px',
-                        cursor: ehDiaPassado ? 'not-allowed' : 'pointer',
-                        background: selecionado ? 'linear-gradient(135deg, #4c74f0, #2554eb)' : '#fff',
-                        color: ehDiaPassado ? '#ccc' : (selecionado ? '#ffffff' : '#000'),
-                        border: selecionado ? '1px solid #2554eb' : '1px solid #eee', display: 'flex', flexDirection: 'column', alignItems: 'center'
-                      }}
-                    >
-                      <span style={{ fontSize: '10px', fontWeight: 'bold' }}>{format(dia, 'EEE', { locale: ptBR }).toUpperCase()}</span>
-                      <span style={{ fontSize: '13px' }}>{format(dia, 'dd/MM')}</span>
-                    </div>
-                  );
-                })}
+      <header className="oc-cabeca">
+        <button type="button" className="oc-voltar" onClick={() => navigate(`/${empresaSlug}/barbeiros`)}>← Trocar profissional</button>
+        <span className="oc-kicker">Agendamento</span>
+        <div className="oc-agenda-titulo">
+          <span className="oc-avatar-pro oc-avatar-pro-g">
+            {barbeiroFoto ? <img src={barbeiroFoto} alt="" /> : (barbeiroNome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p.charAt(0)).join('').toUpperCase()}
+          </span>
+          <h1 className="oc-titulo">COM {(barbeiroNome || '...').toUpperCase()}.</h1>
+        </div>
+        <ol className="oc-etapas">
+          {ETAPAS.map((nome, k) => (
+            <li key={nome} className={k + 1 < etapa || confirmado ? 'feita' : k + 1 === etapa ? 'atual' : ''}>
+              <span>{String(k + 1).padStart(2, '0')}</span>{nome}
+            </li>
+          ))}
+        </ol>
+      </header>
+
+      <div className="oc-agenda-grade">
+        <div className="oc-agenda-coluna">
+          <section className="oc-painel">
+            <div className="oc-painel-cab"><span className="oc-rotulo"><b>02</b> Horário</span></div>
+            {jaFiltrou ? (
+              <div className="oc-resumo-hora">
+                <div>
+                  <span className="oc-dica">Horário escolhido</span>
+                  <strong>{format(dataHora, "EEEE, dd 'de' MMMM", { locale: ptBR })} · {format(dataHora, 'HH:mm')}</strong>
+                </div>
+                <button
+                  type="button"
+                  className="oc-btn oc-btn-contorno oc-btn-p"
+                  onClick={() => {
+                    // Atualiza a URL via router (não window.history) pra re-renderizar sem reload.
+                    // Mantém "unidade" na URL: sem isso, o próximo agendamento ia com unidade_id null.
+                    const unidadeParam = unidadeId ? `&unidade=${unidadeId}` : '';
+                    navigate(`${location.pathname}?barbeiro=${barbeiroId}&data=${format(dataHora, 'yyyy-MM-dd')}${unidadeParam}`, { replace: true });
+                    setHoraSelecionada(null);
+                  }}
+                >Outro horário neste dia</button>
               </div>
+            ) : (
+              <>
+                <div className="oc-regua-com-setas">
+                  <button type="button" className="oc-seta" aria-label="Semana anterior"
+                    disabled={isSameDay(inicioSemana, startOfDay(new Date())) || isBefore(inicioSemana, startOfDay(new Date()))}
+                    onClick={() => {
+                      const nova = new Date(inicioSemana);
+                      nova.setDate(nova.getDate() - 7);
+                      if (!isBefore(nova, startOfDay(new Date()))) setInicioSemana(nova);
+                    }}>‹</button>
+                  <div className="oc-regua">
+                    {gerarDias().map((dia) => {
+                      const sel = isSameDay(dia, dataHora);
+                      const passado = isBefore(startOfDay(dia), startOfDay(new Date()));
+                      return (
+                        <button type="button" key={dia.toISOString()} disabled={passado} className={`oc-dia ${sel ? 'ativo' : ''} ${passado ? 'fechado' : ''}`}
+                          onClick={() => { if (!passado) { setDataHora(dia); setHoraSelecionada(null); } }}>
+                          <span className="oc-dia-semana">{format(dia, 'EEE', { locale: ptBR }).replace('.', '').slice(0, 3)}</span>
+                          <span className="oc-dia-num">{format(dia, 'dd')}</span>
+                          <span className="oc-dia-mes">{format(dia, 'MMM', { locale: ptBR }).replace('.', '')}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button type="button" className="oc-seta" aria-label="Próxima semana" onClick={() => {
+                    const nova = new Date(inicioSemana);
+                    nova.setDate(nova.getDate() + 7);
+                    setInicioSemana(nova);
+                  }}>›</button>
+                </div>
+                {periodos.length > 0 ? (
+                  <div className="oc-embarque">
+                    {periodos.map((per) => (
+                      <div className="oc-embarque-linha" key={per.nome}>
+                        <span className="oc-embarque-periodo">{per.nome}</span>
+                        <div className="oc-embarque-horas">
+                          {per.slots.map((slot) => {
+                            const sel = horaSelecionada && isEqual(slot.data, horaSelecionada);
+                            return (
+                              <button type="button" key={slot.hora} disabled={!slot.disponivel}
+                                className={`oc-flap ${sel ? 'ativo' : ''} ${slot.disponivel ? '' : 'ocupado'}`}
+                                onClick={() => { setHoraSelecionada(slot.data); setDataHora(slot.data); setBilhete(null); setMensagem(''); }}>
+                                <span>{slot.hora}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="oc-vazio-linha">Fechado neste dia. Escolha outra data.</p>}
+              </>
+            )}
+          </section>
 
-              <button onClick={() => {
-                const nova = new Date(inicioSemana);
-                nova.setDate(nova.getDate() + 7);
-                setInicioSemana(nova);
-              }} style={styles.btnSeta}>›</button>
+          <section className="oc-painel">
+            <div className="oc-painel-cab">
+              <span className="oc-rotulo"><b>03</b> Serviços</span>
+              <span className="oc-dica">Toque pra adicionar ou tirar</span>
             </div>
-
-            <div className="agenda-slots-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-              {gerarSlotsHorario().map((slot, i) => {
-                const selecionado = horaSelecionada && isEqual(slot.data, horaSelecionada);
+            <div className="oc-servicos">
+              {servicos.map(sv => {
+                const noCarrinho = carrinho.some(item => item.id === sv.id);
+                const noPlano = isAssinante && servicosPlano.includes(sv.id);
+                const restante = noPlano ? restantesPlano[sv.id] : undefined;
+                const esgotado = noPlano && restante != null && restante <= 0;
+                const pendentes = noPlano ? (pendentesPlano[sv.id] || 0) : 0;
+                // "restante" só reflete o que já foi debitado no fechamento de caixa; agendamentos
+                // pendentes/confirmados deste ciclo já comprometem a cota na prática.
+                const risco = noPlano && !esgotado && restante != null && pendentes >= restante;
                 return (
-                  <button
-                    key={i}
-                    disabled={!slot.disponivel}
-                    onClick={() => { setHoraSelecionada(slot.data); setDataHora(slot.data); }}
-                    style={{
-                      padding: '10px 5px', borderRadius: '8px', border: selecionado ? '1px solid #2554eb' : '1px solid #eee', fontSize: '13px',
-                      background: !slot.disponivel ? '#f2f2f2' : (selecionado ? 'linear-gradient(135deg, #4c74f0, #2554eb)' : '#fff'),
-                      color: !slot.disponivel ? '#ccc' : (selecionado ? '#ffffff' : '#000'),
-                      cursor: slot.disponivel ? 'pointer' : 'not-allowed',
-                      textDecoration: slot.disponivel ? 'none' : 'line-through'
-                    }}
-                  >
-                    {slot.hora}
-                  </button>
+                  <div key={sv.id} className={`oc-servico ${noCarrinho ? 'ativo' : ''}`}>
+                    <button type="button" className="oc-servico-botao" onClick={() => alternarServico(sv)} aria-pressed={noCarrinho}>
+                      <span className="oc-servico-check">{noCarrinho ? '✓' : '+'}</span>
+                      <span className="oc-servico-nome">
+                        {sv.nome}
+                        {noPlano && <em className={`oc-plano-tag ${esgotado ? 'esgotado' : ''}`}>{esgotado ? 'Limite atingido' : restante != null ? `No plano · ${restante} restante(s)` : 'Incluso no plano'}</em>}
+                      </span>
+                      <span className="oc-servico-dur">{parseInt(sv.duracao) || 30} min</span>
+                      <span className="oc-servico-preco">{noPlano && !esgotado ? 'Plano' : moeda(sv.valor)}</span>
+                    </button>
+                    {esgotado && <p className="oc-aviso">Você já usou todos os {sv.nome.toLowerCase()} inclusos no seu plano este mês. Esse aqui entra à parte, por {moeda(sv.valor)}.</p>}
+                    {risco && <p className="oc-aviso">Você já tem {pendentes === 1 ? 'um agendamento' : `${pendentes} agendamentos`} de {sv.nome.toLowerCase()} marcado{pendentes > 1 ? 's' : ''} este mês. Se {pendentes === 1 ? 'ele for concluído' : 'todos forem concluídos'} pela barbearia, esse aqui pode passar do limite do seu plano e ser cobrado no valor integral ({moeda(sv.valor)}).</p>}
+                  </div>
                 );
               })}
             </div>
+          </section>
+        </div>
+
+        <aside className={`oc-bilhete ${confirmado ? 'confirmado' : ''}`}>
+          <div className="oc-bilhete-topo">
+            <span className="oc-rotulo"><b>04</b> Bilhete</span>
+            <span className="oc-bilhete-codigo">{confirmado && bilhete.codigo ? `#${bilhete.codigo}` : 'Rascunho'}</span>
           </div>
-        )}
-
-        <div style={styles.servicesBox}>
-          <h4 style={{marginTop: 0, fontSize: '14px'}}>Serviços disponíveis:</h4>
-          {servicos.map(s => {
-            const noCarrinho = carrinho.some(item => item.id === s.id);
-            const noPlano = isAssinante && servicosPlano.includes(s.id);
-            const restante = noPlano ? restantesPlano[s.id] : undefined;
-            const esgotado = noPlano && restante != null && restante <= 0;
-            const pendentes = noPlano ? (pendentesPlano[s.id] || 0) : 0;
-            // A cota mostrada em "restante" só reflete o que já foi de fato consumido (debitado
-            // no fechamento de caixa). Se o cliente já tem, marcados nesse ciclo, agendamentos
-            // pendentes/confirmados suficientes pra esgotar o que falta, avisamos aqui — antes
-            // de finalizados, esses agendamentos não aparecem em "restante", mas já comprometem
-            // a cota na prática.
-            const risco = noPlano && !esgotado && restante != null && pendentes >= restante;
-            return (
-              <div key={s.id} style={{...styles.serviceItem, flexDirection: 'column', alignItems: 'stretch', gap: (esgotado || risco) ? '6px' : 0}}>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                  <span style={{fontSize: '14px'}}>
-                    {s.nome}
-                    {!isAssinante && <strong> • R$ {parseFloat(s.valor).toFixed(2).replace('.',',')}</strong>}
-                    {noPlano && (
-                      <span style={{marginLeft:'6px',background: esgotado ? '#fef3c7' : '#ede9fe', color: esgotado ? '#92400e' : '#6d28d9',fontSize:'11px',fontWeight:'700',padding:'2px 7px',borderRadius:'4px',textTransform:'uppercase',letterSpacing:'0.3px'}}>
-                        {esgotado ? 'Limite atingido' : restante != null ? `Incluso na assinatura · ${restante} restante(s)` : 'Incluso na assinatura'}
-                      </span>
-                    )}
-                    {isAssinante && !noPlano && (
-                      <span style={{marginLeft:'4px',fontSize:'13px',color:'#6b7280'}}>• R$ {parseFloat(s.valor).toFixed(2).replace('.',',')}</span>
-                    )}
-                  </span>
-                  <button
-                    onClick={() => adicionarAoCarrinho(s)}
-                    disabled={noCarrinho}
-                    style={{...styles.addBtn, background: noCarrinho ? '#e0e0e0' : 'linear-gradient(135deg, #4c74f0, #2554eb)', color: noCarrinho ? '#999' : '#ffffff'}}
-                  >
-                    {noCarrinho ? (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
-                    ) : 'Adicionar'}
-                  </button>
-                </div>
-                {esgotado && (
-                  <p style={{margin: 0, fontSize: '11px', color: '#92400e', lineHeight: 1.4}}>
-                    Você já usou todos os {s.nome.toLowerCase()} inclusos no seu plano este mês. Esse aqui entra à parte, por R$ {parseFloat(s.valor).toFixed(2).replace('.',',')}.
-                  </p>
-                )}
-                {risco && (
-                  <p style={{margin: 0, fontSize: '11px', color: '#92400e', lineHeight: 1.4}}>
-                    Você já tem {pendentes === 1 ? 'um agendamento' : `${pendentes} agendamentos`} de {s.nome.toLowerCase()} marcado{pendentes > 1 ? 's' : ''} este mês. Se {pendentes === 1 ? 'ele for concluído' : 'todos forem concluídos'} pela barbearia, esse aqui pode passar do limite do seu plano e ser cobrado no valor integral (R$ {parseFloat(s.valor).toFixed(2).replace('.',',')}).
-                  </p>
-                )}
+          <div className="oc-bilhete-campos">
+            <div className="oc-bilhete-pro">
+              <small>Profissional</small>
+              <span className="oc-bilhete-pro-linha">
+                <span className="oc-avatar-pro">{barbeiroFoto ? <img src={barbeiroFoto} alt="" /> : (barbeiroNome || '?').charAt(0).toUpperCase()}</span>
+                <strong>{barbeiroNome || '...'}</strong>
+              </span>
+            </div>
+            <div><small>Data</small><strong>{dataBilhete ? format(dataBilhete, 'dd MMM', { locale: ptBR }) : '--'}</strong></div>
+            <div><small>Hora</small><strong className="oc-bilhete-hora">{dataBilhete ? format(dataBilhete, 'HH:mm') : '--:--'}</strong></div>
+            <div><small>Duração</small><strong>{duracaoBilhete ? `${duracaoBilhete} min` : '--'}</strong></div>
+          </div>
+          <div className="oc-bilhete-itens">
+            {itensBilhete.length === 0 ? <p className="oc-dica">Nenhum serviço ainda.</p> : itensBilhete.map((sv) => (
+              <div key={sv.id} className="oc-bilhete-item">
+                <span>{sv.nome}</span>
+                <span>{isAssinante && servicosPlano.includes(sv.id) ? 'Plano' : moeda(sv.valor)}</span>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+          <div className="oc-bilhete-picote" aria-hidden="true" />
+          <div className="oc-bilhete-total">
+            <small>{isAssinante ? 'A pagar à parte' : 'Total'}</small>
+            <strong>{moeda(isAssinante ? totalExtraPlano : totalCheio)}</strong>
+          </div>
+          {isAssinante && <p className="oc-dica oc-bilhete-plano">Serviços do seu plano de assinatura não são cobrados aqui.</p>}
 
-        <div style={styles.cartBox}>
-          <h4 style={styles.cartTitle}>Resumo:</h4>
-          {carrinho.map((item, index) => {
-            const serv = servicos.find(s => String(s.id) === String(item.id));
-            const noPlano = isAssinante && servicosPlano.includes(item.id);
-            return (
-              <div key={index} style={styles.cartItem}>
-                <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
-                  <span>{serv?.nome}</span>
-                  {noPlano && <span style={{background:'#ede9fe',color:'#6d28d9',fontSize:'10px',fontWeight:'700',padding:'1px 6px',borderRadius:'4px'}}>Incluso na assinatura</span>}
-                  {isAssinante && !noPlano && <span style={{fontSize:'12px',color:'#6b7280'}}>R$ {parseFloat(serv?.valor||0).toFixed(2).replace('.',',')}</span>}
-                </div>
-                <button onClick={() => setCarrinho(carrinho.filter((_, i) => i !== index))} style={styles.removeBtn}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
-            );
-          })}
-          {carrinho.length > 0 && horaSelecionada && (
-            <p style={{fontSize: '12px', color: '#666', marginTop: '10px', textAlign: 'left'}}>
-              Agendado para: <strong>{format(horaSelecionada, 'HH:mm')}</strong> ({duracaoTotal} min)
-            </p>
+          {aceitaPix && valorAPagar > 0 && !confirmado && (
+            <div className="oc-pagamento" role="radiogroup" aria-label="Forma de pagamento">
+              <span className="oc-pagamento-titulo">Pagamento</span>
+              <button type="button" role="radio" aria-checked={pagarAgora} className={`oc-pag-opcao ${pagarAgora ? 'ativo' : ''}`} onClick={() => setPagarAgora(true)}>
+                <span className="oc-pag-radio" />
+                <span className="oc-pag-texto"><strong>Pagar agora</strong><small>Pix na hora, horário garantido</small></span>
+                <span className="oc-pag-selo">PIX</span>
+              </button>
+              <button type="button" role="radio" aria-checked={!pagarAgora} className={`oc-pag-opcao ${!pagarAgora ? 'ativo' : ''}`} onClick={() => setPagarAgora(false)}>
+                <span className="oc-pag-radio" />
+                <span className="oc-pag-texto"><strong>Pagar no local</strong><small>No dia do atendimento</small></span>
+              </button>
+            </div>
           )}
-        </div>
-
-        {(() => {
-          if (!isAssinante) {
-            const total = carrinho.reduce((a,c) => a + (parseFloat(servicos.find(s=>s.id===c.id)?.valor)||0), 0);
-            return <h3 style={styles.total}>Total: R$ {total.toFixed(2).replace('.',',')}</h3>;
-          }
-          const totalExtra = carrinho
-            .filter(c => !servicosPlano.includes(c.id))
-            .reduce((a,c) => a + (parseFloat(servicos.find(s=>s.id===c.id)?.valor)||0), 0);
-          return (
-            <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
-              <div style={{padding:'10px 14px',background:'#faf5ff',border:'1px solid #c4b5fd',borderRadius:'8px',display:'flex',alignItems:'center',gap:'8px'}}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"></path><path d="M11 3L8 9l4 13 4-13-3-6"></path><line x1="2" y1="9" x2="22" y2="9"></line></svg>
-                <span style={{fontSize:'13px',fontWeight:'600',color:'#6d28d9'}}>Coberto pelo plano de assinatura</span>
-              </div>
-              {totalExtra > 0 && (
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 14px',background:'#f9fafb',border:'1px solid #e5e7eb',borderRadius:'8px'}}>
-                  <span style={{fontSize:'13px',color:'#374151',fontWeight:'500'}}>Serviço adicional</span>
-                  <span style={{fontSize:'16px',fontWeight:'700',color:'#111827'}}>R$ {totalExtra.toFixed(2).replace('.',',')}</span>
-                </div>
+          {confirmado && <div className="oc-carimbo" aria-hidden="true">CONFIRMADO</div>}
+          {confirmado && aceitaPix && valorAPagar > 0 && !bilhete.pagarAgora && (
+            <p className="oc-dica oc-pag-local">Pagamento no local, no dia do atendimento.</p>
+          )}
+          {pixInfo && (
+            <div className="oc-pix">
+              {pixInfo.pago ? (
+                <div className="oc-pix-pago"><span>✓</span><strong>Pagamento recebido</strong><small>Seu horário está garantido.</small></div>
+              ) : pixInfo.falhou ? (
+                <>
+                  <p className="oc-erro">Não foi possível confirmar o pagamento.</p>
+                  <p className="oc-dica">Seu agendamento continua reservado. Combine o pagamento diretamente com o estabelecimento.</p>
+                </>
+              ) : (
+                <>
+                  <span className="oc-rotulo"><b>●</b> Pague com Pix · {moeda(valorAPagar || (bilhete?.itens || []).reduce((a, sv) => a + (parseFloat(sv.valor) || 0), 0))}</span>
+                  {pixInfo.qr_code_base64 && <img src={`data:image/png;base64,${pixInfo.qr_code_base64}`} alt="QR Code do Pix" className="oc-pix-qr" />}
+                  <button type="button" onClick={copiarCodigoPix} className="oc-btn oc-btn-contorno oc-btn-bloco">Copiar código Pix</button>
+                  <p className="oc-dica">Aguardando confirmação do pagamento...</p>
+                </>
               )}
             </div>
-          );
-        })()}
+          )}
 
-        {erroConflito && (
-          <p style={{ fontSize: '13px', color: '#991b1b', margin: '0 0 10px 0', textAlign: 'left' }}>
-            {erroConflito}
-          </p>
-        )}
+          {erroConflito && !confirmado && <p className="oc-erro">{erroConflito}</p>}
+          {!confirmado && (
+            <button type="button" onClick={confirmarAgendamento} disabled={carrinho.length === 0 || !horaSelecionada || !!erroConflito || confirmando} className="oc-btn oc-btn-primario oc-btn-bloco">
+              {confirmando ? 'Confirmando...' : !horaSelecionada ? 'Escolha um horário' : carrinho.length === 0 ? 'Escolha um serviço' : aceitaPix && pagarAgora && valorAPagar > 0 ? 'Confirmar e pagar com Pix' : 'Confirmar agendamento'}
+            </button>
+          )}
+          {confirmado && (
+            <div className="oc-bilhete-acoes">
+              <p className="oc-ok">Agendado! Você recebe um lembrete antes do horário.</p>
+              <button type="button" className="oc-btn oc-btn-contorno oc-btn-bloco" onClick={() => navigate(`/${empresaSlug}/perfil?aba=agendamentos`)}>Ver meus agendamentos</button>
+            </div>
+          )}
+          {mensagem && !confirmado && mensagem !== 'Aguarde...' && <p className="oc-erro">{mensagem}</p>}
 
-        <button
-          onClick={confirmarAgendamento}
-          disabled={carrinho.length === 0 || !!erroConflito || confirmando}
-          style={{ ...styles.confirmBtn, background: (carrinho.length > 0 && !erroConflito) ? 'linear-gradient(135deg, #4c74f0, #2554eb)' : '#ccc', color: (carrinho.length > 0 && !erroConflito) ? '#ffffff' : '#fff' }}
-        >
-          {confirmando ? 'Confirmando...' : 'Confirmar Agendamento'}
-        </button>
-
-        {mensagem && (
-          <div style={{ ...styles.msgBanner, backgroundColor: mensagem.includes('sucesso') ? '#f0fdf4' : '#fef2f2', color: mensagem.includes('sucesso') ? '#166534' : '#991b1b', border: mensagem.includes('sucesso') ? '1px solid #bbf7d0' : '1px solid #fecaca', fontWeight: '500', fontSize: '13px' }}>
-            {mensagem}
-          </div>
-        )}
-
-        {pixInfo && (
-          <div style={styles.pixBox}>
-            {pixInfo.pago ? (
-              <p style={{ margin: 0, textAlign: 'center', color: '#166534', fontWeight: '700', fontSize: '14px' }}>Pagamento recebido.</p>
-            ) : pixInfo.falhou ? (
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ margin: 0, color: '#991b1b', fontWeight: '700', fontSize: '14px' }}>Não foi possível confirmar o pagamento.</p>
-                <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#6b7280' }}>Seu agendamento continua reservado. Combine o pagamento diretamente com o estabelecimento.</p>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ margin: '0 0 10px', fontSize: '13px', color: '#374151', fontWeight: '600' }}>Pague por Pix para garantir seu horário</p>
-                {pixInfo.qr_code_base64 && (
-                  <img
-                    src={`data:image/png;base64,${pixInfo.qr_code_base64}`}
-                    alt="QR Code do Pix"
-                    style={{ width: '180px', maxWidth: '100%', height: 'auto', aspectRatio: '1', border: '1px solid #eee', borderRadius: '8px', padding: '6px', background: '#fff' }}
-                  />
-                )}
-                <div style={{ marginTop: '10px' }}>
-                  <button type="button" onClick={copiarCodigoPix} style={styles.btnCopiarPix}>Copiar código Pix</button>
-                </div>
-                <p style={{ margin: '10px 0 0', fontSize: '11px', color: '#9ca3af' }}>Aguardando confirmação do pagamento...</p>
-              </div>
-            )}
-          </div>
-        )}
+        </aside>
       </div>
     </div>
   );
 }
-
-const styles = {
-  body: { backgroundColor: '#f4f7f6', minHeight: '100vh', display: 'flex', justifyContent: 'center', padding: '40px 20px', fontFamily: '"Inter", sans-serif' },
-  container: { backgroundColor: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', width: '100%', maxWidth: '450px', textAlign: 'center', boxSizing: 'border-box' },
-  header: { fontSize: '22px', fontWeight: '700', marginBottom: '25px', color: '#333' },
-  inputGroup: { marginBottom: '25px', textAlign: 'center' },
-  filtroResumo: { backgroundColor: '#f0faff', padding: '15px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #cce5ff' },
-  btnTrocarHorario: { marginTop: '10px', border: 'none', background: 'none', color: '#1d4ed8', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline' },
-  label: { fontWeight: '600', fontSize: '14px', color: '#666', marginBottom: '15px', display: 'block' },
-  servicesBox: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '20px', textAlign: 'left', border: '1px solid #f0f0f0' },
-  serviceItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '8px', borderBottom: '1px solid #fafafa' },
-  addBtn: { padding: '6px 12px', borderRadius: '8px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' },
-  cartTitle: { textAlign: 'left', marginBottom: '15px', fontSize: '14px', color: '#444' },
-  cartBox: { backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '12px', marginBottom: '20px' },
-  cartItem: { display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '14px', borderBottom: '1px solid #eee' },
-  removeBtn: { border: 'none', background: 'none', cursor: 'pointer', color: '#ff4d4f', fontWeight: 'bold' },
-  total: { fontSize: '24px', fontWeight: '800', margin: '20px 0', color: '#1a1a1a' },
-  confirmBtn: { width: '100%', padding: '16px', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' },
-  msgBanner: { marginTop: '16px', padding: '12px 16px', borderRadius: '8px', fontSize: '13px' },
-  pixBox: { marginTop: '16px', padding: '16px', borderRadius: '12px', border: '1px solid #e5e7eb', background: '#f9fafb' },
-  btnCopiarPix: { padding: '8px 16px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
-  notificacaoContainer: { position: 'fixed', top: '20px', right: '20px', zIndex: 1000 },
-  sininhoIcon: { fontSize: '22px', cursor: 'pointer', backgroundColor: '#fff', padding: '12px', borderRadius: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', position: 'relative' },
-  badge: { position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ff4d4f', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '10px' },
-  dropdown: { position: 'absolute', top: '60px', right: '0', backgroundColor: 'white', width: '280px', borderRadius: '15px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', border: '1px solid #eee' },
-  dropdownTitle: { padding: '12px', fontWeight: 'bold', borderBottom: '1px solid #eee' },
-  listaNotif: { maxHeight: '300px', overflowY: 'auto' },
-  itemNotif: { padding: '10px', borderBottom: '1px solid #eee' },
-  btnSeta: {
-    border: 'none', background: '#f0f0f0', borderRadius: '50%',
-    width: '38px', height: '38px', cursor: 'pointer', fontSize: '20px',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-  },
-};
 
 export default Agenda;

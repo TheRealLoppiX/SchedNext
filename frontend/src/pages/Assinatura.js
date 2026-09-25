@@ -123,7 +123,7 @@ function Assinatura() {
     navigator.clipboard.writeText(pixInfo.qr_code).catch(() => {});
   };
 
-  if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Carregando...</p>;
+  if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: 'var(--fx-muted)' }}>Carregando...</p>;
 
   const cobrancaAtivaCartao = formaConfigurada === 'cartao' && statusCobranca === 'authorized';
   const cobrancaAtivaPix = formaConfigurada === 'pix' && statusAssinatura !== 'inadimplente';
@@ -135,12 +135,16 @@ function Assinatura() {
   const pendente = statusAssinatura === 'pendente';
 
   return (
-    <div style={styles.body}>
-      <div style={styles.container}>
-        <h2 style={styles.header}>Assinatura</h2>
+    <div className="oc-pagina oc-assinatura">
+      <header className="oc-cabeca">
+        <span className="oc-kicker">Plano mensal</span>
+        <h1 className="oc-titulo">ASSINATURA.</h1>
+        <p className="oc-sub">Seus benefícios de assinante e a cobrança automática.</p>
+      </header>
+      <div className="oc-painel" style={{ maxWidth: '560px' }}>
 
         {!planoId ? (
-          <p style={{ color: '#6b7280', fontSize: '14px' }}>
+          <p style={{ color: 'var(--fx-muted)', fontSize: '14px' }}>
             Você ainda não tem um plano de assinatura atribuído. Fale com o estabelecimento pra saber mais.
           </p>
         ) : (
@@ -153,21 +157,21 @@ function Assinatura() {
                 {assinante && pendente && <span style={styles.badgePendente}>Aguardando 1º pagamento</span>}
               </div>
               {plano?.preco != null && (
-                <p style={{ margin: '8px 0 0', fontSize: '15px', color: '#374151' }}>R$ {Number(plano.preco).toFixed(2)}/mês</p>
+                <p style={{ margin: '8px 0 0', fontSize: '15px', color: 'var(--fx-text)' }}>R$ {Number(plano.preco).toFixed(2)}/mês</p>
               )}
             </div>
 
             {inadimplente && (
-              <div style={{ ...styles.card, marginTop: '16px', background: '#fef2f2', border: '1px solid #fecaca' }}>
-                <p style={{ margin: 0, fontSize: '13px', color: '#991b1b' }}>
+              <div style={{ ...styles.card, marginTop: '16px', background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.35)' }}>
+                <p style={{ margin: 0, fontSize: '13px', color: '#fca5a5' }}>
                   Não identificamos o pagamento da sua mensalidade. Enquanto isso, o preço e a cota do seu plano ficam suspensos. Regularize abaixo, no cartão ou no Pix, ou diretamente com o estabelecimento.
                 </p>
               </div>
             )}
 
             {pendente && (
-              <div style={{ ...styles.card, marginTop: '16px', background: '#fffbeb', border: '1px solid #fde68a' }}>
-                <p style={{ margin: 0, fontSize: '13px', color: '#92400e' }}>
+              <div style={{ ...styles.card, marginTop: '16px', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.35)' }}>
+                <p style={{ margin: 0, fontSize: '13px', color: '#fcd34d' }}>
                   Seu plano foi vinculado, mas ainda não identificamos nenhum pagamento. O preço e a cota de assinante só liberam depois da primeira mensalidade confirmada. Escolha Cartão ou Pix logo abaixo pra cadastrar a cobrança agora, ou pague diretamente com o estabelecimento.
                 </p>
               </div>
@@ -177,7 +181,7 @@ function Assinatura() {
               <h3 style={{ margin: '0 0 8px', fontSize: '15px' }}>Cobrança automática</h3>
               {cobrancaAtiva && !inadimplente ? (
                 <>
-                  <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#059669', fontWeight: '600' }}>
+                  <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#34d399', fontWeight: '600' }}>
                     Ativa por {formaConfigurada === 'pix' ? 'Pix' : 'cartão'}: {formaConfigurada === 'pix' ? 'você recebe um Pix novo por e-mail e WhatsApp todo mês.' : 'seu cartão é cobrado automaticamente todo mês.'}
                   </p>
                   <LoadingButton loading={processando} onClick={cancelar} style={styles.btnCancelar}>Cancelar cobrança automática</LoadingButton>
@@ -185,32 +189,32 @@ function Assinatura() {
               ) : pixInfo ? (
                 <div style={styles.pixBox}>
                   {pixInfo.pago ? (
-                    <p style={{ margin: 0, textAlign: 'center', color: '#166534', fontWeight: '700', fontSize: '14px' }}>Pagamento recebido.</p>
+                    <p style={{ margin: 0, textAlign: 'center', color: '#86efac', fontWeight: '700', fontSize: '14px' }}>Pagamento recebido.</p>
                   ) : pixInfo.falhou ? (
                     <div style={{ textAlign: 'center' }}>
-                      <p style={{ margin: 0, color: '#991b1b', fontWeight: '700', fontSize: '14px' }}>Não foi possível confirmar o pagamento.</p>
+                      <p style={{ margin: 0, color: '#fca5a5', fontWeight: '700', fontSize: '14px' }}>Não foi possível confirmar o pagamento.</p>
                       <LoadingButton loading={processando} onClick={() => setPixInfo(null)} style={{ ...styles.btnAssinar, marginTop: '10px' }}>Gerar novo Pix</LoadingButton>
                     </div>
                   ) : (
                     <div style={{ textAlign: 'center' }}>
-                      <p style={{ margin: '0 0 10px', fontSize: '13px', color: '#374151', fontWeight: '600' }}>Pague por Pix pra ativar sua mensalidade</p>
+                      <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--fx-text)', fontWeight: '600' }}>Pague por Pix pra ativar sua mensalidade</p>
                       {pixInfo.qr_code_base64 && (
                         <img
                           src={`data:image/png;base64,${pixInfo.qr_code_base64}`}
                           alt="QR Code do Pix"
-                          style={{ width: '180px', maxWidth: '100%', height: 'auto', aspectRatio: '1', border: '1px solid #eee', borderRadius: '8px', padding: '6px', background: '#fff' }}
+                          style={{ width: '180px', maxWidth: '100%', height: 'auto', aspectRatio: '1', border: '1px solid var(--fx-line)', borderRadius: '8px', padding: '6px', background: 'var(--fx-surface)' }}
                         />
                       )}
                       <div style={{ marginTop: '10px' }}>
                         <button type="button" onClick={copiarCodigoPix} style={styles.btnCopiarPix}>Copiar código Pix</button>
                       </div>
-                      <p style={{ margin: '10px 0 0', fontSize: '11px', color: '#9ca3af' }}>Aguardando confirmação do pagamento...</p>
+                      <p style={{ margin: '10px 0 0', fontSize: '11px', color: 'var(--fx-muted)' }}>Aguardando confirmação do pagamento...</p>
                     </div>
                   )}
                 </div>
               ) : (
                 <>
-                  <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#6b7280' }}>
+                  <p style={{ margin: '0 0 14px', fontSize: '13px', color: 'var(--fx-muted)' }}>
                     {inadimplente
                       ? 'Regularize sua mensalidade por cartão ou Pix, ou combine o pagamento diretamente com o estabelecimento.'
                       : 'Ainda não tem cobrança automática configurada. Assine pra não precisar combinar o pagamento por fora todo mês. É opcional, a primeira mensalidade pode ser paga presencialmente.'}
@@ -245,20 +249,19 @@ function Assinatura() {
 }
 
 const styles = {
-  body: { backgroundColor: '#f4f7f6', minHeight: '100vh', display: 'flex', justifyContent: 'center', padding: '40px 20px', fontFamily: '"Inter", sans-serif' },
-  container: { backgroundColor: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', width: '100%', maxWidth: '450px', boxSizing: 'border-box' },
-  header: { fontSize: '22px', fontWeight: '700', marginBottom: '20px', color: '#333' },
-  card: { backgroundColor: '#f9fafb', padding: '18px', borderRadius: '12px', border: '1px solid #f0f0f0' },
-  badgeAtivo: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', backgroundColor: '#d1fae5', color: '#065f46' },
-  badgeInadimplente: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', backgroundColor: '#fee2e2', color: '#991b1b' },
-  badgePendente: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', backgroundColor: '#fef3c7', color: '#92400e' },
+  container: { backgroundColor: 'var(--fx-surface)', padding: '30px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', width: '100%', maxWidth: '450px', boxSizing: 'border-box' },
+  header: { fontSize: '22px', fontWeight: '700', marginBottom: '20px', color: 'var(--fx-text)' },
+  card: { backgroundColor: 'var(--fx-surface-2)', padding: '18px', borderRadius: '12px', border: '1px solid var(--fx-line)' },
+  badgeAtivo: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', backgroundColor: 'rgba(52,211,153,0.12)', color: '#6ee7b7' },
+  badgeInadimplente: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', backgroundColor: 'rgba(248,113,113,0.12)', color: '#fca5a5' },
+  badgePendente: { padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', backgroundColor: 'rgba(251,191,36,0.12)', color: '#fcd34d' },
   formaPagamentoRow: { display: 'flex', gap: '8px', marginBottom: '14px' },
-  btnForma: { flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid #d1d5db', background: '#fff', color: '#374151', fontWeight: '600', fontSize: '13px', cursor: 'pointer' },
-  btnFormaAtiva: { border: '1px solid #2554eb', background: '#eef2ff', color: '#2554eb' },
-  btnAssinar: { width: '100%', padding: '12px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '700', cursor: 'pointer' },
-  btnCancelar: { width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontWeight: '600', cursor: 'pointer' },
+  btnForma: { flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid var(--fx-line)', background: 'var(--fx-surface)', color: 'var(--fx-text)', fontWeight: '600', fontSize: '13px', cursor: 'pointer' },
+  btnFormaAtiva: { border: '1px solid #2554eb', background: 'rgba(96,165,250,0.12)', color: 'var(--fx-accent-text)' },
+  btnAssinar: { width: '100%', padding: '13px', borderRadius: '999px', border: 'none', background: 'var(--oc-texto)', color: 'var(--oc-fundo)', fontWeight: '600', cursor: 'pointer' },
+  btnCancelar: { width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.12)', color: '#f87171', fontWeight: '600', cursor: 'pointer' },
   pixBox: { padding: '4px' },
-  btnCopiarPix: { padding: '8px 16px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }
+  btnCopiarPix: { padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--fx-line)', background: 'var(--fx-surface)', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }
 };
 
 export default Assinatura;

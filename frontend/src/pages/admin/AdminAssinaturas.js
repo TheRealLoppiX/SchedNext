@@ -249,19 +249,19 @@ function AdminAssinaturas({ empresaId }) {
                 const sel = !!item;
                 const ilimitado = sel && item.limite_mensal == null;
                 return (
-                    <div key={sv.id} style={{ ...s.itemServico, backgroundColor: sel ? '#f0fdf4' : '#f9fafb', borderColor: sel ? '#a7f3d0' : '#e5e7eb', flexWrap: 'wrap' }}>
+                    <div key={sv.id} style={{ ...s.itemServico, backgroundColor: sel ? 'var(--fx-green-bg)' : 'var(--fx-surface-2)', borderColor: sel ? 'var(--fx-green-line)' : 'var(--fx-line)', flexWrap: 'wrap' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, cursor: 'pointer', minWidth: 0 }}>
                             <input
                                 type="checkbox"
                                 checked={sel}
                                 onChange={() => onToggle(sv.id)}
-                                style={{ accentColor: '#111827', width: '15px', height: '15px', flexShrink: 0 }}
+                                style={{ accentColor: 'var(--fx-text)', width: '15px', height: '15px', flexShrink: 0 }}
                             />
-                            <span style={{ fontSize: '13px', color: sel ? '#065f46' : '#374151', fontWeight: sel ? '600' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '13px', color: sel ? 'var(--fx-green)' : 'var(--fx-text)', fontWeight: sel ? '600' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {sv.nome}
                             </span>
                         </label>
-                        <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--fx-muted)', whiteSpace: 'nowrap' }}>
                             R$ {parseFloat(sv.valor).toFixed(2).replace('.', ',')}
                         </span>
                         {sel && (
@@ -276,12 +276,12 @@ function AdminAssinaturas({ empresaId }) {
                                     onChange={e => onAlterarLimite(sv.id, e.target.value ? parseInt(e.target.value, 10) : null)}
                                     style={{ ...s.inputLimite, opacity: ilimitado ? 0.5 : 1 }}
                                 />
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6b7280', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--fx-muted)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                     <input
                                         type="checkbox"
                                         checked={ilimitado}
                                         onChange={() => onAlterarLimite(sv.id, ilimitado ? 1 : null)}
-                                        style={{ accentColor: '#111827', width: '13px', height: '13px' }}
+                                        style={{ accentColor: 'var(--fx-text)', width: '13px', height: '13px' }}
                                     />
                                     Ilimitado
                                 </label>
@@ -297,14 +297,14 @@ function AdminAssinaturas({ empresaId }) {
         <div className="admin-page-container" style={s.container}>
             <header style={s.header}>
                 <div>
-                    <h2 style={s.title}><Icons.Diamond color="#111827" /> Planos de Assinatura</h2>
+                    <h2 style={s.title}>Planos de Assinatura</h2>
                     <p style={s.subtitle}>Crie e gerencie os planos de assinatura {termos.artigoContraido} {termos.local.toLowerCase()}.</p>
                 </div>
             </header>
 
             {mensagem.texto && (
-                <div style={{ ...s.alerta, backgroundColor: mensagem.tipo === 'sucesso' ? '#ecfdf5' : '#fef2f2', color: mensagem.tipo === 'sucesso' ? '#065f46' : '#991b1b', border: `1px solid ${mensagem.tipo === 'sucesso' ? '#a7f3d0' : '#fecaca'}` }}>
-                    {mensagem.tipo === 'sucesso' ? <Icons.CheckCircle color="#059669" /> : <Icons.Alert color="#dc2626" />}
+                <div style={{ ...s.alerta, backgroundColor: mensagem.tipo === 'sucesso' ? 'var(--fx-green-bg)' : 'var(--fx-red-bg)', color: mensagem.tipo === 'sucesso' ? 'var(--fx-green)' : 'var(--fx-red)', border: `1px solid ${mensagem.tipo === 'sucesso' ? 'var(--fx-green-line)' : 'var(--fx-red-line)'}` }}>
+                    {mensagem.tipo === 'sucesso' ? <Icons.CheckCircle color="var(--fx-green)" /> : <Icons.Alert color="var(--fx-red)" />}
                     <span>{mensagem.texto}</span>
                 </div>
             )}
@@ -313,8 +313,8 @@ function AdminAssinaturas({ empresaId }) {
             <div style={s.cardForm}>
                 <h4 style={s.cardTitle}>
                     {editando
-                        ? <><Icons.Edit color="#4b5563" /> Editar Plano</>
-                        : <><Icons.Plus color="#4b5563" /> Novo Plano</>
+                        ? <><Icons.Edit color="var(--fx-muted)" /> Editar Plano</>
+                        : <><Icons.Plus color="var(--fx-muted)" /> Novo Plano</>
                     }
                 </h4>
 
@@ -355,7 +355,7 @@ function AdminAssinaturas({ empresaId }) {
 
                 <div style={s.inputGroup}>
                     <label style={s.label}>Serviços Inclusos no Plano</label>
-                    <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 10px 0' }}>
+                    <p style={{ fontSize: '12px', color: 'var(--fx-faint)', margin: '0 0 10px 0' }}>
                         O cliente assinante poderá agendar estes serviços sem custo, até o limite mensal definido (ou sem limite).
                     </p>
                     <FormularioServicos
@@ -395,8 +395,8 @@ function AdminAssinaturas({ empresaId }) {
                         {planos.length > 0 ? planos.map(p => (
                             <tr key={p.id} style={{ ...s.tr, opacity: p.ativo ? 1 : 0.6 }}>
                                 <td style={s.td}>
-                                    <strong style={{ color: '#111827', fontSize: '14px' }}>{p.nome}</strong>
-                                    {p.descricao && <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#9ca3af' }}>{p.descricao}</p>}
+                                    <strong style={{ color: 'var(--fx-text)', fontSize: '14px' }}>{p.nome}</strong>
+                                    {p.descricao && <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>{p.descricao}</p>}
                                 </td>
                                 <td style={s.td}>
                                     <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
@@ -408,39 +408,39 @@ function AdminAssinaturas({ empresaId }) {
                                     </div>
                                 </td>
                                 <td style={{ ...s.td, textAlign: 'center' }}>
-                                    <strong style={{ fontSize: '16px', color: '#059669' }}>
+                                    <strong style={{ fontSize: '16px', color: 'var(--fx-green)' }}>
                                         R$ {parseFloat(p.preco || 0).toFixed(2).replace('.', ',')}
                                     </strong>
                                 </td>
                                 <td style={{ ...s.td, textAlign: 'center' }}>
-                                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#6366f1' }}>{p.total_assinantes || 0}</span>
+                                    <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--fx-violet)' }}>{p.total_assinantes || 0}</span>
                                 </td>
                                 <td style={{ ...s.td, textAlign: 'center' }}>
                                     <span style={{
                                         padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase',
-                                        backgroundColor: p.ativo ? '#ecfdf5' : '#fef2f2',
-                                        color: p.ativo ? '#065f46' : '#dc2626'
+                                        backgroundColor: p.ativo ? 'var(--fx-green-bg)' : 'var(--fx-red-bg)',
+                                        color: p.ativo ? 'var(--fx-green)' : 'var(--fx-red)'
                                     }}>
                                         {p.ativo ? 'Ativo' : 'Inativo'}
                                     </span>
                                 </td>
                                 <td style={{ ...s.td, textAlign: 'right' }}>
                                     <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                        <button onClick={() => toggleAtivo(p)} style={{ ...s.btnIcone, backgroundColor: p.ativo ? '#fef2f2' : '#ecfdf5' }} title={p.ativo ? 'Desativar' : 'Ativar'}>
-                                            <Icons.Power color={p.ativo ? '#dc2626' : '#059669'} />
+                                        <button onClick={() => toggleAtivo(p)} style={{ ...s.btnIcone, backgroundColor: p.ativo ? 'var(--fx-red-bg)' : 'var(--fx-green-bg)' }} title={p.ativo ? 'Desativar' : 'Ativar'}>
+                                            <Icons.Power color={p.ativo ? 'var(--fx-red)' : 'var(--fx-green)'} />
                                         </button>
                                         <button onClick={() => abrirEdicao(p)} style={s.btnIcone} title="Editar">
-                                            <Icons.Edit color="#4b5563" />
+                                            <Icons.Edit color="var(--fx-muted)" />
                                         </button>
-                                        <button onClick={() => excluir(p.id, p.nome)} style={{ ...s.btnIcone, backgroundColor: '#fef2f2' }} title="Excluir">
-                                            <Icons.Trash color="#dc2626" />
+                                        <button onClick={() => excluir(p.id, p.nome)} style={{ ...s.btnIcone, backgroundColor: 'var(--fx-red-bg)' }} title="Excluir">
+                                            <Icons.Trash color="var(--fx-red)" />
                                         </button>
                                     </div>
                                 </td>
                             </tr>
                         )) : (
                             <tr>
-                                <td colSpan="6" style={{ padding: '50px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                                <td colSpan="6" style={{ padding: '50px', textAlign: 'center', color: 'var(--fx-faint)', fontSize: '14px' }}>
                                     Nenhum plano criado ainda.
                                 </td>
                             </tr>
@@ -454,14 +454,14 @@ function AdminAssinaturas({ empresaId }) {
             <div style={{ marginTop: '30px' }}>
                 <header style={s.header}>
                     <div>
-                        <h2 style={s.title}><Icons.Diamond color="#111827" /> Campanhas Promocionais</h2>
+                        <h2 style={s.title}>Campanhas Promocionais</h2>
                         <p style={s.subtitle}>Preço diferente por ciclo pra atrair novos assinantes (ex: 1º mês R$19,90, 2º R$29,90, demais no preço cheio).</p>
                     </div>
                 </header>
 
                 {!permiteCampanhas ? (
                     <div style={s.upsell}>
-                        <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+                        <p style={{ margin: 0, fontSize: '14px', color: 'var(--fx-muted)' }}>
                             Criar campanhas promocionais de preço escalonado é um recurso exclusivo de planos superiores. Fale com o suporte para fazer upgrade.
                         </p>
                     </div>
@@ -486,33 +486,33 @@ function AdminAssinaturas({ empresaId }) {
                                             const expirada = new Date(c.fim) < new Date();
                                             return (
                                                 <tr key={c.id} style={s.tr}>
-                                                    <td style={s.td}><strong style={{ color: '#111827' }}>{c.nome}</strong></td>
+                                                    <td style={s.td}><strong style={{ color: 'var(--fx-text)' }}>{c.nome}</strong></td>
                                                     <td style={s.td}>{c.plano_assinatura?.nome || '-'}</td>
                                                     <td style={s.td}>{new Date(c.inicio).toLocaleDateString('pt-BR')} - {new Date(c.fim).toLocaleDateString('pt-BR')}</td>
                                                     <td style={s.td}>{c.campanha_assinatura_precos_ciclo.map(p => `${p.numero_ciclo}º: ${formatarValor(p.valor)}`).join(' · ')}, demais: cheio</td>
                                                     <td style={s.td}>
                                                         <span style={{
                                                             padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase',
-                                                            backgroundColor: c.ativa && !expirada ? '#ecfdf5' : '#f3f4f6',
-                                                            color: c.ativa && !expirada ? '#065f46' : '#6b7280'
+                                                            backgroundColor: c.ativa && !expirada ? 'var(--fx-green-bg)' : 'var(--fx-surface-2)',
+                                                            color: c.ativa && !expirada ? 'var(--fx-green)' : 'var(--fx-muted)'
                                                         }}>
                                                             {!c.ativa ? 'Desativada' : expirada ? 'Expirada' : 'Ativa'}
                                                         </span>
                                                     </td>
                                                     <td style={{ ...s.td, textAlign: 'right' }}>
                                                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                                                            <button onClick={() => abrirEdicaoCampanha(c)} style={s.btnIcone} title="Editar"><Icons.Edit color="#4b5563" /></button>
-                                                            <button onClick={() => alternarAtivaCampanha(c)} style={{ ...s.btnIcone, backgroundColor: c.ativa ? '#fef2f2' : '#ecfdf5' }} title={c.ativa ? 'Desativar' : 'Ativar'}>
-                                                                <Icons.Power color={c.ativa ? '#dc2626' : '#059669'} />
+                                                            <button onClick={() => abrirEdicaoCampanha(c)} style={s.btnIcone} title="Editar"><Icons.Edit color="var(--fx-muted)" /></button>
+                                                            <button onClick={() => alternarAtivaCampanha(c)} style={{ ...s.btnIcone, backgroundColor: c.ativa ? 'var(--fx-red-bg)' : 'var(--fx-green-bg)' }} title={c.ativa ? 'Desativar' : 'Ativar'}>
+                                                                <Icons.Power color={c.ativa ? 'var(--fx-red)' : 'var(--fx-green)'} />
                                                             </button>
-                                                            <button onClick={() => excluirCampanha(c)} style={{ ...s.btnIcone, backgroundColor: '#fef2f2' }} title="Excluir"><Icons.Trash color="#dc2626" /></button>
+                                                            <button onClick={() => excluirCampanha(c)} style={{ ...s.btnIcone, backgroundColor: 'var(--fx-red-bg)' }} title="Excluir"><Icons.Trash color="var(--fx-red)" /></button>
                                                         </div>
                                                     </td>
                                                 </tr>
                                             );
                                         }) : (
                                             <tr>
-                                                <td colSpan="6" style={{ padding: '50px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                                                <td colSpan="6" style={{ padding: '50px', textAlign: 'center', color: 'var(--fx-faint)', fontSize: '14px' }}>
                                                     Nenhuma campanha criada ainda.
                                                 </td>
                                             </tr>
@@ -528,8 +528,8 @@ function AdminAssinaturas({ empresaId }) {
                     <div style={s.overlay} onClick={() => setEditandoCampanha(null)}>
                         <div style={s.modal} onClick={ev => ev.stopPropagation()}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{editandoCampanha.id ? 'Editar campanha' : 'Nova campanha'}</h3>
-                                <button onClick={() => setEditandoCampanha(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#9ca3af', lineHeight: 1 }}>×</button>
+                                <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)' }}>{editandoCampanha.id ? 'Editar campanha' : 'Nova campanha'}</h3>
+                                <button onClick={() => setEditandoCampanha(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--fx-faint)', lineHeight: 1 }}>×</button>
                             </div>
 
                             <div style={s.inputGroup}>
@@ -560,15 +560,15 @@ function AdminAssinaturas({ empresaId }) {
                                 {editandoCampanha.precos_por_ciclo.map((p, idx) => (
                                     <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
                                         <input type="number" min="1" style={{ ...s.input, width: '70px' }} value={p.numero_ciclo} onChange={e => atualizarCicloCampanha(idx, 'numero_ciclo', e.target.value)} title="Número do ciclo" />
-                                        <span style={{ fontSize: '12px', color: '#9ca3af', whiteSpace: 'nowrap' }}>º ciclo →</span>
+                                        <span style={{ fontSize: '12px', color: 'var(--fx-faint)', whiteSpace: 'nowrap' }}>º ciclo →</span>
                                         <input type="number" min="0" step="0.01" style={{ ...s.input, flex: 1 }} value={p.valor} onChange={e => atualizarCicloCampanha(idx, 'valor', e.target.value)} placeholder="Valor (R$)" />
                                         {editandoCampanha.precos_por_ciclo.length > 1 && (
-                                            <button onClick={() => removerCicloCampanha(idx)} style={{ background: 'none', border: 'none', color: '#2554eb', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Remover</button>
+                                            <button onClick={() => removerCicloCampanha(idx)} style={{ background: 'none', border: 'none', color: 'var(--fx-blue)', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Remover</button>
                                         )}
                                     </div>
                                 ))}
-                                <button onClick={addCicloCampanha} style={{ background: 'none', border: 'none', color: '#2554eb', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}>+ Adicionar ciclo</button>
-                                <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>Ciclos além do último definido aqui cobram o preço cheio do plano automaticamente.</p>
+                                <button onClick={addCicloCampanha} style={{ background: 'none', border: 'none', color: 'var(--fx-blue)', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}>+ Adicionar ciclo</button>
+                                <p style={{ fontSize: '12px', color: 'var(--fx-faint)', marginTop: '6px' }}>Ciclos além do último definido aqui cobram o preço cheio do plano automaticamente.</p>
                             </div>
 
                             <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
@@ -595,31 +595,31 @@ const Icons = {
 
 const s = {
     container: { padding: '40px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Inter', sans-serif" },
-    header: { marginBottom: '30px', borderBottom: '1px solid #e5e7eb', paddingBottom: '20px' },
-    title: { fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 5px 0', letterSpacing: '-0.5px' },
-    subtitle: { color: '#6b7280', fontSize: '15px', margin: 0 },
+    header: { marginBottom: '30px', paddingBottom: '4px' },
+    title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+    subtitle: { color: 'var(--fx-muted)', fontSize: '15px', margin: 0 },
     alerta: { padding: '14px 18px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '600' },
-    cardForm: { background: '#fff', padding: '28px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: '20px' },
-    cardTitle: { margin: 0, color: '#111827', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' },
+    cardForm: { background: 'var(--fx-card)', padding: '28px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid var(--fx-line)', display: 'flex', flexDirection: 'column', gap: '20px' },
+    cardTitle: { margin: 0, color: 'var(--fx-text)', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' },
     formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' },
     inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
-    label: { fontSize: '12px', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px' },
-    input: { padding: '11px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', outline: 'none', color: '#111827', boxSizing: 'border-box' },
+    label: { fontSize: '12px', fontWeight: '700', color: 'var(--fx-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
+    input: { padding: '11px 14px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px', outline: 'none', color: 'var(--fx-text)', boxSizing: 'border-box' },
     gridServicos: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' },
     itemServico: { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', border: '1px solid', transition: '0.2s' },
-    inputLimite: { width: '90px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px', outline: 'none', color: '#111827', boxSizing: 'border-box' },
+    inputLimite: { width: '90px', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', fontSize: '12px', outline: 'none', color: 'var(--fx-text)', boxSizing: 'border-box' },
     btnPrincipal: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '14px' },
-    btnCancelar: { background: '#f3f4f6', color: '#4b5563', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
-    cardTabela: { background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid #f3f4f6' },
+    btnCancelar: { background: 'var(--fx-surface-2)', color: 'var(--fx-muted)', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '14px' },
+    cardTabela: { background: 'var(--fx-card)', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid var(--fx-line)' },
     table: { width: '100%', borderCollapse: 'collapse' },
-    th: { padding: '13px 20px', background: '#f9fafb', color: '#6b7280', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #e5e7eb', textAlign: 'left' },
-    tr: { borderBottom: '1px solid #f3f4f6' },
-    td: { padding: '16px 20px', fontSize: '13px', verticalAlign: 'middle', color: '#374151' },
-    badgeServico: { background: '#eef2ff', color: '#4f46e5', fontSize: '11px', fontWeight: '600', padding: '3px 8px', borderRadius: '4px' },
-    btnIcone: { background: '#f3f4f6', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' },
-    upsell: { background: '#fff', padding: '24px', borderRadius: '12px', border: '1px dashed #d1d5db' },
+    th: { padding: '13px 20px', background: 'var(--fx-surface-2)', color: 'var(--fx-muted)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--fx-line)', textAlign: 'left' },
+    tr: { borderBottom: '1px solid var(--fx-line)' },
+    td: { padding: '16px 20px', fontSize: '13px', verticalAlign: 'middle', color: 'var(--fx-text)' },
+    badgeServico: { background: 'var(--fx-violet-bg)', color: 'var(--fx-violet)', fontSize: '11px', fontWeight: '600', padding: '3px 8px', borderRadius: '4px' },
+    btnIcone: { background: 'var(--fx-surface-2)', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' },
+    upsell: { background: 'var(--fx-card)', padding: '24px', borderRadius: '12px', border: '1px dashed var(--fx-line-2)' },
     overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(17,24,39,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000, padding: '20px' },
-    modal: { background: '#fff', padding: '28px', borderRadius: '14px', width: '100%', maxWidth: '520px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', boxSizing: 'border-box' },
+    modal: { background: 'var(--fx-card)', padding: '28px', borderRadius: '14px', width: '100%', maxWidth: '520px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', boxSizing: 'border-box' },
 };
 
 export default AdminAssinaturas;

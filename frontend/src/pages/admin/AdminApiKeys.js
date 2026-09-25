@@ -84,14 +84,14 @@ function AdminApiKeys({ empresaId }) {
     }
   };
 
-  if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Carregando...</p>;
+  if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: 'var(--fx-muted)' }}>Carregando...</p>;
 
   if (!permitido) {
     return (
       <div style={styles.container}>
-        <h2 style={styles.title}><Icons.Plug color="#111827" /> API pública</h2>
+        <h2 style={styles.title}>API pública</h2>
         <div style={styles.upsell}>
-          <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+          <p style={{ margin: 0, fontSize: '14px', color: 'var(--fx-muted)' }}>
             Integrar seus próprios sistemas com o SchedNext via API é um recurso exclusivo do <strong>plano Enterprise</strong>.
             Fale com o suporte para fazer upgrade.
           </p>
@@ -102,7 +102,7 @@ function AdminApiKeys({ empresaId }) {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}><Icons.Plug color="#111827" /> API pública</h2>
+      <h2 style={styles.title}>API pública</h2>
       <p style={styles.subtitle}>Gere chaves para integrar seus próprios sistemas ao SchedNext.</p>
 
       {chaveGerada && (
@@ -133,7 +133,7 @@ function AdminApiKeys({ empresaId }) {
             <div key={c.id} style={styles.linha}>
               <div>
                 <strong>{c.nome}</strong>
-                <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                <div style={{ fontSize: '12px', color: 'var(--fx-muted)' }}>
                   <code>{c.key_preview}</code> · criada em {new Date(c.criado_em).toLocaleDateString('pt-BR')}
                   {c.ultimo_uso_em && ` · último uso em ${new Date(c.ultimo_uso_em).toLocaleDateString('pt-BR')}`}
                 </div>
@@ -151,26 +151,23 @@ function AdminApiKeys({ empresaId }) {
   );
 }
 
-const Icons = {
-  Plug: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><path d="M12 22v-5"></path><path d="M9 8V2"></path><path d="M15 8V2"></path><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"></path></svg>,
-};
 
 const styles = {
   container: { padding: '40px', maxWidth: '900px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },
-  title: { fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 5px 0' },
-  subtitle: { color: '#6b7280', fontSize: '15px', marginBottom: '25px' },
-  upsell: { padding: '20px', backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px dashed #d1d5db' },
-  avisoChave: { padding: '18px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', marginBottom: '20px' },
-  codigoChave: { display: 'block', margin: '10px 0', padding: '10px', background: '#111827', color: '#4ade80', borderRadius: '6px', fontSize: '13px', wordBreak: 'break-all' },
-  btnFecharAviso: { padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#111827', color: '#fff', cursor: 'pointer', fontSize: '13px' },
-  cardForm: { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6', marginBottom: '24px' },
+  title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  subtitle: { color: 'var(--fx-muted)', fontSize: '15px', marginBottom: '25px' },
+  upsell: { padding: '20px', backgroundColor: 'var(--fx-surface-2)', borderRadius: '10px', border: '1px dashed var(--fx-line-2)' },
+  avisoChave: { padding: '18px', backgroundColor: 'var(--fx-amber-bg)', border: '1px solid var(--fx-amber-line)', borderRadius: '10px', marginBottom: '20px' },
+  codigoChave: { display: 'block', margin: '10px 0', padding: '10px', background: 'var(--fx-strong)', color: '#4ade80', borderRadius: '6px', fontSize: '13px', wordBreak: 'break-all' },
+  btnFecharAviso: { padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--fx-strong)', color: '#fff', cursor: 'pointer', fontSize: '13px' },
+  cardForm: { backgroundColor: 'var(--fx-card)', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--fx-line)', marginBottom: '24px' },
   formRow: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
-  input: { flex: '1 1 260px', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' },
+  input: { flex: '1 1 260px', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px' },
   btnGerar: { padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '600', cursor: 'pointer' },
   tabela: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  linha: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: '16px', borderRadius: '10px', border: '1px solid #f3f4f6' },
-  btnRevogar: { padding: '8px 14px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontSize: '13px' },
-  badgeRevogada: { fontSize: '12px', color: '#9ca3af', fontWeight: '600' }
+  linha: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--fx-card)', padding: '16px', borderRadius: '10px', border: '1px solid var(--fx-line)' },
+  btnRevogar: { padding: '8px 14px', borderRadius: '6px', border: '1px solid var(--fx-red-line)', background: 'var(--fx-red-bg)', color: 'var(--fx-red)', cursor: 'pointer', fontSize: '13px' },
+  badgeRevogada: { fontSize: '12px', color: 'var(--fx-faint)', fontWeight: '600' }
 };
 
 export default AdminApiKeys;

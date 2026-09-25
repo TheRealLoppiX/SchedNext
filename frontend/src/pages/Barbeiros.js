@@ -175,163 +175,129 @@ function Barbeiros() {
 
   const gerarDias = () => [...Array(7)].map((_, i) => addDays(inicioSemana, i));
 
-  const renderEstrelas = (media) => {
-    const valorMedia = parseFloat(media) || 0;
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '15px' }}>
-        <div style={{ display: 'flex', gap: '2px' }}>
-          {[1, 2, 3, 4, 5].map((estrela) => {
-            const preenchida = estrela <= Math.round(valorMedia);
-            return (
-              <svg key={estrela} width="16" height="16" viewBox="0 0 24 24" fill={preenchida ? '#ffc107' : 'none'} stroke="#ffc107" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-              </svg>
-            );
-          })}
-        </div>
-        <span style={{ fontSize: '13px', color: '#888' }}>{valorMedia > 0 ? valorMedia.toFixed(1) : 'Novo'}</span>
-      </div>
-    );
+  const iniciais = (nome) => nome.trim().split(/\s+/).slice(0, 2).map((p) => p.charAt(0).toUpperCase()).join('');
+  const nota = (media) => {
+    const v = parseFloat(media) || 0;
+    return v > 0 ? v.toFixed(1) : null;
   };
 
+  // Horários agrupados por período, no estilo painel de embarque.
+  const periodos = [
+    { nome: 'Manhã', filtro: (h) => h < '12:00' },
+    { nome: 'Tarde', filtro: (h) => h >= '12:00' && h < '18:00' },
+    { nome: 'Noite', filtro: (h) => h >= '18:00' }
+  ].map((p) => ({ ...p, horas: listaHorarios.filter(p.filtro) })).filter((p) => p.horas.length > 0);
+
+  const irParaAgenda = (b) => navigate(`/${empresaSlug}/agenda?barbeiro=${b.id}&data=${format(dataSelecionada, 'yyyy-MM-dd')}${horaSelecionada ? `&hora=${horaSelecionada}` : ''}${unidadeSelecionada ? `&unidade=${unidadeSelecionada}` : ''}`);
+
   return (
-    <div className="admin-page-container" style={s.wrapper}>
-      <h2 style={s.header}>Olá, {nomeCliente}!</h2>
-      <p style={s.subHeader}>Bem-vindo à <strong>{nomeEmpresa}</strong></p>
+    <div className="oc-pagina">
+      <header className="oc-cabeca">
+        <span className="oc-kicker">{nomeEmpresa || '...'} · Agenda online</span>
+        <h1 className="oc-titulo">OLÁ, {nomeCliente.toUpperCase()}.</h1>
+        <p className="oc-sub">Escolha o dia, o horário e quem vai te atender.</p>
+      </header>
 
       {unidades.length > 1 && (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', justifyContent: 'center' }}>
-          <button
-            onClick={() => setUnidadeSelecionada(null)}
-            style={{ ...s.chipUnidade, ...(unidadeSelecionada === null ? s.chipUnidadeAtiva : {}) }}
-          >
-            Todas as unidades
-          </button>
+        <div className="oc-chips">
+          <button type="button" onClick={() => setUnidadeSelecionada(null)} className={unidadeSelecionada === null ? 'ativo' : ''}>Todas as unidades</button>
           {unidades.map((u) => (
-            <button
-              key={u.id}
-              onClick={() => setUnidadeSelecionada(u.id)}
-              style={{ ...s.chipUnidade, ...(unidadeSelecionada === u.id ? s.chipUnidadeAtiva : {}) }}
-            >
-              {u.nome}
-            </button>
+            <button type="button" key={u.id} onClick={() => setUnidadeSelecionada(u.id)} className={unidadeSelecionada === u.id ? 'ativo' : ''}>{u.nome}</button>
           ))}
         </div>
       )}
-      
-      <div style={s.filterSection}>
-        <div style={s.carouselRow}>
-          <button style={s.btnSeta} onClick={() => setInicioSemana(addDays(inicioSemana, -7))} disabled={isSameDay(inicioSemana, startOfDay(new Date()))}>‹</button>
-          <div style={s.scrollArea}>
-            {gerarDias().map((dia, i) => {
-              const sel = isSameDay(dia, dataSelecionada);
-              return (
-                <div key={i} onClick={() => { setDataSelecionada(dia); setHoraSelecionada(''); }} style={{ ...s.bubble, background: sel ? 'linear-gradient(135deg, #4c74f0, #2554eb)' : '#fff', color: sel ? '#ffffff' : '#000', border: sel ? '1px solid #2554eb' : '1px solid #eee' }}>
-                  <span style={s.bubbleLabel}>{format(dia, 'EEE', { locale: ptBR }).toUpperCase()}</span>
-                  <span style={s.bubbleValue}>{format(dia, 'dd/MM')}</span>
+
+      <section className="oc-painel">
+        <div className="oc-painel-cab">
+          <span className="oc-rotulo"><b>01</b> Dia</span>
+          <div className="oc-setas">
+            <button type="button" aria-label="Semana anterior" onClick={() => setInicioSemana(addDays(inicioSemana, -7))} disabled={isSameDay(inicioSemana, startOfDay(new Date()))}>‹</button>
+            <button type="button" aria-label="Próxima semana" onClick={() => setInicioSemana(addDays(inicioSemana, 7))}>›</button>
+          </div>
+        </div>
+        <div className="oc-regua">
+          {gerarDias().map((dia) => {
+            const sel = isSameDay(dia, dataSelecionada);
+            const fechado = !getHorarioDoDia(dia).aberto;
+            return (
+              <button type="button" key={dia.toISOString()} className={`oc-dia ${sel ? 'ativo' : ''} ${fechado ? 'fechado' : ''}`} onClick={() => { setDataSelecionada(dia); setHoraSelecionada(''); }}>
+                <span className="oc-dia-semana">{format(dia, 'EEE', { locale: ptBR }).replace('.', '').slice(0, 3)}</span>
+                <span className="oc-dia-num">{format(dia, 'dd')}</span>
+                <span className="oc-dia-mes">{fechado ? 'fechado' : format(dia, 'MMM', { locale: ptBR }).replace('.', '')}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="oc-painel-cab">
+          <span className="oc-rotulo"><b>02</b> Horário</span>
+          <span className="oc-dica">{horaSelecionada ? <>Mostrando quem está livre às <b>{horaSelecionada}</b></> : 'Opcional: filtra quem está livre'}</span>
+        </div>
+        {!empresaFechada && periodos.length > 0 ? (
+          <div className="oc-embarque">
+            {periodos.map((per) => (
+              <div className="oc-embarque-linha" key={per.nome}>
+                <span className="oc-embarque-periodo">{per.nome}</span>
+                <div className="oc-embarque-horas">
+                  {per.horas.map((h) => (
+                    <button type="button" key={h} className={`oc-flap ${h === horaSelecionada ? 'ativo' : ''}`} onClick={() => setHoraSelecionada(h === horaSelecionada ? '' : h)}>
+                      <span>{h}</span>
+                    </button>
+                  ))}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
-          <button style={s.btnSeta} onClick={() => setInicioSemana(addDays(inicioSemana, 7))}>›</button>
+        ) : (
+          <p className="oc-vazio-linha">{empresaFechada ? 'Fechado neste dia.' : 'Sem horários para hoje. Escolha outro dia.'}</p>
+        )}
+      </section>
+
+      <section>
+        <div className="oc-secao-cab">
+          <span className="oc-rotulo"><b>03</b> {termos.profissional}</span>
+          {!empresaFechada && <span className="oc-contagem">{barbeirosFiltrados.length} {barbeirosFiltrados.length === 1 ? 'disponível' : 'disponíveis'}{horaSelecionada ? ` às ${horaSelecionada}` : ''}</span>}
         </div>
 
-        <div style={{ ...s.carouselRow, marginTop: '15px' }}>
-          <button style={s.btnSeta} onClick={() => { document.getElementById('h-scroll').scrollLeft -= 150 }}>‹</button>
-          <div id="h-scroll" style={s.scrollArea}>
-            {/* AGORA LÊ A REGRA DINÂMICA AO INVÉS DE APENAS DOMINGO */}
-            {!empresaFechada && listaHorarios.length > 0 ? (
-              listaHorarios.map((h, i) => {
-                const sel = h === horaSelecionada;
-                return (
-                  <div key={i} 
-                    onClick={() => setHoraSelecionada(sel ? '' : h)} 
-                    style={{ ...s.bubble, minWidth: '70px', background: sel ? 'linear-gradient(135deg, #4c74f0, #2554eb)' : '#fff', color: sel ? '#ffffff' : '#000', border: sel ? '1px solid #2554eb' : '1px solid #eee' }}>
-                    <span style={{ ...s.bubbleValue, fontSize: '15px' }}>{h}</span>
-                  </div>
-                );
-              })
-            ) : (
-              <p style={{ color: '#999', fontSize: '12px', padding: '10px' }}>
-                {empresaFechada ? "Fechado neste dia" : "Sem horários para hoje."}
-              </p>
-            )}
-          </div>
-          <button style={s.btnSeta} onClick={() => { document.getElementById('h-scroll').scrollLeft += 150 }}>›</button>
-        </div>
-      </div>
-
-      <div style={s.containerHorizontal}>
         {empresaFechada ? (
-          <div style={s.emptyState}>
-            <h3 style={{ color: '#d9534f' }}>Fechado para agendamentos</h3>
-            <p>Não funcionamos neste dia. Tente outra data!</p>
+          <div className="oc-vazio">
+            <strong>FECHADO NESTE DIA.</strong>
+            <p>Não funcionamos nessa data. Escolha outro dia na régua acima.</p>
           </div>
         ) : barbeirosFiltrados.length > 0 ? (
-          barbeirosFiltrados.map(b => (
-            <div key={b.id} style={s.card}>
-              <div style={s.avatar}>
-                {b.foto_url ? <img src={b.foto_url} alt={b.nome} style={s.imgAvatar} /> : b.nome.charAt(0).toUpperCase()}
-              </div>
-              <h3 style={s.name}>{b.nome}</h3>
-      {isAssinante && (
-        <div style={{ background: '#ede9fe', color: '#6d28d9', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '700', marginBottom: '8px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-          Assinante
-        </div>
-      )}
-              {renderEstrelas(b.media_estrelas)}
-              <p style={s.description}>Profissional qualificado para seu estilo.</p>
-              
-              {horaSelecionada ? (
-                <button
-                  onClick={() => navigate(`/${empresaSlug}/agenda?barbeiro=${b.id}&data=${format(dataSelecionada, 'yyyy-MM-dd')}&hora=${horaSelecionada}${unidadeSelecionada ? `&unidade=${unidadeSelecionada}` : ''}`)}
-                  style={s.btn}
-                >
-                  Agendar para às {horaSelecionada}
-                </button>
-              ) : (
-                <button
-                  onClick={() => navigate(`/${empresaSlug}/agenda?barbeiro=${b.id}&data=${format(dataSelecionada, 'yyyy-MM-dd')}${unidadeSelecionada ? `&unidade=${unidadeSelecionada}` : ''}`)}
-                  style={s.btnDisponibilidade}
-                >
-                  Ver disponibilidade
-                </button>
-              )}
-            </div>
-          ))
+          <div className="oc-pros">
+            {barbeirosFiltrados.map((b, i) => (
+              <article key={b.id} className="oc-pro" style={{ animationDelay: `${i * 0.06}s` }}>
+                <div className="oc-pro-retrato">
+                  {b.foto_url ? <img src={b.foto_url} alt={b.nome} /> : <span className="oc-pro-monograma">{iniciais(b.nome)}</span>}
+                  <span className="oc-pro-indice">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="oc-pro-status"><i />{horaSelecionada ? `Livre às ${horaSelecionada}` : 'Atendendo'}</span>
+                  <span className="oc-pro-scan" />
+                </div>
+                <div className="oc-pro-info">
+                  <div className="oc-pro-linha">
+                    <h3>{b.nome}</h3>
+                    <span className="oc-pro-nota">{nota(b.media_estrelas) ? <>★ {nota(b.media_estrelas)}</> : 'NOVO'}</span>
+                  </div>
+                  <span className="oc-pro-esp">{b.especialidade || 'Profissional'}</span>
+                  {isAssinante && <span className="oc-selo">Assinante</span>}
+                  <button type="button" onClick={() => irParaAgenda(b)} className={`oc-btn ${horaSelecionada ? 'oc-btn-primario' : 'oc-btn-contorno'}`}>
+                    {horaSelecionada ? `Agendar às ${horaSelecionada}` : 'Ver horários'}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="13 6 19 12 13 18" /></svg>
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
         ) : (
-          <div style={s.emptyState}>
-            <p style={{ fontSize: '18px', fontWeight: 'bold' }}>Nenhum {termos.profissional.toLowerCase()} disponível</p>
-            <p>Tente outro horário ou data.</p>
+          <div className="oc-vazio">
+            <strong>NINGUÉM LIVRE NESSE HORÁRIO.</strong>
+            <p>Tente outro horário ou outro dia.</p>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
-
-const s = {
-  wrapper: { padding: '40px 20px', minHeight: '100vh', backgroundColor: '#f8f9fa', textAlign: 'center' },
-  header: { fontSize: '32px', color: '#1a1a1a', margin: '0 0 10px 0' },
-  subHeader: { color: '#666', marginBottom: '30px', fontSize: '18px' },
-  chipUnidade: { padding: '8px 16px', borderRadius: '20px', border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#374151' },
-  chipUnidadeAtiva: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', border: '1px solid #2554eb' },
-  filterSection: { maxWidth: '650px', margin: '0 auto 40px auto', backgroundColor: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' },
-  carouselRow: { display: 'flex', alignItems: 'center', gap: '10px' },
-  scrollArea: { display: 'flex', gap: '10px', overflowX: 'auto', flex: 1, padding: '5px', scrollbarWidth: 'none' },
-  bubble: { minWidth: '60px', padding: '10px 5px', borderRadius: '15px', border: '1px solid #eee', cursor: 'pointer', textAlign: 'center', flexShrink: 0 },
-  bubbleLabel: { fontSize: '9px', fontWeight: 'bold', display: 'block' },
-  bubbleValue: { fontSize: '13px', fontWeight: 'bold' },
-  btnSeta: { border: 'none', background: '#f0f0f0', borderRadius: '50%', width: '38px', height: '38px', cursor: 'pointer', flexShrink: 0 },
-  containerHorizontal: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '25px', maxWidth: '1200px', margin: '0 auto' },
-  card: { backgroundColor: '#fff', width: '100%', maxWidth: '280px', padding: '30px', borderRadius: '15px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'center', boxSizing: 'border-box' },
-  avatar: { width: '80px', height: '80px', backgroundColor: '#333', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', marginBottom: '15px', overflow: 'hidden', flexShrink: 0 },
-  imgAvatar: { width: '100%', height: '100%', objectFit: 'cover' },
-  name: { fontSize: '20px', color: '#333', marginBottom: '5px' },
-  description: { fontSize: '14px', color: '#777', lineHeight: '1.5', marginBottom: '20px' },
-  btn: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', border: 'none', padding: '12px 25px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%' },
-  btnDisponibilidade: { backgroundColor: '#fff', color: '#1d4ed8', border: '1px solid #2554eb', padding: '12px 25px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%' },
-  emptyState: { padding: '40px', color: '#999', width: '100%' }
-};
 
 export default Barbeiros;

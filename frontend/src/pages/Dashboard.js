@@ -49,10 +49,7 @@ function Dashboard() {
     switch (abaAtiva) {
       case 'agendamentos':
         return (
-          <>
-            <FidelidadeView userId={userId} />
-            <AgendamentosView userId={userId} />
-          </>
+          <AgendamentosView userId={userId} extra={<FidelidadeView userId={userId} />} />
         );
       case 'dados':
         return <DadosView dadosIniciais={dados} userId={userId} />;
@@ -66,16 +63,14 @@ function Dashboard() {
   };
 
   return (
-    <div style={{ padding: '20px' }}>
-      <div style={styles.viewContainer}>
-        {renderConteudo()}
-      </div>
+    <div className="oc-pagina oc-perfil">
+      {renderConteudo()}
     </div>
   );
 }
 
 // --- COMPONENTE ATUALIZADO ---
-function AgendamentosView({ userId }) {
+function AgendamentosView({ userId, extra = null }) {
   const toast = useToast();
   const [lista, setLista] = useState([]);
   
@@ -154,7 +149,7 @@ function AgendamentosView({ userId }) {
   };
 
   const getStatusDisplay = (status, ehPassado) => {
-    if (ehPassado && status === 'pendente') return { texto: 'EXPIRADO', cor: '#999' };
+    if (ehPassado && status === 'pendente') return { texto: 'EXPIRADO', cor: 'var(--fx-muted)' };
     const estilos = {
       confirmado: { texto: 'CONFIRMADO', cor: '#28a745' },
       cancelado: { texto: 'CANCELADO', cor: '#dc3545' },
@@ -166,14 +161,18 @@ function AgendamentosView({ userId }) {
 
   return (
     <div>
-      <h2 style={styles.titulo}>Meus Agendamentos</h2>
+      <header className="oc-cabeca">
+        <span className="oc-kicker">Histórico</span>
+        <h1 className="oc-titulo">SEUS HORÁRIOS.</h1>
+      </header>
+      {extra}
 
       {/* --- MODAL DE CANCELAMENTO PROFISSIONAL --- */}
       {modalCancelamento.aberto && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
             <h3 style={{ color: '#d33', marginBottom: '10px' }}>Cancelar Agendamento?</h3>
-            <p style={{ fontSize: '14px', color: '#666' }}>Poderia nos informar o motivo do cancelamento?</p>
+            <p style={{ fontSize: '14px', color: 'var(--fx-muted)' }}>Poderia nos informar o motivo do cancelamento?</p>
             
             <textarea
               style={{ ...styles.textArea, height: '80px', marginTop: '15px' }}
@@ -184,7 +183,7 @@ function AgendamentosView({ userId }) {
 
             <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
               <button 
-                style={{ ...styles.btnPreto, flex: 1, backgroundColor: '#eee', color: '#333' }} 
+                style={{ ...styles.btnPreto, flex: 1, backgroundColor: 'var(--fx-surface-2)', color: 'var(--fx-text)' }} 
                 onClick={() => setModalCancelamento({ aberto: false, id: null, motivo: '' })}
               >
                 Voltar
@@ -231,62 +230,86 @@ function AgendamentosView({ userId }) {
         </div>
       )}
 
-      {/* TABELA DE AGENDAMENTOS */}
-      <div style={styles.tabela}>
-        {lista.map((ag, i) => {
-          // ATENÇÃO: data_hora vem do banco "ingênuo", os números representam o horário de
-          // parede pretendido (ex: 09:00), só que salvos com rótulo UTC (+00), sem conversão real
-          // de fuso. Por isso NUNCA usar toLocaleDateString/toLocaleTimeString aqui (eles fariam
-          // uma conversão de fuso de verdade e mostrariam 3h a menos). Extraímos os componentes
-          // com os getters UTC, que pegam exatamente os números gravados.
+      {/* LINHA DO TEMPO DE AGENDAMENTOS */}
+      {(() => {
+        // ATENÇÃO: data_hora vem do banco "ingênuo", os números representam o horário de
+        // parede pretendido (ex: 09:00), só que salvos com rótulo UTC (+00), sem conversão real
+        // de fuso. Por isso NUNCA usar toLocaleDateString/toLocaleTimeString aqui. Extraímos os
+        // componentes com os getters UTC, que pegam exatamente os números gravados.
+        const MESES = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+        const itens = lista.map((ag) => {
           const dataAg = new Date(ag.data_hora);
-          const dataFormatada = `${String(dataAg.getUTCDate()).padStart(2, '0')}/${String(dataAg.getUTCMonth() + 1).padStart(2, '0')}/${dataAg.getUTCFullYear()}`;
-          const horaFormatada = `${String(dataAg.getUTCHours()).padStart(2, '0')}:${String(dataAg.getUTCMinutes()).padStart(2, '0')}`;
-          // Para saber se já passou, precisamos do instante real: como o horário de Brasília é
-          // sempre UTC-3 (sem horário de verão), o instante real é o valor gravado + 3h.
+          // Horário de Brasília é sempre UTC-3 (sem horário de verão): instante real = gravado + 3h.
           const instanteReal = new Date(dataAg.getTime() + 3 * 60 * 60 * 1000);
           const ehPassado = instanteReal < new Date();
-          const statusVisual = getStatusDisplay(ag.status, ehPassado);
-          const podeAvaliar = ag.status === 'concluido';
+          return {
+            ag,
+            dia: String(dataAg.getUTCDate()).padStart(2, '0'),
+            mes: MESES[dataAg.getUTCMonth()],
+            ano: dataAg.getUTCFullYear(),
+            hora: `${String(dataAg.getUTCHours()).padStart(2, '0')}:${String(dataAg.getUTCMinutes()).padStart(2, '0')}`,
+            ehPassado,
+            instante: instanteReal.getTime(),
+            status: getStatusDisplay(ag.status, ehPassado)
+          };
+        });
+        const proximos = itens.filter((it) => !it.ehPassado && it.ag.status !== 'cancelado').sort((x, y) => x.instante - y.instante);
+        const destaque = proximos[0];
+        const resto = itens.filter((it) => it !== destaque);
 
-          return (
-            <div key={i} className="dashboard-agend-linha" style={styles.linha}>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontWeight: '500' }}>{dataFormatada}</span>
-                <small style={{ color: '#888' }}>{horaFormatada}</small>
+        const acao = (it) => {
+          const { ag, ehPassado } = it;
+          if (ag.status === 'concluido') {
+            return ag.ja_avaliado > 0
+              ? <span className="oc-tl-tag ok">Avaliado</span>
+              : <button type="button" onClick={() => abrirModalAvaliacao(ag)} className="oc-btn oc-btn-primario oc-btn-p">Avaliar</button>;
+          }
+          if (!ehPassado && ag.status !== 'cancelado') {
+            return <button type="button" onClick={() => setModalCancelamento({ aberto: true, id: ag.id, motivo: '' })} className="oc-btn oc-btn-contorno oc-btn-p oc-btn-perigo">Cancelar</button>;
+          }
+          return ag.status === 'cancelado' ? null : <span className="oc-tl-tag">Aguardando finalizar</span>;
+        };
+
+        if (itens.length === 0) {
+          return <div className="oc-vazio"><strong>NENHUM HORÁRIO AINDA.</strong><p>Quando você agendar, ele aparece aqui.</p></div>;
+        }
+
+        return (
+          <>
+            {destaque && (
+              <div className="oc-proximo">
+                <span className="oc-rotulo"><b>●</b> Próximo horário</span>
+                <div className="oc-proximo-corpo">
+                  <div className="oc-proximo-data">
+                    <span className="oc-proximo-dia">{destaque.dia}</span>
+                    <span className="oc-proximo-mes">{destaque.mes} {destaque.ano}</span>
+                  </div>
+                  <div className="oc-proximo-info">
+                    <span className="oc-proximo-hora">{destaque.hora}</span>
+                    <span>com <b>{destaque.ag.barbeiro}</b></span>
+                    <span className="oc-tl-status" style={{ '--cor': destaque.status.cor }}>{destaque.status.texto}</span>
+                  </div>
+                  <div className="oc-proximo-acao">{acao(destaque)}</div>
+                </div>
               </div>
-
-              <b>{ag.barbeiro}</b>
-              
-              <span style={{ color: statusVisual.cor, fontWeight: 'bold', fontSize: '13px' }}>{statusVisual.texto}</span>
-
-              <div style={{ textAlign: 'right' }}>
-                {podeAvaliar ? (
-                  ag.ja_avaliado > 0 ? (
-                    <span style={{ color: '#28a745', fontSize: '13px', fontWeight: 'bold' }}>Avaliado</span>
-                  ) : (
-                    <button onClick={() => abrirModalAvaliacao(ag)} style={styles.btnAvaliar}>Avaliar</button>
-                  )
-                ) : (
-                  (!ehPassado && ag.status !== 'cancelado') ? (
-                    <button 
-                       onClick={() => setModalCancelamento({ aberto: true, id: ag.id, motivo: '' })} 
-                       style={styles.btnCancelar}
-                    >
-                      Cancelar
-                    </button>
-                  ) : (
-                    ag.status === 'cancelado'
-                    ? <span style={{ fontSize: '12px', color: '#999' }}>Cancelado</span>
-                    : <span style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic' }}>Aguardando finalizar</span>
-                  )
-                )}
-              
-              </div>
+            )}
+            <div className="oc-tl">
+              {resto.map((it) => (
+                <div key={it.ag.id} className={`oc-tl-item ${it.ehPassado ? 'passado' : ''} ${it.ag.status === 'cancelado' ? 'cancelado' : ''}`}>
+                  <div className="oc-tl-data"><b>{it.dia}</b><span>{it.mes}</span></div>
+                  <span className="oc-tl-ponto" style={{ '--cor': it.status.cor }} />
+                  <div className="oc-tl-info">
+                    <strong>{it.ag.barbeiro}</strong>
+                    <span>{it.hora} · {it.ano}</span>
+                  </div>
+                  <span className="oc-tl-status" style={{ '--cor': it.status.cor }}>{it.status.texto}</span>
+                  <div className="oc-tl-acao">{acao(it)}</div>
+                </div>
+              ))}
             </div>
-          );
-        })}
-      </div>
+          </>
+        );
+      })()}
     </div>
   );
 }
@@ -342,13 +365,17 @@ function DadosView() {
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '0 auto' }}>
-      <h2 style={styles.titulo}>Minha Conta</h2>
+    <div>
+      <header className="oc-cabeca">
+        <span className="oc-kicker">Perfil</span>
+        <h1 className="oc-titulo">MINHA CONTA.</h1>
+      </header>
+      <div className="oc-painel" style={{ maxWidth: '520px' }}>
       
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
         <div style={styles.fotoGrande}>
           {form.foto_url ? <img src={form.foto_url} style={styles.imgFull} alt="Perfil" /> : (
-            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="var(--fx-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
@@ -365,7 +392,7 @@ function DadosView() {
       <div style={styles.inputGroup}>
         <label style={styles.label}>Nome Completo</label>
         <input 
-          style={{ ...styles.input, backgroundColor: editando ? '#fff' : '#f9f9f9' }} 
+          style={{ ...styles.input, backgroundColor: editando ? 'var(--fx-surface)' : 'var(--fx-surface-2)' }} 
           value={form.nome_completo} 
           onChange={e => setForm({ ...form, nome_completo: e.target.value })} 
           disabled={!editando} 
@@ -375,7 +402,7 @@ function DadosView() {
       <div style={styles.inputGroup}>
         <label style={styles.label}>Telefone</label>
         <input 
-          style={{ ...styles.input, backgroundColor: editando ? '#fff' : '#f9f9f9' }} 
+          style={{ ...styles.input, backgroundColor: editando ? 'var(--fx-surface)' : 'var(--fx-surface-2)' }} 
           value={form.telefone}
           maxLength={15}
           onChange={e => setForm({ ...form, telefone: formatarTelefone(e.target.value) })}
@@ -401,6 +428,7 @@ function DadosView() {
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -470,8 +498,8 @@ function PrivacidadeView({ userId, emailAtual }) {
       <h2 style={styles.titulo}>Segurança da Conta</h2>
       
       {passo === 1 ? (
-        <div style={{ padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-          <p style={{ marginBottom: '15px', color: '#666' }}>
+        <div style={{ padding: '20px', backgroundColor: 'var(--fx-surface-2)', borderRadius: '8px' }}>
+          <p style={{ marginBottom: '15px', color: 'var(--fx-muted)' }}>
             Para alterar seu e-mail de acesso ou sua senha, você precisará confirmar um código enviado ao seu e-mail atual.
           </p>
           <button style={styles.btnPreto} onClick={solicitarCodigo}>
@@ -513,7 +541,7 @@ function PrivacidadeView({ userId, emailAtual }) {
 
           <div style={{ display: 'flex', gap: '10px' }}>
             <button style={styles.btnVerde} onClick={salvarAlteracoes}>Confirmar e Salvar</button>
-            <button style={{ ...styles.btnPreto, backgroundColor: '#666' }} onClick={() => setPasso(1)}>Cancelar</button>
+            <button style={{ ...styles.btnPreto, backgroundColor: 'var(--fx-surface-3)' }} onClick={() => setPasso(1)}>Cancelar</button>
           </div>
         </div>
       )}
@@ -525,7 +553,7 @@ const styles = {
   viewContainer: { 
     maxWidth: '600px', 
     margin: '20px auto', 
-    backgroundColor: '#fff', 
+    backgroundColor: 'var(--fx-surface)', 
     padding: '30px', 
     borderRadius: '16px', 
     boxShadow: '0 4px 20px rgba(0,0,0,0.08)' 
@@ -536,25 +564,25 @@ const styles = {
     marginBottom: '25px',
     textAlign: 'center',
     fontSize: '22px',
-    color: '#333'
+    color: 'var(--fx-text)'
   },
   fotoGrande: { 
     width: '120px', 
     height: '120px', 
     borderRadius: '50%', 
-    background: '#f8f9fa', 
+    background: 'var(--fx-surface-2)', 
     margin: '0 auto 15px', 
     display: 'flex', 
     alignItems: 'center', 
     justifyContent: 'center', 
     fontSize: '50px', 
-    border: '4px solid #eee', 
+    border: '4px solid var(--fx-line)', 
     overflow: 'hidden',
     boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
   },
   imgFull: { width: '100%', height: '100%', objectFit: 'cover' },
   btnEscolher: { 
-    backgroundColor: '#333', 
+    backgroundColor: 'var(--fx-surface-3)', 
     color: '#fff', 
     padding: '8px 18px', 
     borderRadius: '20px', 
@@ -566,12 +594,12 @@ const styles = {
   input: { 
     width: '100%', 
     padding: '12px 15px', 
-    border: '1px solid #ddd', 
+    border: '1px solid var(--fx-line)', 
     borderRadius: '10px', 
     boxSizing: 'border-box',
     fontSize: '16px',
-    backgroundColor: '#fff',
-    color: '#333',
+    backgroundColor: 'var(--fx-surface)',
+    color: 'var(--fx-text)',
     outline: 'none',
     transition: 'border-color 0.3s'
   },
@@ -583,7 +611,7 @@ const styles = {
     display: 'block', 
     marginBottom: '8px', 
     fontWeight: '600', 
-    color: '#666',
+    color: 'var(--fx-muted)',
     fontSize: '14px',
     marginLeft: '5px'
   },
@@ -604,8 +632,8 @@ const styles = {
   btnCancelarNovo: { 
     flex: 1,
     padding: '14px', 
-    backgroundColor: '#f1f1f1', // Cinza suave para equilíbrio
-    color: '#666', 
+    backgroundColor: 'var(--fx-surface-2)', // Cinza suave para equilíbrio
+    color: 'var(--fx-muted)', 
     border: 'none', 
     borderRadius: '12px', 
     cursor: 'pointer', 
@@ -616,7 +644,7 @@ const styles = {
   // -----------------------------------
   btnPreto: { 
     padding: '12px 20px', 
-    backgroundColor: '#1a1a1a', 
+    backgroundColor: 'var(--fx-surface-3)', 
     color: '#fff', 
     border: 'none', 
     borderRadius: '10px', 
@@ -631,7 +659,7 @@ const styles = {
     padding: '5px'
   },
   tabela: { 
-    border: '1px solid #eee', 
+    border: '1px solid var(--fx-line)', 
     borderRadius: '12px',
     overflow: 'hidden'
   },
@@ -639,7 +667,7 @@ const styles = {
     display: 'grid', 
     gridTemplateColumns: '1.2fr 1fr 1fr 1fr', 
     padding: '15px', 
-    borderBottom: '1px solid #eee', 
+    borderBottom: '1px solid var(--fx-line)', 
     alignItems: 'center',
     fontSize: '14px'
   },
@@ -656,7 +684,7 @@ const styles = {
   },
   btnAvaliar: { 
     backgroundColor: '#ffc107', 
-    color: '#000', 
+    color: 'var(--fx-text)', 
     border: 'none', 
     padding: '6px 12px', 
     borderRadius: '8px', 
@@ -665,7 +693,7 @@ const styles = {
     fontWeight: 'bold' 
   },
   cardFidelidade: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: 'var(--fx-surface-3)',
     color: '#fff',
     padding: '25px',
     borderRadius: '16px',
@@ -676,7 +704,7 @@ const styles = {
   },
   barraProgresso: {
     height: '12px',
-    backgroundColor: '#333',
+    backgroundColor: 'var(--fx-surface-3)',
     borderRadius: '6px',
     marginTop: '15px',
     overflow: 'hidden'
@@ -698,7 +726,7 @@ const styles = {
     backdropFilter: 'blur(4px)'
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: 'var(--fx-surface)',
     padding: '30px',
     borderRadius: '24px',
     width: '100%',
@@ -712,10 +740,10 @@ const styles = {
     height: '110px',
     padding: '15px',
     borderRadius: '15px',
-    border: '1px solid #ddd',
+    border: '1px solid var(--fx-line)',
     fontSize: '15px',
     fontFamily: 'inherit',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: 'var(--fx-surface-2)',
     resize: 'none',
     outline: 'none',
     boxSizing: 'border-box',
@@ -746,7 +774,7 @@ const styles = {
     flexDirection: 'column',
     gap: '6px',
     marginBottom: '15px',
-    color: '#ccc',
+    color: 'var(--fx-muted)',
     border: '1px solid rgba(255,255,255,0.05)'
   },
   barraProgressoNova: {
@@ -796,7 +824,7 @@ function AgendamentosAdminView({ empresaId }) {
       <h2 style={styles.titulo}>Gestão de Agendamentos</h2>
       
       {/* Filtros */}
-      <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+      <div style={{ background: 'var(--fx-surface)', padding: '20px', borderRadius: '12px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
         <div style={{ marginBottom: '15px' }}>
           <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Filtrar por Data:</label>
           <input type="date" value={filtroData} onChange={e => setFiltroData(e.target.value)} style={styles.input} />
@@ -813,10 +841,10 @@ function AgendamentosAdminView({ empresaId }) {
       </div>
 
       {/* Lista */}
-      <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
+      <div style={{ background: 'var(--fx-surface)', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: '#1a1a1a', color: '#fff', textAlign: 'left' }}>
+            <tr style={{ background: 'var(--fx-surface-3)', color: '#fff', textAlign: 'left' }}>
               <th style={{ padding: '15px' }}>Hora</th>
               <th style={{ padding: '15px' }}>Cliente</th>
               <th style={{ padding: '15px' }}>{termos.profissional}</th>
@@ -825,7 +853,7 @@ function AgendamentosAdminView({ empresaId }) {
           </thead>
           <tbody>
             {filtrados.length > 0 ? filtrados.map(a => (
-              <tr key={a.id} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={a.id} style={{ borderBottom: '1px solid var(--fx-line)' }}>
                 <td style={{ padding: '15px', fontWeight: 'bold' }}>{a.hora}</td>
                 <td style={{ padding: '15px' }}>{a.cliente_nome}</td>
                 <td style={{ padding: '15px' }}>{a.barbeiro_nome}</td>
@@ -835,7 +863,7 @@ function AgendamentosAdminView({ empresaId }) {
                   </button>
                 </td>
               </tr>
-            )) : <tr><td colSpan="4" style={{ padding: '30px', textAlign: 'center', color: '#999' }}>Nenhum agendamento para este filtro.</td></tr>}
+            )) : <tr><td colSpan="4" style={{ padding: '30px', textAlign: 'center', color: 'var(--fx-muted)' }}>Nenhum agendamento para este filtro.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -858,39 +886,27 @@ function FidelidadeView({ userId }) {
   // Se não tiver campanha ativa, o card simplesmente não aparece na tela
   if (!info || !info.ativa) return null; 
 
-  // Evita divisão por zero e calcula a porcentagem da barra
-  const pct = info.objetivo > 0 ? (info.progresso / info.objetivo) * 100 : 0;
 
+  const casas = Math.max(1, Math.min(20, info.objetivo || 0));
   return (
-    <div style={styles.cardFidelidadeNovo}>
-      <div style={styles.fidelidadeHeader}>
-        <h3 style={{ margin: 0, fontSize: '18px', color: '#fff' }}>{info.nome}</h3>
-        <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '12px', fontWeight: 'bold' }}>
-          Ação Ativa
-        </span>
+    <div className="oc-carimbos">
+      <div className="oc-carimbos-topo">
+        <div>
+          <span className="oc-rotulo"><b>●</b> {info.nome}</span>
+          <p className="oc-carimbos-premio">Complete {info.objetivo} atendimentos e ganhe <b>{info.premio}</b></p>
+        </div>
+        <div className="oc-carimbos-contagem"><b>{info.progresso}</b>/{info.objetivo}</div>
       </div>
-
-      <p style={{ fontSize: '14px', color: '#e5e7eb', margin: '15px 0 5px 0' }}>
-        Complete <b>{info.objetivo} cortes</b> e ganhe:
-      </p>
-      <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#ffc107', marginBottom: '15px' }}>
-        {info.premio}
+      <div className="oc-carimbos-grade" style={{ gridTemplateColumns: `repeat(${Math.min(casas, 10)}, 1fr)` }}>
+        {Array.from({ length: casas }).map((_, k) => (
+          <span key={k} className={`oc-carimbo-casa ${k < info.progresso ? 'feito' : ''} ${k === casas - 1 ? 'premio' : ''}`} style={{ animationDelay: `${k * 0.05}s` }}>
+            {k === casas - 1 ? '★' : k < info.progresso ? '✓' : String(k + 1).padStart(2, '0')}
+          </span>
+        ))}
       </div>
-
-      <div style={styles.fidelidadeRegras}>
-        <small>Válido até: {formatarDataSemFuso(info.data_fim)}</small>
-        {info.valor_minimo > 0 && <small>Serviços acima de: R$ {info.valor_minimo}</small>}
-      </div>
-
-      <div style={styles.barraProgressoNova}>
-        <div style={{ ...styles.progressoPreenchidoNovo, width: `${pct}%` }} />
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '13px' }}>
-        <span style={{ color: '#ccc' }}>{info.progresso} / {info.objetivo} concluídos</span>
-        <span style={{ color: info.ganhouPremio ? '#28a745' : '#ffc107', fontWeight: 'bold' }}>
-          {info.ganhouPremio ? "PRÊMIO LIBERADO!" : `Faltam ${info.faltam}`}
-        </span>
+      <div className="oc-carimbos-rodape">
+        <small>Válido até {formatarDataSemFuso(info.data_fim)}{info.valor_minimo > 0 ? ` · serviços acima de R$ ${info.valor_minimo}` : ''}</small>
+        <strong className={info.ganhouPremio ? 'ok' : ''}>{info.ganhouPremio ? 'Prêmio liberado!' : `Faltam ${info.faltam}`}</strong>
       </div>
     </div>
   );

@@ -4,14 +4,15 @@ import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import useEscToClose from '../../hooks/useEscToClose';
 import LoadingButton from '../../components/LoadingButton';
+import BotaoTema from '../../components/BotaoTema';
 import { API_URL } from '../../services/api';
 import { formatarDataSemFuso, partesDataSemFuso } from '../../utils/dataSemFuso';
 import { formatarDocumento } from '../../utils/validacao';
 
 const STATUS_LEAD_INFO = {
-  novo: { label: 'Novo', bg: '#dbeafe', fg: '#1e40af' },
-  contatado: { label: 'Contatado', bg: '#fef3c7', fg: '#92400e' },
-  fechado: { label: 'Fechado', bg: '#d1fae5', fg: '#065f46' }
+  novo: { label: 'Novo', bg: 'var(--fx-blue-bg)', fg: 'var(--fx-blue)' },
+  contatado: { label: 'Contatado', bg: 'var(--fx-amber-bg)', fg: 'var(--fx-amber)' },
+  fechado: { label: 'Fechado', bg: 'var(--fx-green-bg)', fg: 'var(--fx-green)' }
 };
 
 // Status da assinatura DA EMPRESA na plataforma (empresas.status_assinatura, ver
@@ -21,19 +22,19 @@ function infoStatusEmpresa(empresa) {
   // excluida_em é uma coluna separada de status_assinatura (soft delete, ver
   // sql/2026_empresas_exclusao.sql) — checa primeiro porque tem prioridade sobre qualquer status.
   if (empresa.excluida_em) {
-    return { label: 'Excluída', bg: '#f3f4f6', fg: '#6b7280' };
+    return { label: 'Excluída', bg: 'var(--fx-surface-2)', fg: 'var(--fx-muted)' };
   }
   if (empresa.status_assinatura === 'ativa' && empresa.cancelamento_agendado && empresa.proxima_cobranca_em) {
-    return { label: `Cancelamento agendado p/ ${formatarData(empresa.proxima_cobranca_em)}`, bg: '#fef3c7', fg: '#92400e' };
+    return { label: `Cancelamento agendado p/ ${formatarData(empresa.proxima_cobranca_em)}`, bg: 'var(--fx-amber-bg)', fg: 'var(--fx-amber)' };
   }
   const mapa = {
-    trial: { label: 'Em teste', bg: '#dbeafe', fg: '#1e40af' },
-    ativa: { label: 'Em dia', bg: '#d1fae5', fg: '#065f46' },
-    inadimplente: { label: 'Inadimplente', bg: '#fee2e2', fg: '#991b1b' },
-    suspensa: { label: 'Suspensa', bg: '#fee2e2', fg: '#991b1b' },
-    cancelada: { label: 'Cancelada', bg: '#f3f4f6', fg: '#374151' }
+    trial: { label: 'Em teste', bg: 'var(--fx-blue-bg)', fg: 'var(--fx-blue)' },
+    ativa: { label: 'Em dia', bg: 'var(--fx-green-bg)', fg: 'var(--fx-green)' },
+    inadimplente: { label: 'Inadimplente', bg: 'var(--fx-red-bg)', fg: 'var(--fx-red)' },
+    suspensa: { label: 'Suspensa', bg: 'var(--fx-red-bg)', fg: 'var(--fx-red)' },
+    cancelada: { label: 'Cancelada', bg: 'var(--fx-surface-2)', fg: 'var(--fx-text)' }
   };
-  return mapa[empresa.status_assinatura] || { label: empresa.status_assinatura || 'Sem status', bg: '#f3f4f6', fg: '#6b7280' };
+  return mapa[empresa.status_assinatura] || { label: empresa.status_assinatura || 'Sem status', bg: 'var(--fx-surface-2)', fg: 'var(--fx-muted)' };
 }
 
 // Mesmo enum de backend/src/schemas/index.js (verticalEnum) — rótulo legível pro select de troca
@@ -270,67 +271,42 @@ function SuperAdminDashboard() {
   }, [totalPendencias]);
   const contadorDoItem = (valor) => (valor === 'suporte' ? totalPendencias : 0);
 
+  // Mesma casca do painel da empresa (components/Layout.js + estilo/admin-oficio.css): menu de
+  // vidro agrupado por seção, faixa do topo com a trilha da aba e gaveta no celular.
   return (
-    <div style={s.pagina}>
-      {menuAberto && (
-        <div className="bb-sidebar-overlay" onClick={() => setMenuAberto(false)} />
-      )}
+    <div className="oa-admin oa-absoluto" style={s.pagina}>
+      <div className="oc-fundo" aria-hidden="true" />
+      {menuAberto && <div className="oa-veu" onClick={() => setMenuAberto(false)} />}
 
-      {/* Faixa fixa atrás do botão de hambúrguer no mobile (só aparece via CSS), pra o botão não
-          ficar flutuando por cima do conteúdo quando a página rola. */}
-      <div className="sa-topbar">
-        <span className="sa-topbar-titulo">{itemAtivo?.label || 'Admin absoluto'}</span>
-      </div>
-
-      <button
-        className="bb-mobile-menu-btn"
-        onClick={() => setMenuAberto((prev) => !prev)}
-        aria-label={totalPendencias ? `Abrir menu (${totalPendencias} pendência(s) no suporte)` : 'Abrir menu'}
-      >
-        <Icons.Menu color="#fff" />
-        {totalPendencias > 0 && <span style={{ ...s.balaoContador, ...s.balaoContadorSobreIcone }}>{totalPendencias}</span>}
-      </button>
-
-      <aside
-        className={`bb-sidebar sa-sidebar${menuAberto ? ' aberto' : ''}`}
-        style={{ ...s.sidebar, width: menuAberto ? '250px' : '70px', padding: menuAberto ? '14px 14px 20px' : '14px 10px 20px' }}
-        onMouseEnter={() => { if (podeUsarHover()) setMenuAberto(true); }}
-        onMouseLeave={() => { if (podeUsarHover()) setMenuAberto(false); }}
-      >
-        <button style={s.btnMenu} onClick={() => setMenuAberto((prev) => !prev)} aria-label={menuAberto ? 'Fechar menu' : 'Abrir menu'}>
-          <Icons.Menu color="#fff" />
-        </button>
-
-        {menuAberto && (
-          <div style={s.sidebarTopo}>
-            <img src="/icon-schednext.png" alt="SchedNext" style={s.logoSidebar} />
-            <div>
-              <p style={s.sidebarTitulo}>SchedNext</p>
-              <p style={s.sidebarSubtitulo}>Admin absoluto</p>
-            </div>
+      <aside className={`oa-menu${menuAberto ? ' aberto' : ''}`}>
+        <div className="oa-marca">
+          <div className="oa-marca-logo oa-marca-logo-sn">
+            <img src="/icon-schednext.png" alt="SchedNext" />
           </div>
-        )}
+          <div className="oa-marca-texto">
+            <p className="oa-marca-nome">SchedNext</p>
+            <p className="oa-marca-sub">Admin absoluto</p>
+          </div>
+        </div>
 
-        <nav style={s.nav}>
-          {GRUPOS_MENU.map((grupo) => (
-            <div key={grupo.titulo} style={menuAberto ? s.grupoMenu : s.grupoMenuRecolhido}>
-              {menuAberto && <p style={s.grupoTitulo}>{grupo.titulo}</p>}
+        <nav className="oa-nav">
+          {GRUPOS_MENU.map((grupo, gi) => (
+            <div key={grupo.titulo} className="oa-grupo">
+              <p className="oa-grupo-titulo"><i>{String(gi + 1).padStart(2, '0')}</i>{grupo.titulo}</p>
               {grupo.itens.map(({ valor, label, icon }) => {
                 const IconeItem = Icons[icon];
                 const contador = contadorDoItem(valor);
                 return (
                   <button
                     key={valor}
+                    type="button"
                     onClick={() => escolherAba(valor)}
                     title={contador ? `${label} (${contador} aguardando)` : label}
-                    style={{ ...s.navItem, ...(menuAberto ? {} : s.navItemRecolhido), ...(aba === valor ? s.navItemAtivo : {}) }}
+                    className={`oa-item${aba === valor ? ' ativo' : ''}`}
                   >
-                    <span style={{ position: 'relative', display: 'inline-flex' }}>
-                      <IconeItem color={aba === valor ? '#fff' : '#9ca3af'} />
-                      {contador > 0 && !menuAberto && <span style={{ ...s.balaoContador, ...s.balaoContadorSobreIcone }}>{contador}</span>}
-                    </span>
-                    {menuAberto && label}
-                    {contador > 0 && menuAberto && <span style={{ ...s.balaoContador, marginLeft: 'auto' }}>{contador}</span>}
+                    <IconeItem color="currentColor" />
+                    {label}
+                    {contador > 0 && <span className="oa-balao">{contador}</span>}
                   </button>
                 );
               })}
@@ -338,12 +314,37 @@ function SuperAdminDashboard() {
           ))}
         </nav>
 
-        <button onClick={sair} title="Sair" style={{ ...s.navSair, ...(menuAberto ? {} : s.navItemRecolhido) }}>
-          <Icons.LogOut color="#f87171" /> {menuAberto && 'Sair'}
-        </button>
+        <div className="oa-rodape">
+          <BotaoTema className="oa-item" comRotulo />
+          <button type="button" className="oa-item oa-sair" onClick={sair}>
+            <Icons.LogOut color="currentColor" /> Sair
+          </button>
+        </div>
       </aside>
 
-      <main ref={mainRef} className="bb-main" style={s.main}>
+      <main ref={mainRef} className="oa-principal">
+        <div className="oa-topo">
+          <div className="oa-trilha">
+            <button
+              type="button"
+              className="oa-botao-menu"
+              onClick={() => setMenuAberto((prev) => !prev)}
+              aria-label={totalPendencias ? `Abrir menu (${totalPendencias} pendência(s) no suporte)` : 'Abrir menu'}
+            >
+              <Icons.Menu color="currentColor" />
+              {totalPendencias > 0 && <span className="oa-balao oa-balao-icone">{totalPendencias}</span>}
+            </button>
+            <span>Plataforma</span><span>/</span><b>{itemAtivo?.label || 'Admin absoluto'}</b>
+          </div>
+          <div className="oa-topo-dir">
+            {totalPendencias > 0 && (
+              <button type="button" className="oa-alerta-topo" onClick={() => escolherAba('suporte')}>
+                {totalPendencias} no suporte
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="sa-container" style={s.container}>
           <header className="sa-header" style={s.header}>
             <h1 style={s.titulo}>{itemAtivo?.label || 'Painel da plataforma'}</h1>
@@ -430,12 +431,12 @@ function AbaMetricas({ toast }) {
       ) : (
         <div>
           <div style={s.statsGrid}>
-            <StatCard label="Empresas na plataforma (hoje)" valor={metricas.total_empresas} cor="#2563eb" icon="Building" />
-            <StatCard label="MRR atual (planos pagos ativos)" valor={metricas.mrr.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} cor="#059669" icon="TrendingUp" />
-            <StatCard label={`Cadastradas em ${rotuloPeriodo}`} valor={metricas.cadastradas_no_periodo} cor="#7c3aed" icon="Building" />
-            <StatCard label={`A receber em ${rotuloPeriodo}`} valor={metricas.a_receber_no_periodo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} cor="#d97706" icon="TrendingUp" />
+            <StatCard label="Empresas na plataforma (hoje)" valor={metricas.total_empresas} cor="var(--fx-blue)" icon="Building" />
+            <StatCard label="MRR atual (planos pagos ativos)" valor={metricas.mrr.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} cor="var(--fx-green)" icon="TrendingUp" />
+            <StatCard label={`Cadastradas em ${rotuloPeriodo}`} valor={metricas.cadastradas_no_periodo} cor="var(--fx-violet)" icon="Building" />
+            <StatCard label={`A receber em ${rotuloPeriodo}`} valor={metricas.a_receber_no_periodo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} cor="var(--fx-amber)" icon="TrendingUp" />
           </div>
-          <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '-8px', marginBottom: '20px' }}>
+          <p style={{ fontSize: '12px', color: 'var(--fx-faint)', marginTop: '-8px', marginBottom: '20px' }}>
             "Empresas na plataforma" e "MRR atual" são sempre um retrato de agora. "Cadastradas" e "A receber" seguem o período selecionado acima, e "a receber" reflete só a próxima cobrança agendada de cada empresa, não uma projeção do ano inteiro.
           </p>
 
@@ -581,12 +582,12 @@ function useTelaEstreita(limite = 760) {
 
 // Variação contra o período anterior, sempre com seta + texto (nunca só cor).
 function Variacao({ atual, anterior }) {
-  if (!anterior && !atual) return <span style={{ color: '#9ca3af' }}>sem dados antes</span>;
-  if (!anterior) return <span style={{ color: '#059669', fontWeight: 700 }}>novo</span>;
+  if (!anterior && !atual) return <span style={{ color: 'var(--fx-faint)' }}>sem dados antes</span>;
+  if (!anterior) return <span style={{ color: 'var(--fx-green)', fontWeight: 700 }}>novo</span>;
   const delta = ((atual - anterior) / anterior) * 100;
   const subiu = delta >= 0;
   return (
-    <span style={{ color: subiu ? '#059669' : '#dc2626', fontWeight: 700, whiteSpace: 'nowrap' }}>
+    <span style={{ color: subiu ? 'var(--fx-green)' : 'var(--fx-red)', fontWeight: 700, whiteSpace: 'nowrap' }}>
       {subiu ? '▲' : '▼'} {pctBr(Math.abs(delta))}
     </span>
   );
@@ -596,8 +597,8 @@ function CardKpi({ label, valor, atual, anterior, cor, detalhe }) {
   return (
     <div style={{ ...s.statCard, borderTopColor: cor }}>
       <div style={s.statLabel}>{label}</div>
-      <div style={{ ...s.statNumero, color: '#111827', marginTop: '8px' }}>{valor}</div>
-      <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+      <div style={{ ...s.statNumero, color: 'var(--fx-text)', marginTop: '8px' }}>{valor}</div>
+      <div style={{ fontSize: '12px', color: 'var(--fx-muted)', marginTop: '4px' }}>
         {anterior !== undefined && <><Variacao atual={atual} anterior={anterior} /> vs período anterior</>}
         {detalhe}
       </div>
@@ -605,7 +606,7 @@ function CardKpi({ label, valor, atual, anterior, cor, detalhe }) {
   );
 }
 
-const COR_FLUXO = '#bfcffb';
+const COR_FLUXO = 'rgba(76, 116, 240, 0.32)';
 const COR_ETAPA = '#2554eb';
 const COR_PERDA = '#e5484d';
 
@@ -631,9 +632,9 @@ function FunilFaixas({ etapas }) {
           {etapas.map((e, i) => {
             const anterior = i > 0 ? etapas[i - 1].sessoes : null;
             return (
-              <div key={e.chave} style={{ paddingRight: '10px', fontSize: '12px', color: '#6b7280', lineHeight: 1.45 }}>
-                <div style={{ fontWeight: 700, color: '#111827', fontSize: '12.5px', minHeight: '34px' }}>{e.label}</div>
-                <div style={{ fontSize: '18px', fontWeight: 800, color: '#111827' }}>{numeroBr(e.sessoes)}</div>
+              <div key={e.chave} style={{ paddingRight: '10px', fontSize: '12px', color: 'var(--fx-muted)', lineHeight: 1.45 }}>
+                <div style={{ fontWeight: 700, color: 'var(--fx-text)', fontSize: '12.5px', minHeight: '34px' }}>{e.label}</div>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--fx-text)' }}>{numeroBr(e.sessoes)}</div>
                 <div>ant. {numeroBr(e.sessoes_anterior)} · <Variacao atual={e.sessoes} anterior={e.sessoes_anterior} /></div>
                 {anterior !== null && <div title="Dos que chegaram na etapa anterior, quantos chegaram nesta">▸ {pctBr(taxa(e.sessoes, anterior))} da etapa anterior</div>}
               </div>
@@ -684,10 +685,10 @@ function FunilFaixas({ etapas }) {
             const proxima = etapas[i + 1];
             const perda = proxima ? e.sessoes - proxima.sessoes : 0;
             return (
-              <div key={e.chave} style={{ fontSize: '12px', paddingLeft: '30%', color: '#6b7280' }}>
+              <div key={e.chave} style={{ fontSize: '12px', paddingLeft: '30%', color: 'var(--fx-muted)' }}>
                 {proxima && perda > 0 && (
                   <>
-                    <div style={{ color: '#b91c1c', fontWeight: 700 }}>−{numeroBr(perda)}</div>
+                    <div style={{ color: 'var(--fx-red)', fontWeight: 700 }}>−{numeroBr(perda)}</div>
                     <div>{pctBr(taxa(perda, e.sessoes))} saíram</div>
                   </>
                 )}
@@ -710,17 +711,17 @@ function FunilLista({ etapas }) {
         const proxima = etapas[i + 1];
         const perda = proxima ? e.sessoes - proxima.sessoes : 0;
         return (
-          <div key={e.chave} style={{ padding: '10px 0', borderBottom: i < etapas.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+          <div key={e.chave} style={{ padding: '10px 0', borderBottom: i < etapas.length - 1 ? '1px solid var(--fx-line)' : 'none' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>{i + 1}. {e.label}</span>
-              <span style={{ fontSize: '16px', fontWeight: 800, color: '#111827' }}>{numeroBr(e.sessoes)}</span>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--fx-text)' }}>{i + 1}. {e.label}</span>
+              <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--fx-text)' }}>{numeroBr(e.sessoes)}</span>
             </div>
-            <div style={{ height: '10px', background: '#f3f4f6', borderRadius: '4px', margin: '6px 0', overflow: 'hidden' }}>
+            <div style={{ height: '10px', background: 'var(--fx-surface-2)', borderRadius: '4px', margin: '6px 0', overflow: 'hidden' }}>
               <div style={{ width: `${taxa(e.sessoes, topo)}%`, minWidth: e.sessoes ? '3px' : 0, height: '100%', background: COR_ETAPA, borderRadius: '4px' }} />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 10px', fontSize: '12px', color: '#6b7280' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 10px', fontSize: '12px', color: 'var(--fx-muted)' }}>
               <span>{pctBr(taxa(e.sessoes, topo))} do total · <Variacao atual={e.sessoes} anterior={e.sessoes_anterior} /></span>
-              {proxima && perda > 0 && <span style={{ color: '#b91c1c', fontWeight: 700 }}>▼ {numeroBr(perda)} saíram ({pctBr(taxa(perda, e.sessoes))})</span>}
+              {proxima && perda > 0 && <span style={{ color: 'var(--fx-red)', fontWeight: 700 }}>▼ {numeroBr(perda)} saíram ({pctBr(taxa(perda, e.sessoes))})</span>}
             </div>
           </div>
         );
@@ -738,23 +739,23 @@ function ListaBarras({ itens, rotulo = (c) => c, vazio = 'Sem dados nesse perío
   return (
     <div>
       {itens.map((item) => (
-        <div key={item.chave} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6' }} title={cols.map((c) => `${c.titulo}: ${c.formatar ? c.formatar(item) : numeroBr(item[c.chave])}`).join(' · ')}>
+        <div key={item.chave} style={{ padding: '8px 0', borderBottom: '1px solid var(--fx-line)' }} title={cols.map((c) => `${c.titulo}: ${c.formatar ? c.formatar(item) : numeroBr(item[c.chave])}`).join(' · ')}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '13px' }}>
-            <span style={{ color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{rotulo(item.chave)}</span>
-            <span style={{ display: 'flex', gap: '12px', flexShrink: 0, color: '#6b7280', fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ color: 'var(--fx-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{rotulo(item.chave)}</span>
+            <span style={{ display: 'flex', gap: '12px', flexShrink: 0, color: 'var(--fx-muted)', fontVariantNumeric: 'tabular-nums' }}>
               {cols.map((c, i) => (
-                <span key={c.chave} style={i === 0 ? { color: '#111827', fontWeight: 700 } : undefined}>
+                <span key={c.chave} style={i === 0 ? { color: 'var(--fx-text)', fontWeight: 700 } : undefined}>
                   {c.formatar ? c.formatar(item) : numeroBr(item[c.chave])}
                 </span>
               ))}
             </span>
           </div>
-          <div style={{ height: '6px', background: '#f3f4f6', borderRadius: '3px', marginTop: '5px', overflow: 'hidden' }}>
+          <div style={{ height: '6px', background: 'var(--fx-surface-2)', borderRadius: '3px', marginTop: '5px', overflow: 'hidden' }}>
             <div style={{ width: `${taxa(item[principal] || 0, max)}%`, height: '100%', background: COR_ETAPA, borderRadius: '3px' }} />
           </div>
         </div>
       ))}
-      <p style={{ fontSize: '11px', color: '#9ca3af', margin: '8px 0 0' }}>Colunas: {cols.map((c) => c.titulo).join(' · ')}</p>
+      <p style={{ fontSize: '11px', color: 'var(--fx-faint)', margin: '8px 0 0' }}>Colunas: {cols.map((c) => c.titulo).join(' · ')}</p>
     </div>
   );
 }
@@ -775,14 +776,14 @@ function SerieDiaria({ serie }) {
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '140px', minWidth: `${Math.min(serie.length * 10, 900)}px` }}>
         {serie.map((d, i) => (
           <div key={d.dia} title={`${formatarDataSemFuso(d.dia)}: ${numeroBr(d.sessoes)} sessões, ${numeroBr(d.contas)} conta(s) criada(s)`} style={{ flex: '1 0 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-            <div style={{ width: '100%', maxWidth: '22px', height: `${taxa(d.sessoes, max)}%`, minHeight: d.sessoes ? '2px' : 0, background: d.contas ? COR_ETAPA : '#93acf6', borderRadius: '3px 3px 0 0' }} />
-            <span style={{ fontSize: '9.5px', color: '#9ca3af', marginTop: '4px', height: '12px', whiteSpace: 'nowrap' }}>
+            <div style={{ width: '100%', maxWidth: '22px', height: `${taxa(d.sessoes, max)}%`, minHeight: d.sessoes ? '2px' : 0, background: d.contas ? COR_ETAPA : 'rgba(125, 211, 252, 0.45)', borderRadius: '3px 3px 0 0' }} />
+            <span style={{ fontSize: '9.5px', color: 'var(--fx-faint)', marginTop: '4px', height: '12px', whiteSpace: 'nowrap' }}>
               {i % passoRotulo === 0 ? d.dia.slice(8, 10) + '/' + d.dia.slice(5, 7) : ''}
             </span>
           </div>
         ))}
       </div>
-      <p style={{ fontSize: '11px', color: '#9ca3af', margin: '6px 0 0' }}>Sessões por dia. Barras em azul escuro = dias com pelo menos uma conta criada.</p>
+      <p style={{ fontSize: '11px', color: 'var(--fx-faint)', margin: '6px 0 0' }}>Sessões por dia. Barras em azul escuro = dias com pelo menos uma conta criada.</p>
     </div>
   );
 }
@@ -832,7 +833,7 @@ function AbaFunil({ toast }) {
       <div className="sa-barra-top" style={s.barraTop}>
         <div className="sa-filtros" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">De</span><input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} /></label>
-          <span className="sa-ate" style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
+          <span className="sa-ate" style={{ color: 'var(--fx-faint)', fontSize: '13px' }}>até</span>
           <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">Até</span><input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} /></label>
           <select style={s.selectFiltro} value={dispositivo} onChange={(e) => setDispositivo(e.target.value)}>
             <option value="">Todos os dispositivos</option>
@@ -856,25 +857,25 @@ function AbaFunil({ toast }) {
         <p style={s.textoVazio}>Não foi possível carregar o funil.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <p style={{ fontSize: '12px', color: '#9ca3af', margin: 0 }}>
+          <p style={{ fontSize: '12px', color: 'var(--fx-faint)', margin: 0 }}>
             Comparando com {formatarDataSemFuso(dados.periodo.inicio_anterior)} a {formatarDataSemFuso(dados.periodo.fim_anterior)} (período anterior de mesmo tamanho).
             Cada "sessão" é uma visita: termina depois de 30 minutos parada.
           </p>
 
           <div style={{ ...s.statsGrid, marginBottom: 0 }}>
-            <CardKpi label="Visitas (sessões)" valor={numeroBr(r.sessoes)} atual={r.sessoes} anterior={r.sessoes_anterior} cor="#2563eb" />
-            <CardKpi label="Pessoas diferentes" valor={numeroBr(r.visitantes)} atual={r.visitantes} anterior={r.visitantes_anterior} cor="#7c3aed" />
-            <CardKpi label="Contas criadas" valor={numeroBr(r.contas)} atual={r.contas} anterior={r.contas_anterior} cor="#059669" />
+            <CardKpi label="Visitas (sessões)" valor={numeroBr(r.sessoes)} atual={r.sessoes} anterior={r.sessoes_anterior} cor="var(--fx-blue)" />
+            <CardKpi label="Pessoas diferentes" valor={numeroBr(r.visitantes)} atual={r.visitantes} anterior={r.visitantes_anterior} cor="var(--fx-violet)" />
+            <CardKpi label="Contas criadas" valor={numeroBr(r.contas)} atual={r.contas} anterior={r.contas_anterior} cor="var(--fx-green)" />
             <CardKpi
               label="Conversão do site"
               valor={pctBr(taxa(r.contas, r.sessoes), 2)}
-              cor="#d97706"
+              cor="var(--fx-amber)"
               detalhe={<>antes: {pctBr(taxa(r.contas_anterior, r.sessoes_anterior), 2)}</>}
             />
             <CardKpi
               label="Clicaram em Entrar"
               valor={numeroBr(r.entrar)}
-              cor="#0891b2"
+              cor="var(--fx-blue)"
               detalhe={<>{numeroBr(r.logins)} fizeram login ({pctBr(taxa(r.logins, r.entrar))})</>}
             />
           </div>
@@ -936,7 +937,7 @@ function AbaFunil({ toast }) {
           <div style={s.card}>
             <h3 style={s.cardTitulo}>Campanhas (links com utm_campaign)</h3>
             <ListaBarras itens={dados.campanhas} colunas={COLUNAS_CONVERSAO} vazio="Nenhuma visita por link de campanha nesse período." />
-            <p style={{ fontSize: '12px', color: '#6b7280', margin: '10px 0 0', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '12px', color: 'var(--fx-muted)', margin: '10px 0 0', lineHeight: 1.5 }}>
               Pra separar cada divulgação, use links como <code>schednext.com.br/?utm_source=instagram&amp;utm_medium=bio&amp;utm_campaign=lancamento</code>.
               Anúncios do Google e do Meta já chegam marcados sozinhos (gclid/fbclid) e entram como "Anúncios pagos".
             </p>
@@ -958,7 +959,7 @@ function AbaFunil({ toast }) {
               vazio="Sem localização registrada nesse período."
             />
             {r.sem_localizacao > 0 && (
-              <p style={{ fontSize: '12px', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '8px 10px', margin: '10px 0 0' }}>
+              <p style={{ fontSize: '12px', color: 'var(--fx-amber)', background: 'var(--fx-amber-bg)', border: '1px solid var(--fx-amber-line)', borderRadius: '8px', padding: '8px 10px', margin: '10px 0 0' }}>
                 {numeroBr(r.sem_localizacao)} visita(s) sem localização (IP não identificado ou consulta de localização indisponível no momento).
               </p>
             )}
@@ -1024,7 +1025,7 @@ function AbaFunil({ toast }) {
               </div>
               <div>
                 <p style={{ ...s.subTexto, marginBottom: '6px' }}>Código de confirmação errado/expirado</p>
-                <p style={{ fontSize: '22px', fontWeight: 800, color: '#111827', margin: 0 }}>{numeroBr(dados.abandono.erros_codigo)}</p>
+                <p style={{ fontSize: '22px', fontWeight: 800, color: 'var(--fx-text)', margin: 0 }}>{numeroBr(dados.abandono.erros_codigo)}</p>
               </div>
             </div>
           </div>
@@ -1172,7 +1173,7 @@ function AbaFinanceiro({ toast }) {
       <div className="sa-barra-top" style={s.barraTop}>
         <div className="sa-filtros" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">De</span><input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} /></label>
-          <span className="sa-ate" style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
+          <span className="sa-ate" style={{ color: 'var(--fx-faint)', fontSize: '13px' }}>até</span>
           <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">Até</span><input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} /></label>
           <select className="sa-filtro-largo" style={s.selectFiltro} value={agrupamento} onChange={(e) => setAgrupamento(e.target.value)}>
             <option value="dia">Por dia</option>
@@ -1191,10 +1192,10 @@ function AbaFinanceiro({ toast }) {
       ) : (
         <div>
           <div style={s.statsGrid}>
-            <StatCard label="Faturamento bruto" valor={formatarMoeda(financeiro.resumo.faturamento_bruto)} cor="#2563eb" icon="DollarSign" />
-            <StatCard label="Receita líquida" valor={formatarMoeda(financeiro.resumo.receita_liquida)} cor="#059669" icon="TrendingUp" />
-            <StatCard label="Descontos e taxas" valor={`${formatarMoeda(financeiro.resumo.descontos_valor)} (${financeiro.resumo.descontos_pct}%)`} cor="#d97706" icon="Tag" />
-            <StatCard label="Transações no período" valor={financeiro.resumo.quantidade_transacoes} cor="#6d28d9" icon="BarChart" />
+            <StatCard label="Faturamento bruto" valor={formatarMoeda(financeiro.resumo.faturamento_bruto)} cor="var(--fx-blue)" icon="DollarSign" />
+            <StatCard label="Receita líquida" valor={formatarMoeda(financeiro.resumo.receita_liquida)} cor="var(--fx-green)" icon="TrendingUp" />
+            <StatCard label="Descontos e taxas" valor={`${formatarMoeda(financeiro.resumo.descontos_valor)} (${financeiro.resumo.descontos_pct}%)`} cor="var(--fx-amber)" icon="Tag" />
+            <StatCard label="Transações no período" valor={financeiro.resumo.quantidade_transacoes} cor="var(--fx-violet)" icon="BarChart" />
           </div>
 
           <div style={s.gridDuasColunas}>
@@ -1286,7 +1287,7 @@ function BarraGrafico({ dados }) {
       {dados.map((d) => (
         <div key={d.periodo} title={`${d.periodo}: ${formatarMoeda(d.bruto)}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '28px', flex: '1 0 auto' }}>
           <div style={{ width: '100%', maxWidth: '28px', height: `${Math.max((d.bruto / maximo) * 120, 2)}px`, background: 'linear-gradient(180deg, #4c74f0, #2554eb)', borderRadius: '4px 4px 0 0' }} />
-          <span style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px', whiteSpace: 'nowrap' }}>{d.periodo.slice(5) || d.periodo}</span>
+          <span style={{ fontSize: '10px', color: 'var(--fx-faint)', marginTop: '4px', whiteSpace: 'nowrap' }}>{d.periodo.slice(5) || d.periodo}</span>
         </div>
       ))}
     </div>
@@ -1298,10 +1299,10 @@ function BarraRanking({ label, valor, maximo, sufixo }) {
   const percentual = maximo > 0 ? Math.max((valor / maximo) * 100, 2) : 0;
   return (
     <div style={{ marginBottom: '10px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#374151', marginBottom: '4px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--fx-text)', marginBottom: '4px' }}>
         <span>{label}</span><strong>{sufixo}</strong>
       </div>
-      <div style={{ background: '#f3f4f6', borderRadius: '6px', height: '8px', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--fx-surface-2)', borderRadius: '6px', height: '8px', overflow: 'hidden' }}>
         <div style={{ width: `${percentual}%`, background: 'linear-gradient(90deg, #4c74f0, #2554eb)', height: '100%', borderRadius: '6px' }} />
       </div>
     </div>
@@ -1309,11 +1310,11 @@ function BarraRanking({ label, valor, maximo, sufixo }) {
 }
 
 const STATUS_CONTA_INFO = {
-  pendente: { label: 'Pendente', bg: '#fef3c7', fg: '#92400e' },
-  atrasado: { label: 'Atrasado', bg: '#fee2e2', fg: '#991b1b' },
-  pago: { label: 'Pago', bg: '#d1fae5', fg: '#065f46' },
-  recebido: { label: 'Recebido', bg: '#d1fae5', fg: '#065f46' },
-  cancelado: { label: 'Cancelado', bg: '#f3f4f6', fg: '#374151' }
+  pendente: { label: 'Pendente', bg: 'var(--fx-amber-bg)', fg: 'var(--fx-amber)' },
+  atrasado: { label: 'Atrasado', bg: 'var(--fx-red-bg)', fg: 'var(--fx-red)' },
+  pago: { label: 'Pago', bg: 'var(--fx-green-bg)', fg: 'var(--fx-green)' },
+  recebido: { label: 'Recebido', bg: 'var(--fx-green-bg)', fg: 'var(--fx-green)' },
+  cancelado: { label: 'Cancelado', bg: 'var(--fx-surface-2)', fg: 'var(--fx-text)' }
 };
 
 const FORMA_PAGAMENTO_OPCOES = [
@@ -1361,7 +1362,7 @@ function dataPrevistaPorAncora(diaAncora, competenciaAnoMes) {
 }
 
 function BadgeStatusConta({ status }) {
-  const info = STATUS_CONTA_INFO[status] || { label: status, bg: '#f3f4f6', fg: '#6b7280' };
+  const info = STATUS_CONTA_INFO[status] || { label: status, bg: 'var(--fx-surface-2)', fg: 'var(--fx-muted)' };
   return <span style={{ ...s.badge, background: info.bg, color: info.fg }}>{info.label}</span>;
 }
 
@@ -1617,7 +1618,7 @@ function ContasPagarPainel({ toast, confirmar }) {
           </select>
           <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">Competência</span><input type="month" title="Filtrar por competência" style={s.selectFiltro} value={competenciaFiltro} onChange={(e) => setCompetenciaFiltro(e.target.value)} /></label>
           <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">De</span><input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} /></label>
-          <span className="sa-ate" style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
+          <span className="sa-ate" style={{ color: 'var(--fx-faint)', fontSize: '13px' }}>até</span>
           <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">Até</span><input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} /></label>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -1629,10 +1630,10 @@ function ContasPagarPainel({ toast, confirmar }) {
 
       {resumo && (
         <div style={s.statsGrid}>
-          <StatCard label="Pendente" valor={formatarMoeda(resumo.pendente.valor)} cor="#d97706" icon="DollarSign" />
-          <StatCard label="Atrasado" valor={formatarMoeda(resumo.atrasado.valor)} cor="#dc2626" icon="DollarSign" />
-          <StatCard label="Pago" valor={formatarMoeda(resumo.concluido.valor)} cor="#059669" icon="DollarSign" />
-          <StatCard label="Total lançado" valor={formatarMoeda(resumo.valor_total)} cor="#2563eb" icon="Wallet" />
+          <StatCard label="Pendente" valor={formatarMoeda(resumo.pendente.valor)} cor="var(--fx-amber)" icon="DollarSign" />
+          <StatCard label="Atrasado" valor={formatarMoeda(resumo.atrasado.valor)} cor="var(--fx-red)" icon="DollarSign" />
+          <StatCard label="Pago" valor={formatarMoeda(resumo.concluido.valor)} cor="var(--fx-green)" icon="DollarSign" />
+          <StatCard label="Total lançado" valor={formatarMoeda(resumo.valor_total)} cor="var(--fx-blue)" icon="Wallet" />
         </div>
       )}
 
@@ -1653,7 +1654,7 @@ function ContasPagarPainel({ toast, confirmar }) {
                     <td style={s.td}>{formatarCompetencia(c.competencia)}</td>
                     <td style={s.td}>{formatarDataSemFuso(c.data_vencimento)}</td>
                     <td style={s.td}>
-                      <strong style={{ color: '#111827' }}>{c.beneficiario_nome}</strong>
+                      <strong style={{ color: 'var(--fx-text)' }}>{c.beneficiario_nome}</strong>
                       {c.beneficiario_documento && <div style={s.subTexto}>{c.beneficiario_documento}</div>}
                     </td>
                     <td style={s.td}>{c.descricao}</td>
@@ -1740,7 +1741,7 @@ function ModalContaPagar({ conta, onFechar, onSalvo, toast }) {
     <div className="sa-overlay" style={s.overlay} onClick={onFechar}>
       <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
         <div style={s.modalHeader}>
-          <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{conta ? 'Editar conta a pagar' : 'Nova conta a pagar'}</h3>
+          <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)' }}>{conta ? 'Editar conta a pagar' : 'Nova conta a pagar'}</h3>
           <button onClick={onFechar} style={s.btnFechar}><Icons.Close /></button>
         </div>
 
@@ -1957,7 +1958,7 @@ function ContasReceberPainel({ toast, confirmar }) {
           </select>
           <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">Competência</span><input type="month" title="Filtrar por competência" style={s.selectFiltro} value={competenciaFiltro} onChange={(e) => setCompetenciaFiltro(e.target.value)} /></label>
           <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">De</span><input type="date" style={s.selectFiltro} value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} /></label>
-          <span className="sa-ate" style={{ color: '#9ca3af', fontSize: '13px' }}>até</span>
+          <span className="sa-ate" style={{ color: 'var(--fx-faint)', fontSize: '13px' }}>até</span>
           <label className="sa-campo-filtro"><span className="sa-rotulo-filtro">Até</span><input type="date" style={s.selectFiltro} value={dataFim} onChange={(e) => setDataFim(e.target.value)} /></label>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -1970,10 +1971,10 @@ function ContasReceberPainel({ toast, confirmar }) {
 
       {resumo && (
         <div style={s.statsGrid}>
-          <StatCard label="Pendente" valor={formatarMoeda(resumo.pendente.valor)} cor="#d97706" icon="DollarSign" />
-          <StatCard label="Atrasado" valor={formatarMoeda(resumo.atrasado.valor)} cor="#dc2626" icon="DollarSign" />
-          <StatCard label="Recebido" valor={formatarMoeda(resumo.concluido.valor)} cor="#059669" icon="DollarSign" />
-          <StatCard label="Total lançado" valor={formatarMoeda(resumo.valor_total)} cor="#2563eb" icon="Wallet" />
+          <StatCard label="Pendente" valor={formatarMoeda(resumo.pendente.valor)} cor="var(--fx-amber)" icon="DollarSign" />
+          <StatCard label="Atrasado" valor={formatarMoeda(resumo.atrasado.valor)} cor="var(--fx-red)" icon="DollarSign" />
+          <StatCard label="Recebido" valor={formatarMoeda(resumo.concluido.valor)} cor="var(--fx-green)" icon="DollarSign" />
+          <StatCard label="Total lançado" valor={formatarMoeda(resumo.valor_total)} cor="var(--fx-blue)" icon="Wallet" />
         </div>
       )}
 
@@ -2137,7 +2138,7 @@ function ModalContaReceber({ conta, empresaPreSelecionada, empresasSugeridas, on
     <div className="sa-overlay" style={s.overlay} onClick={onFechar}>
       <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
         <div style={s.modalHeader}>
-          <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{conta ? 'Editar conta a receber' : 'Nova conta a receber'}</h3>
+          <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)' }}>{conta ? 'Editar conta a receber' : 'Nova conta a receber'}</h3>
           <button onClick={onFechar} style={s.btnFechar}><Icons.Close /></button>
         </div>
 
@@ -2236,7 +2237,7 @@ function ModalGerarBoleto({ conta, onFechar, onSalvo, toast }) {
     <div className="sa-overlay" style={s.overlay} onClick={onFechar}>
       <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
         <div style={s.modalHeader}>
-          <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>Gerar boleto</h3>
+          <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)' }}>Gerar boleto</h3>
           <button onClick={onFechar} style={s.btnFechar}><Icons.Close /></button>
         </div>
         <p style={{ ...s.subTexto, marginBottom: '4px' }}>{conta.descricao} · {formatarMoeda(conta.valor)} · vence {formatarDataSemFuso(conta.data_prevista)}</p>
@@ -2314,7 +2315,7 @@ function ModalLancamentoEmMassa({ onFechar, onSalvo, toast }) {
     <div className="sa-overlay" style={s.overlay} onClick={onFechar}>
       <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
         <div style={s.modalHeader}>
-          <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>Lançamento em massa</h3>
+          <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)' }}>Lançamento em massa</h3>
           <button onClick={onFechar} style={s.btnFechar}><Icons.Close /></button>
         </div>
         <p style={s.subTexto}>
@@ -2432,7 +2433,7 @@ function AbaEmpresas({ toast, confirmar }) {
                   return (
                     <tr key={e.id} style={s.tr}>
                       <td style={s.td}>
-                        <strong style={{ color: '#111827' }}>{e.nome}</strong>
+                        <strong style={{ color: 'var(--fx-text)' }}>{e.nome}</strong>
                         <div style={s.subTexto}>{e.slug}</div>
                       </td>
                       <td style={s.td}>{e.email}</td>
@@ -2440,7 +2441,7 @@ function AbaEmpresas({ toast, confirmar }) {
                       <td style={s.td}>
                         {e.plano_plataforma?.nome || '-'}
                         {e.plano_plataforma_pendente_id && (
-                          <div style={{ ...s.subTexto, color: '#92400e' }}>trocando p/ {e.plano_plataforma_pendente?.nome}</div>
+                          <div style={{ ...s.subTexto, color: 'var(--fx-amber)' }}>trocando p/ {e.plano_plataforma_pendente?.nome}</div>
                         )}
                       </td>
                       <td style={s.td}>
@@ -2493,15 +2494,15 @@ function AbaEmpresas({ toast, confirmar }) {
 function BarraUso({ label, usado, limite }) {
   const ilimitado = limite == null;
   const percentual = ilimitado ? 0 : Math.min(100, Math.round((usado / limite) * 100));
-  const cor = ilimitado ? '#d1d5db' : percentual >= 100 ? '#dc2626' : percentual >= 80 ? '#d97706' : '#2554eb';
+  const cor = ilimitado ? 'var(--fx-line-2)' : percentual >= 100 ? 'var(--fx-red)' : percentual >= 80 ? 'var(--fx-amber)' : 'var(--fx-blue)';
 
   return (
     <div style={{ marginBottom: '14px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6b7280', marginBottom: '5px', fontWeight: 600 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--fx-muted)', marginBottom: '5px', fontWeight: 600 }}>
         <span>{label}</span>
         <span>{ilimitado ? `${usado} (ilimitado)` : `${usado} / ${limite}`}</span>
       </div>
-      <div style={{ background: '#f3f4f6', borderRadius: '6px', height: '8px', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--fx-surface-2)', borderRadius: '6px', height: '8px', overflow: 'hidden' }}>
         {!ilimitado && <div style={{ width: `${percentual}%`, background: cor, height: '100%', borderRadius: '6px' }} />}
       </div>
     </div>
@@ -2660,16 +2661,16 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
           <>
             <div style={s.modalHeader}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{empresa.nome}</h3>
+                <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)' }}>{empresa.nome}</h3>
                 <div style={s.subTexto}>{empresa.slug} · {empresa.email}</div>
               </div>
               <button onClick={onFechar} style={s.btnFechar}><Icons.Close /></button>
             </div>
 
             {empresa.excluida_em && (
-              <div style={{ ...s.avisoSeguranca, background: '#f3f4f6', borderColor: '#e5e7eb', marginTop: 0 }}>
-                <Icons.Close color="#6b7280" size={16} />
-                <div style={{ fontSize: '13px', color: '#374151' }}>
+              <div style={{ ...s.avisoSeguranca, background: 'var(--fx-surface-2)', borderColor: 'var(--fx-line)', marginTop: 0 }}>
+                <Icons.Close color="var(--fx-muted)" size={16} />
+                <div style={{ fontSize: '13px', color: 'var(--fx-text)' }}>
                   Empresa excluída em {formatarData(empresa.excluida_em)}. O login dela está bloqueado e o e-mail já está livre pra um novo cadastro.
                 </div>
               </div>
@@ -2682,7 +2683,7 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
                 <div style={s.infoLabel}>Tipo de negócio</div>
                 {!editandoVertical ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '14px', color: '#111827' }}>{VERTICAL_LABELS[empresa.vertical] || empresa.vertical || '-'}</span>
+                    <span style={{ fontSize: '14px', color: 'var(--fx-text)' }}>{VERTICAL_LABELS[empresa.vertical] || empresa.vertical || '-'}</span>
                     {!empresa.excluida_em && (
                       <button onClick={() => { setNovoVertical(empresa.vertical || ''); setEditandoVertical(true); }} style={s.btnLink}>Trocar</button>
                     )}
@@ -2705,7 +2706,7 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
                 <div style={s.infoLabel}>Plano atual</div>
                 {!editandoPlano ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '14px', color: '#111827' }}>{empresa.plano_plataforma?.nome || '-'} · {formatarPreco(empresa.plano_plataforma?.preco_mensal)}</span>
+                    <span style={{ fontSize: '14px', color: 'var(--fx-text)' }}>{empresa.plano_plataforma?.nome || '-'} · {formatarPreco(empresa.plano_plataforma?.preco_mensal)}</span>
                     {!empresa.excluida_em && (
                       <button onClick={() => { setNovoPlanoId(String(empresa.plano_plataforma_id || '')); setGerarCobranca(true); setEditandoPlano(true); }} style={s.btnLink}>Trocar</button>
                     )}
@@ -2731,7 +2732,7 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
 
               <div>
                 <div style={s.infoLabel}>Forma de pagamento</div>
-                <div style={{ fontSize: '14px', color: '#111827' }}>{infoFormaPagamento(empresa)}</div>
+                <div style={{ fontSize: '14px', color: 'var(--fx-text)' }}>{infoFormaPagamento(empresa)}</div>
               </div>
 
               {empresa.plano_plataforma?.preco_mensal > 0 && (
@@ -2739,7 +2740,7 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
                   <div style={s.infoLabel}>Próxima cobrança</div>
                   {!editandoVencimento ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '14px', fontWeight: empresa.cancelamento_agendado ? 700 : 400, color: empresa.cancelamento_agendado ? '#92400e' : '#111827' }}>
+                      <span style={{ fontSize: '14px', fontWeight: empresa.cancelamento_agendado ? 700 : 400, color: empresa.cancelamento_agendado ? 'var(--fx-amber)' : 'var(--fx-text)' }}>
                         {empresa.proxima_cobranca_em ? formatarData(empresa.proxima_cobranca_em) : 'sem cobrança recorrente ativa'}
                       </span>
                       {!empresa.excluida_em && (
@@ -2757,13 +2758,13 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
               )}
 
               {empresa.plano_plataforma_pendente_id && (
-                <InfoItem label="Trocando para" valor={`${empresa.plano_plataforma_pendente?.nome} · ${formatarPreco(empresa.plano_plataforma_pendente?.preco_mensal)} (aguardando confirmação de pagamento)`} cor="#92400e" />
+                <InfoItem label="Trocando para" valor={`${empresa.plano_plataforma_pendente?.nome} · ${formatarPreco(empresa.plano_plataforma_pendente?.preco_mensal)} (aguardando confirmação de pagamento)`} cor="var(--fx-amber)" />
               )}
               {empresa.cancelamento_agendado && (
-                <InfoItem label="Cancelamento" valor="Agendado, cai pro plano Grátis na próxima cobrança" cor="#92400e" />
+                <InfoItem label="Cancelamento" valor="Agendado, cai pro plano Grátis na próxima cobrança" cor="var(--fx-amber)" />
               )}
               {empresa.chave_ativacao_expira_em && (
-                <InfoItem label="Plano por chave promocional" valor={`expira em ${formatarData(empresa.chave_ativacao_expira_em)}`} cor="#92400e" />
+                <InfoItem label="Plano por chave promocional" valor={`expira em ${formatarData(empresa.chave_ativacao_expira_em)}`} cor="var(--fx-amber)" />
               )}
               {empresa.dominio_customizado && (
                 <InfoItem label="Domínio próprio" valor={`${empresa.dominio_customizado} ${empresa.dominio_verificado ? '(verificado)' : '(não verificado)'}`} />
@@ -2802,7 +2803,7 @@ function InfoItem({ label, valor, badge, cor }) {
       {badge ? (
         <span style={{ ...s.badge, background: badge.bg, color: badge.fg }}>{badge.label}</span>
       ) : (
-        <div style={{ color: cor || '#111827', fontWeight: cor ? 700 : 500, fontSize: '14px' }}>{valor}</div>
+        <div style={{ color: cor || 'var(--fx-text)', fontWeight: cor ? 700 : 500, fontSize: '14px' }}>{valor}</div>
       )}
     </div>
   );
@@ -2902,10 +2903,10 @@ function AbaPlanos({ toast, confirmar }) {
             <div key={p.id} style={{ ...s.card, ...(p.ativo === false ? { opacity: 0.6 } : {}) }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
-                  <strong style={{ fontSize: '15px', color: '#111827' }}>{p.nome}</strong>
-                  {p.ativo === false && <span style={{ ...s.badgeRoxo, background: '#fee2e2', color: '#991b1b', marginLeft: '8px' }}>Desligado</span>}
-                  {p.publico === false && <span style={{ ...s.badgeRoxo, background: '#fef3c7', color: '#92400e', marginLeft: '8px' }}>Oculto do site</span>}
-                  {p.dias_teste ? <span style={{ ...s.badgeRoxo, background: '#dbeafe', color: '#1e40af', marginLeft: '8px' }}>{p.dias_teste} dias de teste</span> : null}
+                  <strong style={{ fontSize: '15px', color: 'var(--fx-text)' }}>{p.nome}</strong>
+                  {p.ativo === false && <span style={{ ...s.badgeRoxo, background: 'var(--fx-red-bg)', color: 'var(--fx-red)', marginLeft: '8px' }}>Desligado</span>}
+                  {p.publico === false && <span style={{ ...s.badgeRoxo, background: 'var(--fx-amber-bg)', color: 'var(--fx-amber)', marginLeft: '8px' }}>Oculto do site</span>}
+                  {p.dias_teste ? <span style={{ ...s.badgeRoxo, background: 'var(--fx-blue-bg)', color: 'var(--fx-blue)', marginLeft: '8px' }}>{p.dias_teste} dias de teste</span> : null}
                   <div style={s.subTexto}>
                     {formatarPreco(p.preco_mensal)} ·{' '}
                     {p.limite_profissionais == null ? 'Profissionais ilimitados' : `Até ${p.limite_profissionais} profissional(is)`} ·{' '}
@@ -2933,7 +2934,7 @@ function AbaPlanos({ toast, confirmar }) {
         <div className="sa-overlay" style={s.overlay} onClick={() => { setEditando(null); setCriandoNovo(false); }}>
           <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
             <div style={s.modalHeader}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{criandoNovo ? 'Novo plano' : `Editar: ${editando.nome}`}</h3>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)' }}>{criandoNovo ? 'Novo plano' : `Editar: ${editando.nome}`}</h3>
               <button onClick={() => { setEditando(null); setCriandoNovo(false); }} style={s.btnFechar}><Icons.Close /></button>
             </div>
 
@@ -3084,7 +3085,7 @@ function AbaTestesPlano({ toast, confirmar }) {
   return (
     <div>
       <div style={s.card}>
-        <h3 style={{ margin: '0 0 4px', fontSize: '16px', color: '#111827' }}>Testar um plano em uma empresa</h3>
+        <h3 style={{ margin: '0 0 4px', fontSize: '16px', color: 'var(--fx-text)' }}>Testar um plano em uma empresa</h3>
         <p style={{ ...s.subTexto, marginBottom: '12px' }}>
           Para testar um plano completo de R$0 sem risco, crie-o na aba Planos e desmarque "Visível no site". Ele nunca aparece
           para visitantes e não pode ser contratado; só você aplica aqui, na empresa que escolher, por tempo limitado.
@@ -3101,14 +3102,14 @@ function AbaTestesPlano({ toast, confirmar }) {
           <>
             <input style={s.input} placeholder="Buscar por nome, endereço (slug) ou e-mail" value={busca} onChange={(e) => setBusca(e.target.value)} />
             {resultados.length > 0 && (
-              <div style={{ marginTop: '6px', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+              <div style={{ marginTop: '6px', border: '1px solid var(--fx-line)', borderRadius: '8px', overflow: 'hidden' }}>
                 {resultados.map((e) => (
                   <button
                     key={e.id}
                     onClick={() => { setEmpresaSel(e); setResultados([]); }}
-                    style={{ display: 'block', width: '100%', textAlign: 'left', background: '#fff', border: 'none', borderBottom: '1px solid #f3f4f6', padding: '10px 14px', cursor: 'pointer' }}
+                    style={{ display: 'block', width: '100%', textAlign: 'left', background: 'var(--fx-card)', border: 'none', borderBottom: '1px solid var(--fx-line)', padding: '10px 14px', cursor: 'pointer' }}
                   >
-                    <strong style={{ color: '#111827', fontSize: '13px' }}>{e.nome}</strong>
+                    <strong style={{ color: 'var(--fx-text)', fontSize: '13px' }}>{e.nome}</strong>
                     <div style={s.subTexto}>{e.slug} · {e.email} · plano {e.plano_plataforma?.nome || '-'}</div>
                   </button>
                 ))}
@@ -3135,7 +3136,7 @@ function AbaTestesPlano({ toast, confirmar }) {
         </div>
       </div>
 
-      <h3 style={{ margin: '24px 0 10px', fontSize: '15px', color: '#111827' }}>Testes em andamento</h3>
+      <h3 style={{ margin: '24px 0 10px', fontSize: '15px', color: 'var(--fx-text)' }}>Testes em andamento</h3>
       {carregando ? <p style={s.textoCarregando}>Carregando...</p> : testes.length === 0 ? (
         <p style={s.textoCarregando}>Nenhum teste de plano em andamento.</p>
       ) : (
@@ -3149,7 +3150,7 @@ function AbaTestesPlano({ toast, confirmar }) {
             <tbody>
               {testes.map((t) => (
                 <tr key={t.id} style={s.tr}>
-                  <td style={s.td}><strong style={{ color: '#111827' }}>{t.nome}</strong><div style={s.subTexto}>{t.slug}</div></td>
+                  <td style={s.td}><strong style={{ color: 'var(--fx-text)' }}>{t.nome}</strong><div style={s.subTexto}>{t.slug}</div></td>
                   <td style={s.td}>{t.plano_atual?.nome || '-'}</td>
                   <td style={s.td}>{t.plano_anterior?.nome || 'Grátis'}</td>
                   <td style={s.td}>{formatarData(t.plano_teste_expira_em)}</td>
@@ -3312,12 +3313,12 @@ function AbaCampanhas({ toast, confirmar }) {
                   const expirada = new Date(c.fim) < new Date();
                   return (
                     <tr key={c.id} style={s.tr}>
-                      <td style={s.td}><strong style={{ color: '#111827' }}>{c.nome}</strong></td>
+                      <td style={s.td}><strong style={{ color: 'var(--fx-text)' }}>{c.nome}</strong></td>
                       <td style={s.td}>{c.plano_plataforma?.nome || '-'}</td>
                       <td style={s.td}>{formatarData(c.inicio)} - {formatarData(c.fim)}</td>
                       <td style={s.td}>{c.campanha_precos_ciclo.map((p) => `${p.numero_ciclo}º: ${formatarPreco(p.valor)}`).join(' · ')}, demais: cheio</td>
                       <td style={s.td}>
-                        <span style={{ ...s.badge, background: c.ativa && !expirada ? '#d1fae5' : '#f3f4f6', color: c.ativa && !expirada ? '#065f46' : '#6b7280' }}>
+                        <span style={{ ...s.badge, background: c.ativa && !expirada ? 'var(--fx-green-bg)' : 'var(--fx-surface-2)', color: c.ativa && !expirada ? 'var(--fx-green)' : 'var(--fx-muted)' }}>
                           {!c.ativa ? 'Desativada' : expirada ? 'Expirada' : 'Ativa'}
                         </span>
                       </td>
@@ -3343,7 +3344,7 @@ function AbaCampanhas({ toast, confirmar }) {
         <div className="sa-overlay" style={s.overlay} onClick={() => setEditando(null)}>
           <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
             <div style={s.modalHeader}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{editando.id ? 'Editar campanha' : 'Nova campanha'}</h3>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)' }}>{editando.id ? 'Editar campanha' : 'Nova campanha'}</h3>
               <button onClick={() => setEditando(null)} style={s.btnFechar}><Icons.Close /></button>
             </div>
 
@@ -3373,7 +3374,7 @@ function AbaCampanhas({ toast, confirmar }) {
                   type="number" min="1" style={{ ...s.input, width: '70px' }} value={p.numero_ciclo}
                   onChange={(e) => atualizarCiclo(idx, 'numero_ciclo', e.target.value)} title="Número do ciclo"
                 />
-                <span style={{ fontSize: '12px', color: '#9ca3af', whiteSpace: 'nowrap' }}>º ciclo →</span>
+                <span style={{ fontSize: '12px', color: 'var(--fx-faint)', whiteSpace: 'nowrap' }}>º ciclo →</span>
                 <input
                   type="number" min="0" step="0.01" style={{ ...s.input, flex: 1 }} value={p.valor}
                   onChange={(e) => atualizarCiclo(idx, 'valor', e.target.value)} placeholder="Valor (R$)"
@@ -3444,20 +3445,20 @@ function AbaAntifraude({ toast, confirmar }) {
       </p>
 
       {grupos.length === 0 ? (
-        <div style={s.card}><p style={{ margin: 0, color: '#065f46', fontSize: '14px' }}>Nenhuma conta compartilhando dados. Tudo limpo.</p></div>
+        <div style={s.card}><p style={{ margin: 0, color: 'var(--fx-green)', fontSize: '14px' }}>Nenhuma conta compartilhando dados. Tudo limpo.</p></div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {grupos.map((g) => (
             <div key={`${g.campo}-${g.valor}`} style={s.card}>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '10px' }}>
                 <span style={s.badgeRoxo}>{ROTULO_CAMPO_ANTIFRAUDE[g.campo]}</span>
-                <strong style={{ fontSize: '13px', color: '#111827', wordBreak: 'break-all' }}>{g.valor}</strong>
+                <strong style={{ fontSize: '13px', color: 'var(--fx-text)', wordBreak: 'break-all' }}>{g.valor}</strong>
                 <span style={s.subTexto}>{g.empresas.length} contas</span>
               </div>
               {g.empresas.map((r) => (
-                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '8px 0', borderTop: '1px solid #f3f4f6', flexWrap: 'wrap' }}>
+                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '8px 0', borderTop: '1px solid var(--fx-line)', flexWrap: 'wrap' }}>
                   <div>
-                    <strong style={{ fontSize: '13px', color: '#111827' }}>{r.nome_empresa || r.empresa?.slug || 'Empresa removida'}</strong>
+                    <strong style={{ fontSize: '13px', color: 'var(--fx-text)' }}>{r.nome_empresa || r.empresa?.slug || 'Empresa removida'}</strong>
                     <div style={s.subTexto}>
                       {r.empresa ? `${r.empresa.slug} · plano ${r.empresa.plano?.nome || '-'} · ${r.empresa.status_assinatura}` : 'conta excluída'} · cadastro em {formatarData(r.criado_em)}
                     </div>
@@ -3561,10 +3562,10 @@ function AbaChaves({ toast, confirmar }) {
   };
 
   const statusChave = (c) => {
-    if (c.revogada_em) return { label: 'Revogada', bg: '#f3f4f6', fg: '#6b7280' };
-    if (c.usada_em) return { label: `Usada por ${c.usada_por_empresa?.nome || 'empresa'}`, bg: '#d1fae5', fg: '#065f46' };
-    if (c.prazo_resgate_ate && new Date(c.prazo_resgate_ate) < new Date()) return { label: 'Expirada (não resgatada)', bg: '#fee2e2', fg: '#991b1b' };
-    return { label: 'Disponível', bg: '#dbeafe', fg: '#1e40af' };
+    if (c.revogada_em) return { label: 'Revogada', bg: 'var(--fx-surface-2)', fg: 'var(--fx-muted)' };
+    if (c.usada_em) return { label: `Usada por ${c.usada_por_empresa?.nome || 'empresa'}`, bg: 'var(--fx-green-bg)', fg: 'var(--fx-green)' };
+    if (c.prazo_resgate_ate && new Date(c.prazo_resgate_ate) < new Date()) return { label: 'Expirada (não resgatada)', bg: 'var(--fx-red-bg)', fg: 'var(--fx-red)' };
+    return { label: 'Disponível', bg: 'var(--fx-blue-bg)', fg: 'var(--fx-blue)' };
   };
 
   return (
@@ -3584,12 +3585,12 @@ function AbaChaves({ toast, confirmar }) {
               <div key={c.id} style={s.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
-                    <strong style={{ fontFamily: 'monospace', fontSize: '15px', letterSpacing: '0.5px', color: '#111827' }}>{c.codigo}</strong>
+                    <strong style={{ fontFamily: 'monospace', fontSize: '15px', letterSpacing: '0.5px', color: 'var(--fx-text)' }}>{c.codigo}</strong>
                     <div style={s.subTexto}>
                       {c.plano_plataforma?.nome} · {c.duracao_dias} dias · gerada em {formatarData(c.criado_em)}
                       {c.prazo_resgate_ate && ` · prazo pra resgatar até ${formatarData(c.prazo_resgate_ate)}`}
                     </div>
-                    {c.observacao && <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>{c.observacao}</div>}
+                    {c.observacao && <div style={{ fontSize: '12px', color: 'var(--fx-faint)', marginTop: '4px' }}>{c.observacao}</div>}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ ...s.badge, background: status.bg, color: status.fg }}>{status.label}</span>
@@ -3610,7 +3611,7 @@ function AbaChaves({ toast, confirmar }) {
             {ultimasGeradas ? (
               <>
                 <div style={s.modalHeader}>
-                  <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>Chave(s) gerada(s)</h3>
+                  <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)' }}>Chave(s) gerada(s)</h3>
                   <button onClick={() => { setCriando(false); setUltimasGeradas(null); }} style={s.btnFechar}><Icons.Close /></button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
@@ -3623,7 +3624,7 @@ function AbaChaves({ toast, confirmar }) {
             ) : (
               <>
                 <div style={s.modalHeader}>
-                  <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>Gerar chave de ativação</h3>
+                  <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)' }}>Gerar chave de ativação</h3>
                   <button onClick={() => setCriando(false)} style={s.btnFechar}><Icons.Close /></button>
                 </div>
 
@@ -3712,24 +3713,24 @@ function AbaLeads({ toast, confirmar }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {leads.map((lead) => {
-        const status = STATUS_LEAD_INFO[lead.status] || { label: lead.status, bg: '#f3f4f6', fg: '#6b7280' };
+        const status = STATUS_LEAD_INFO[lead.status] || { label: lead.status, bg: 'var(--fx-surface-2)', fg: 'var(--fx-muted)' };
         return (
           <div key={lead.id} style={s.card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
               <div>
-                <strong style={{ fontSize: '15px', color: '#111827' }}>{lead.nome_empresa}</strong>
+                <strong style={{ fontSize: '15px', color: 'var(--fx-text)' }}>{lead.nome_empresa}</strong>
                 <div style={s.subTexto}>CNPJ {lead.cnpj} · {lead.localizacao} · {formatarData(lead.criado_em)}</div>
               </div>
               <span style={{ ...s.badge, background: status.bg, color: status.fg }}>{status.label}</span>
             </div>
 
-            <div className="sa-grid-form" style={{ fontSize: '13px', marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', color: '#374151' }}>
+            <div className="sa-grid-form" style={{ fontSize: '13px', marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', color: 'var(--fx-text)' }}>
               <span><strong>Clientes esperados:</strong> {lead.clientes_esperados}</span>
               <span><strong>E-mail:</strong> {lead.email_contato}</span>
               {lead.telefone_contato && <span><strong>Telefone:</strong> {lead.telefone_contato}</span>}
               {lead.empresa_id && <span><strong>Empresa (id):</strong> {lead.empresa_id}</span>}
             </div>
-            {lead.observacoes && <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '10px' }}>{lead.observacoes}</p>}
+            {lead.observacoes && <p style={{ fontSize: '13px', color: 'var(--fx-muted)', marginTop: '10px' }}>{lead.observacoes}</p>}
 
             <div style={{ display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap' }}>
               {lead.status !== 'contatado' && (
@@ -3750,8 +3751,8 @@ function AbaLeads({ toast, confirmar }) {
 }
 
 const STATUS_SUPORTE_INFO = {
-  aguardando_humano: { label: 'Aguardando resposta', bg: '#fef3c7', fg: '#92400e' },
-  resolvido: { label: 'Resolvido', bg: '#f3f4f6', fg: '#6b7280' }
+  aguardando_humano: { label: 'Aguardando resposta', bg: 'var(--fx-amber-bg)', fg: 'var(--fx-amber)' },
+  resolvido: { label: 'Resolvido', bg: 'var(--fx-surface-2)', fg: 'var(--fx-muted)' }
 };
 
 // Módulo de suporte (Admin -> Suporte, ver backend/src/routes/suporte.js e superAdminSuporte.js).
@@ -3791,13 +3792,13 @@ function AbaSuporte({ toast, confirmar, pendencias = [], onAlterou }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {conversas.map((c) => {
-        const status = STATUS_SUPORTE_INFO[c.status] || { label: c.status, bg: '#f3f4f6', fg: '#6b7280' };
+        const status = STATUS_SUPORTE_INFO[c.status] || { label: c.status, bg: 'var(--fx-surface-2)', fg: 'var(--fx-muted)' };
         const pendencia = pendencias.find((p) => p.id === c.id);
         return (
           <div key={c.id} style={{ ...s.card, ...(pendencia ? { borderLeft: '4px solid #ef4444' } : {}) }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
               <div>
-                <strong style={{ fontSize: '15px', color: '#111827' }}>{c.nome_empresa}</strong>
+                <strong style={{ fontSize: '15px', color: 'var(--fx-text)' }}>{c.nome_empresa}</strong>
                 <div style={s.subTexto}>
                   Atualizado em {formatarData(c.atualizado_em)}
                   {c.atendido_por_nome && ` · Atendido por ${c.atendido_por_nome}`}
@@ -3805,7 +3806,7 @@ function AbaSuporte({ toast, confirmar, pendencias = [], onAlterou }) {
               </div>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {pendencia && (
-                  <span style={{ ...s.badge, background: '#fee2e2', color: '#b91c1c' }}>
+                  <span style={{ ...s.badge, background: 'var(--fx-red-bg)', color: 'var(--fx-red)' }}>
                     {pendencia.motivo === 'repassada_para_voce' ? 'Repassado para você' : 'Sem atendente'}
                   </span>
                 )}
@@ -3955,7 +3956,7 @@ function ModalConversaSuporte({ conversaId, onFechar, onResolvido, onAlterou, to
     <div className="sa-overlay" style={s.overlay} onClick={onFechar}>
       <div style={{ ...s.modal, maxWidth: '560px', display: 'flex', flexDirection: 'column', height: '660px' }} onClick={(ev) => ev.stopPropagation()}>
         <div style={s.modalHeader}>
-          <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{conversa?.nome_empresa || 'Conversa'}</h3>
+          <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)' }}>{conversa?.nome_empresa || 'Conversa'}</h3>
           <button onClick={onFechar} style={s.btnFechar}><Icons.Close /></button>
         </div>
 
@@ -3966,7 +3967,7 @@ function ModalConversaSuporte({ conversaId, onFechar, onResolvido, onAlterou, to
             {conversa?.status !== 'resolvido' && (
               <div style={{
                 padding: '8px 12px', borderRadius: '8px', fontSize: '12.5px', marginBottom: '10px',
-                ...(bloqueadoPorOutro ? { background: '#fef2f2', color: '#991b1b' } : conversa?.atendido_por_super_admin_id ? { background: '#ecfdf5', color: '#065f46' } : { background: '#fef3c7', color: '#92400e' })
+                ...(bloqueadoPorOutro ? { background: 'var(--fx-red-bg)', color: 'var(--fx-red)' } : conversa?.atendido_por_super_admin_id ? { background: 'var(--fx-green-bg)', color: 'var(--fx-green)' } : { background: 'var(--fx-amber-bg)', color: 'var(--fx-amber)' })
               }}>
                 {bloqueadoPorOutro
                   ? `Atendido por ${conversa.atendido_por_nome} — só ele(a) pode responder até repassar o caso.`
@@ -3983,7 +3984,7 @@ function ModalConversaSuporte({ conversaId, onFechar, onResolvido, onAlterou, to
                     maxWidth: '80%', padding: '10px 14px', borderRadius: '14px', fontSize: '13.5px', lineHeight: '1.5', whiteSpace: 'pre-wrap',
                     ...(m.remetente === 'super_admin'
                       ? { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', borderBottomRightRadius: '2px' }
-                      : { backgroundColor: m.remetente === 'ia' ? '#f3f4f6' : '#eef2ff', color: '#111827', borderBottomLeftRadius: '2px' })
+                      : { backgroundColor: m.remetente === 'ia' ? 'var(--fx-surface-2)' : 'var(--fx-violet-bg)', color: 'var(--fx-text)', borderBottomLeftRadius: '2px' })
                   }}>
                     {m.remetente === 'empresa' && <div style={{ fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', opacity: 0.6, marginBottom: '4px' }}>Empresa</div>}
                     {m.remetente === 'ia' && <div style={{ fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', opacity: 0.6, marginBottom: '4px' }}>IA</div>}
@@ -4213,7 +4214,7 @@ function AbaSuperAdmins({ toast, confirmar }) {
       {carregando ? <p style={s.textoCarregando}>Carregando...</p> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {lista.map((sa) => {
-            const status = sa.ativo ? { label: 'Ativo', bg: '#d1fae5', fg: '#065f46' } : { label: 'Removido', bg: '#f3f4f6', fg: '#6b7280' };
+            const status = sa.ativo ? { label: 'Ativo', bg: 'var(--fx-green-bg)', fg: 'var(--fx-green)' } : { label: 'Removido', bg: 'var(--fx-surface-2)', fg: 'var(--fx-muted)' };
             return (
               <div key={sa.id} style={{ ...s.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -4221,7 +4222,7 @@ function AbaSuperAdmins({ toast, confirmar }) {
                     {sa.foto_url ? <img src={sa.foto_url} alt={sa.email} style={s.avatarImg} /> : iniciaisEmail(sa.email)}
                   </div>
                   <div>
-                    <strong style={{ color: '#111827', fontSize: '14px' }}>{sa.email}</strong>
+                    <strong style={{ color: 'var(--fx-text)', fontSize: '14px' }}>{sa.email}</strong>
                     <div style={s.subTexto}>criado em {formatarData(sa.criado_em)}</div>
                   </div>
                 </div>
@@ -4244,7 +4245,7 @@ function AbaSuperAdmins({ toast, confirmar }) {
         <div className="sa-overlay" style={s.overlay} onClick={() => setCriandoModal(false)}>
           <div style={{ ...s.modal, maxWidth: '440px' }} onClick={(ev) => ev.stopPropagation()}>
             <div style={s.modalHeader}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}><Icons.Shield color="#111827" /> Novo super admin</h3>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)', display: 'flex', alignItems: 'center', gap: '8px' }}><Icons.Shield color="var(--fx-text)" /> Novo super admin</h3>
               <button onClick={() => setCriandoModal(false)} style={s.btnFechar}><Icons.Close /></button>
             </div>
 
@@ -4265,10 +4266,10 @@ function AbaSuperAdmins({ toast, confirmar }) {
             <input type="password" style={s.input} value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} autoComplete="new-password" />
 
             <div style={s.avisoSeguranca}>
-              <Icons.Lock color="#92400e" />
+              <Icons.Lock color="var(--fx-amber)" />
               <div>
-                <strong style={{ display: 'block', fontSize: '13px', color: '#92400e' }}>Confirme que é você</strong>
-                <span style={{ fontSize: '12.5px', color: '#92400e' }}>Por segurança, digite a SUA senha atual para autorizar a criação deste novo acesso.</span>
+                <strong style={{ display: 'block', fontSize: '13px', color: 'var(--fx-amber)' }}>Confirme que é você</strong>
+                <span style={{ fontSize: '12.5px', color: 'var(--fx-amber)' }}>Por segurança, digite a SUA senha atual para autorizar a criação deste novo acesso.</span>
               </div>
             </div>
 
@@ -4287,7 +4288,7 @@ function AbaSuperAdmins({ toast, confirmar }) {
         <div className="sa-overlay" style={s.overlay} onClick={() => setEditandoModal(false)}>
           <div style={{ ...s.modal, maxWidth: '440px' }} onClick={(ev) => ev.stopPropagation()}>
             <div style={s.modalHeader}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}><Icons.Shield color="#111827" /> Editar meu perfil</h3>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)', display: 'flex', alignItems: 'center', gap: '8px' }}><Icons.Shield color="var(--fx-text)" /> Editar meu perfil</h3>
               <button onClick={() => setEditandoModal(false)} style={s.btnFechar}><Icons.Close /></button>
             </div>
 
@@ -4308,10 +4309,10 @@ function AbaSuperAdmins({ toast, confirmar }) {
             <input type="password" style={s.input} value={formEdicao.novaSenha} onChange={(e) => setFormEdicao({ ...formEdicao, novaSenha: e.target.value })} autoComplete="new-password" placeholder="Mínimo 8 caracteres" />
 
             <div style={s.avisoSeguranca}>
-              <Icons.Lock color="#92400e" />
+              <Icons.Lock color="var(--fx-amber)" />
               <div>
-                <strong style={{ display: 'block', fontSize: '13px', color: '#92400e' }}>Confirme que é você</strong>
-                <span style={{ fontSize: '12.5px', color: '#92400e' }}>Por segurança, digite a SUA senha atual para salvar qualquer alteração no seu perfil.</span>
+                <strong style={{ display: 'block', fontSize: '13px', color: 'var(--fx-amber)' }}>Confirme que é você</strong>
+                <span style={{ fontSize: '12.5px', color: 'var(--fx-amber)' }}>Por segurança, digite a SUA senha atual para salvar qualquer alteração no seu perfil.</span>
               </div>
             </div>
 
@@ -4340,7 +4341,7 @@ const Icons = {
   Mail: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>,
   Shield: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>,
   LogOut: ({ color = 'currentColor' }) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>,
-  Close: ({ color = '#9ca3af', size = 18 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+  Close: ({ color = 'var(--fx-faint)', size = 18 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
   Lock: ({ color = 'currentColor' }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
   DollarSign: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>,
   Wallet: ({ color = 'currentColor' }) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5h-4a2 2 0 0 1 0-4h4z"></path></svg>,
@@ -4348,87 +4349,66 @@ const Icons = {
 };
 
 const s = {
-  pagina: { minHeight: '100vh', background: '#f8f9fa', fontFamily: "'Inter', sans-serif", display: 'flex' },
-  container: { maxWidth: '1200px', margin: '0 auto', padding: '40px 24px' },
-  header: { marginBottom: '24px', borderBottom: '1px solid #e5e7eb', paddingBottom: '20px' },
-  titulo: { fontSize: '26px', color: '#111827', fontWeight: 800, margin: '0 0 4px 0', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center' },
-  subtitulo: { color: '#6b7280', fontSize: '14px', margin: 0 },
+  pagina: { minHeight: '100vh' },
+  container: { maxWidth: '1240px', margin: '0 auto' },
+  header: { marginBottom: '28px' },
+  titulo: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  subtitulo: { color: 'var(--fx-muted)', fontSize: '14px', margin: 0 },
 
-  // Sidebar com a mesma paleta escura e o mesmo comportamento da sidebar do admin de empresa
-  // (ver components/Layout.js): fixa, recolhida em 70px e expandida pra 250px por cima do
-  // conteúdo (a largura vem do estado menuAberto no componente).
-  sidebar: { flexShrink: 0, background: '#16161a', color: '#fff', height: '100vh', position: 'fixed', top: 0, left: 0, zIndex: 1000, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflowY: 'auto', overflowX: 'hidden', transition: 'width 0.3s', borderRight: '1px solid rgba(37, 84, 235,0.25)' },
-  btnMenu: { background: 'none', border: 'none', padding: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', marginBottom: '8px', flexShrink: 0 },
-  sidebarTopo: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' },
-  balaoContador: { minWidth: '18px', height: '18px', padding: '0 5px', borderRadius: '9px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 800, lineHeight: '18px', textAlign: 'center', boxSizing: 'border-box', boxShadow: '0 0 0 2px #16161a' },
-  balaoContadorSobreIcone: { position: 'absolute', top: '-8px', right: '-10px' },
-  logoSidebar: { width: '36px', height: '36px', objectFit: 'contain', flexShrink: 0 },
-  sidebarTitulo: { margin: 0, fontSize: '14px', fontWeight: 800, color: '#fff' },
-  sidebarSubtitulo: { margin: 0, fontSize: '11px', color: '#9ca3af' },
-  main: { flex: 1, minWidth: 0, marginLeft: '70px' },
 
-  nav: { display: 'flex', flexDirection: 'column', flex: 1 },
-  grupoMenu: { marginBottom: '14px' },
-  grupoMenuRecolhido: { marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)' },
-  navItemRecolhido: { justifyContent: 'center', padding: '10px 0', gap: 0 },
-  grupoTitulo: { fontSize: '10px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 6px 10px' },
-  navItem: { display: 'flex', alignItems: 'center', gap: '10px', whiteSpace: 'nowrap', width: '100%', boxSizing: 'border-box', background: 'transparent', color: '#d1d5db', border: 'none', borderRadius: '8px', padding: '9px 10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left', marginBottom: '2px', transition: '0.15s' },
-  navItemAtivo: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff' },
-  navSair: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', boxSizing: 'border-box', background: 'transparent', color: '#f87171', border: 'none', borderRadius: '8px', padding: '9px 10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' },
-
-  tabAtivo: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff' },
+  tabAtivo: { background: 'var(--oc-texto)', color: 'var(--oc-fundo)', borderColor: 'var(--oc-texto)' },
 
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' },
-  statCard: { background: '#fff', padding: '18px 20px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #f3f4f6', borderTop: '4px solid #ddd' },
+  statCard: { background: 'var(--oc-vidro)', backdropFilter: 'blur(14px)', padding: '18px 20px 20px', borderRadius: '18px', border: '1px solid var(--fx-line)', borderTop: '2px solid var(--fx-line)' },
   statCardTopo: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' },
-  statLabel: { fontSize: '12px', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px' },
-  statNumero: { fontSize: '28px', fontWeight: 800, letterSpacing: '-0.5px' },
+  statLabel: { fontFamily: 'var(--oc-mono)', fontSize: '10.5px', color: 'var(--fx-muted)', fontWeight: 400, textTransform: 'uppercase', letterSpacing: '0.16em', lineHeight: 1.5 },
+  statNumero: { fontFamily: 'var(--oc-display)', fontSize: 'clamp(30px, 2.5vw, 42px)', fontWeight: 400, lineHeight: 1, letterSpacing: '0.01em' },
 
   gridDuasColunas: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' },
-  card: { background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #f3f4f6', padding: '20px', marginBottom: '0' },
-  cardTitulo: { margin: '0 0 12px', fontSize: '14px', color: '#111827', fontWeight: 700 },
-  linhaLista: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#374151', padding: '7px 0', borderBottom: '1px solid #f3f4f6' },
-  subTexto: { fontSize: '12px', color: '#6b7280', marginTop: '2px' },
+  card: { background: 'var(--oc-vidro)', backdropFilter: 'blur(14px)', borderRadius: '18px', border: '1px solid var(--fx-line)', padding: '22px 24px', marginBottom: '0' },
+  cardTitulo: { margin: '0 0 14px', fontFamily: 'var(--oc-mono)', fontSize: '11px', fontWeight: 400, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--fx-acento)' },
+  linhaLista: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--fx-text)', padding: '7px 0', borderBottom: '1px solid var(--fx-line)' },
+  subTexto: { fontSize: '12px', color: 'var(--fx-muted)', marginTop: '2px' },
 
   barraTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' },
-  inputBusca: { padding: '11px 16px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', outline: 'none', width: '100%', maxWidth: '300px', color: '#111827', boxSizing: 'border-box' },
-  selectFiltro: { padding: '11px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', outline: 'none', color: '#111827', background: '#fff' },
+  inputBusca: { padding: '11px 16px', borderRadius: '999px', border: '1px solid var(--fx-line-2)', fontSize: '14px', outline: 'none', width: '100%', maxWidth: '320px', color: 'var(--fx-text)', boxSizing: 'border-box' },
+  selectFiltro: { padding: '10px 14px', borderRadius: '999px', border: '1px solid var(--fx-line-2)', fontSize: '13.5px', outline: 'none', color: 'var(--fx-text)', background: 'var(--fx-surface-2)' },
 
-  cardTabela: { background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid #f3f4f6' },
+  cardTabela: { background: 'var(--oc-vidro)', backdropFilter: 'blur(14px)', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--fx-line)' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: '820px' },
-  th: { padding: '13px 18px', background: '#f9fafb', color: '#6b7280', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #e5e7eb', textAlign: 'left' },
-  tr: { borderBottom: '1px solid #f3f4f6' },
-  td: { padding: '14px 18px', fontSize: '13px', verticalAlign: 'middle', color: '#374151' },
+  th: { padding: '13px 18px', background: 'transparent', color: 'var(--fx-muted)', fontFamily: 'var(--oc-mono)', fontSize: '10px', fontWeight: 400, textTransform: 'uppercase', letterSpacing: '0.16em', borderBottom: '1px solid var(--fx-line)', textAlign: 'left' },
+  tr: { borderBottom: '1px solid var(--fx-line)' },
+  td: { padding: '14px 18px', fontSize: '13px', verticalAlign: 'middle', color: 'var(--fx-text)' },
 
   badge: { padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 700, display: 'inline-block', whiteSpace: 'nowrap' },
-  badgeRoxo: { fontSize: '11px', background: '#ede9fe', color: '#6d28d9', padding: '3px 9px', borderRadius: '6px', fontWeight: 700 },
+  badgeRoxo: { fontSize: '11px', background: 'var(--fx-violet-bg)', color: 'var(--fx-violet)', padding: '3px 9px', borderRadius: '6px', fontWeight: 700 },
 
-  btnPrimario: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 16px', fontSize: '13px', cursor: 'pointer', fontWeight: 700 },
-  btnOutline: { background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: '8px', padding: '7px 13px', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' },
-  btnOutlineVermelho: { color: '#dc2626', borderColor: '#fecaca', background: '#fef2f2' },
-  btnOutlineVerde: { color: '#059669', borderColor: '#a7f3d0', background: '#ecfdf5' },
-  btnLink: { background: 'none', border: 'none', color: '#2554eb', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', padding: 0 },
+  btnPrimario: { background: 'var(--oc-texto)', color: 'var(--oc-fundo)', border: 'none', borderRadius: '999px', padding: '11px 20px', fontSize: '13px', cursor: 'pointer', fontWeight: 600 },
+  btnOutline: { background: 'transparent', color: 'var(--fx-text)', border: '1px solid var(--fx-line-2)', borderRadius: '999px', padding: '8px 15px', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnOutlineVermelho: { color: 'var(--fx-red)', borderColor: 'var(--fx-red-line)', background: 'var(--fx-red-bg)' },
+  btnOutlineVerde: { color: 'var(--fx-green)', borderColor: 'var(--fx-green-line)', background: 'var(--fx-green-bg)' },
+  btnLink: { background: 'none', border: 'none', color: 'var(--fx-blue)', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', padding: 0 },
 
   avatarCirculo: { width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, flexShrink: 0, overflow: 'hidden' },
   avatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
-  avisoSeguranca: { display: 'flex', gap: '10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', marginTop: '16px', marginBottom: '4px' },
+  avisoSeguranca: { display: 'flex', gap: '10px', background: 'var(--fx-amber-bg)', border: '1px solid var(--fx-amber-line)', borderRadius: '10px', padding: '12px 14px', marginTop: '16px', marginBottom: '4px' },
 
-  overlay: { position: 'fixed', inset: 0, boxSizing: 'border-box', background: 'rgba(17,24,39,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000, padding: '20px' },
-  modal: { background: '#fff', padding: '28px', borderRadius: '14px', width: '100%', maxWidth: '520px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', boxSizing: 'border-box' },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', paddingBottom: '16px', borderBottom: '1px solid #f0f0f0' },
+  overlay: { position: 'fixed', inset: 0, boxSizing: 'border-box', background: 'rgba(3, 7, 18, 0.62)', backdropFilter: 'blur(3px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000, padding: '20px' },
+  modal: { background: 'var(--fx-card)', color: 'var(--fx-text)', padding: '28px', borderRadius: '20px', border: '1px solid var(--fx-line)', width: '100%', maxWidth: '520px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 40px 90px rgba(0, 0, 0, 0.45)', boxSizing: 'border-box' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', paddingBottom: '16px', borderBottom: '1px solid var(--fx-line)' },
   btnFechar: { background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1, padding: '2px' },
 
   infoGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' },
-  infoLabel: { fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 700, marginBottom: '3px' },
+  infoLabel: { fontFamily: 'var(--oc-mono)', fontSize: '10px', color: 'var(--fx-faint)', textTransform: 'uppercase', letterSpacing: '0.16em', fontWeight: 400, marginBottom: '4px' },
 
-  label: { display: 'block', fontSize: '12px', fontWeight: 700, color: '#4b5563', marginBottom: '6px', marginTop: '12px', textTransform: 'uppercase', letterSpacing: '0.3px' },
-  input: { width: '100%', boxSizing: 'border-box', background: '#fff', border: '1px solid #d1d5db', color: '#111827', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', outline: 'none' },
-  checkboxLinha: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#374151' },
+  label: { display: 'block', fontFamily: 'var(--oc-mono)', fontSize: '10.5px', fontWeight: 400, color: 'var(--fx-muted)', marginBottom: '6px', marginTop: '14px', textTransform: 'uppercase', letterSpacing: '0.16em' },
+  input: { width: '100%', boxSizing: 'border-box', background: 'var(--fx-surface-2)', border: '1px solid var(--fx-line-2)', color: 'var(--fx-text)', borderRadius: '10px', padding: '10px 12px', fontSize: '14px', outline: 'none' },
+  checkboxLinha: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--fx-text)' },
 
-  codigoChave: { background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '10px', fontSize: '14px', letterSpacing: '0.5px', color: '#111827' },
+  codigoChave: { background: 'var(--fx-surface-2)', border: '1px solid var(--fx-line)', borderRadius: '6px', padding: '10px', fontSize: '14px', letterSpacing: '0.5px', color: 'var(--fx-text)' },
 
-  textoCarregando: { color: '#6b7280', fontSize: '14px' },
-  textoVazio: { color: '#9ca3af', fontSize: '14px' }
+  textoCarregando: { color: 'var(--fx-muted)', fontSize: '14px' },
+  textoVazio: { color: 'var(--fx-faint)', fontSize: '14px' }
 };
 
 export default SuperAdminDashboard;

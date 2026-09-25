@@ -144,9 +144,7 @@ function GestaoServicos({ empresaId }) {
     <div className="admin-page-container" style={styles.container}>
       <header style={styles.header}>
         <div>
-          <h2 style={styles.title}>
-            <Icons.Scissors color="#111827" /> Gestão de Serviços
-          </h2>
+          <h2 style={styles.title}>Gestão de Serviços</h2>
           <p style={styles.subtitle}>Cadastre, ative, inative ou edite os serviços oferecidos {termos.artigoContraido === 'da' ? 'pela sua' : 'pelo seu'} {termos.local.toLowerCase()}.</p>
         </div>
       </header>
@@ -154,18 +152,18 @@ function GestaoServicos({ empresaId }) {
       {mensagem.texto && (
         <div style={{
           ...styles.alerta,
-          backgroundColor: mensagem.tipo === 'sucesso' ? '#ecfdf5' : '#fef2f2',
-          color: mensagem.tipo === 'sucesso' ? '#065f46' : '#991b1b',
-          border: `1px solid ${mensagem.tipo === 'sucesso' ? '#a7f3d0' : '#fecaca'}`
+          backgroundColor: mensagem.tipo === 'sucesso' ? 'var(--fx-green-bg)' : 'var(--fx-red-bg)',
+          color: mensagem.tipo === 'sucesso' ? 'var(--fx-green)' : 'var(--fx-red)',
+          border: `1px solid ${mensagem.tipo === 'sucesso' ? 'var(--fx-green-line)' : 'var(--fx-red-line)'}`
         }}>
-          {mensagem.tipo === 'sucesso' ? <Icons.CheckCircle color="#059669" /> : <Icons.Alert color="#dc2626" />}
+          {mensagem.tipo === 'sucesso' ? <Icons.CheckCircle color="var(--fx-green)" /> : <Icons.Alert color="var(--fx-red)" />}
           <span>{mensagem.texto}</span>
         </div>
       )}
 
       <div style={styles.cardForm}>
         <h4 style={styles.cardTitle}>
-          {editandoId ? <><Icons.Edit color="#4b5563" /> Editar Serviço</> : <><Icons.Plus color="#4b5563" /> Novo Serviço</>}
+          {editandoId ? <><Icons.Edit color="var(--fx-muted)" /> Editar Serviço</> : <><Icons.Plus color="var(--fx-muted)" /> Novo Serviço</>}
         </h4>
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.inputGroup}>
@@ -261,7 +259,7 @@ function GestaoServicos({ empresaId }) {
               return (
                 <tr key={s.id} style={{...styles.tr, opacity: isAtivo ? 1 : 0.6}}>
                   <td style={{...styles.td, width: '35%'}}>
-                    <strong style={{color: '#111827', textDecoration: isAtivo ? 'none' : 'line-through'}}>{s.nome}</strong>
+                    <strong style={{color: 'var(--fx-text)', textDecoration: isAtivo ? 'none' : 'line-through'}}>{s.nome}</strong>
                   </td>
                   <td style={{...styles.td, width: '15%', textAlign: 'center'}}>
                     <span style={styles.badgeDuracao}>{s.duracao} min</span>
@@ -272,8 +270,8 @@ function GestaoServicos({ empresaId }) {
                   <td style={{...styles.td, width: '15%', textAlign: 'center'}}>
                     <span style={{
                         padding: '4px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', whiteSpace: 'nowrap',
-                        backgroundColor: isAtivo ? '#ecfdf5' : '#fef2f2',
-                        color: isAtivo ? '#059669' : '#dc2626'
+                        backgroundColor: isAtivo ? 'var(--fx-green-bg)' : 'var(--fx-red-bg)',
+                        color: isAtivo ? 'var(--fx-green)' : 'var(--fx-red)'
                     }}>
                         {isAtivo ? 'Ativo' : 'Inativo'}
                     </span>
@@ -281,13 +279,13 @@ function GestaoServicos({ empresaId }) {
                   <td style={{...styles.td, width: '20%', textAlign: 'right', padding: '18px 10px'}}>
                     <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
                       <button onClick={() => alternarStatus(s.id, s.ativo, s.nome)} style={styles.btnIconPower} title={isAtivo ? "Inativar" : "Ativar"}>
-                        <Icons.Power color={isAtivo ? "#10b981" : "#9ca3af"} />
+                        <Icons.Power color={isAtivo ? "var(--fx-green)" : "var(--fx-faint)"} />
                       </button>
                       <button onClick={() => prepararEdicao(s)} style={styles.btnIconEdit} title="Editar">
-                        <Icons.Edit color="#4b5563" />
+                        <Icons.Edit color="var(--fx-muted)" />
                       </button>
                       <button onClick={() => deletar(s.id)} style={styles.btnIconDelete} title="Excluir">
-                        <Icons.Trash color="#ef4444" />
+                        <Icons.Trash color="var(--fx-red)" />
                       </button>
                     </div>
                   </td>
@@ -295,7 +293,7 @@ function GestaoServicos({ empresaId }) {
               )
             }) : (
               <tr>
-                <td colSpan="5" style={{ padding: '30px', textAlign: 'center', color: '#6b7280' }}>
+                <td colSpan="5" style={{ padding: '30px', textAlign: 'center', color: 'var(--fx-muted)' }}>
                   Nenhum serviço cadastrado ainda.
                 </td>
               </tr>
@@ -320,32 +318,32 @@ const Icons = {
 
 const styles = {
   container: { padding: '40px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Inter', sans-serif" },
-  header: { marginBottom: '30px', borderBottom: '1px solid #e5e7eb', paddingBottom: '20px' },
-  title: { fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 5px 0', letterSpacing: '-0.5px' },
-  subtitle: { color: '#6b7280', fontSize: '15px', margin: 0 },
+  header: { marginBottom: '30px', paddingBottom: '4px' },
+  title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  subtitle: { color: 'var(--fx-muted)', fontSize: '15px', margin: 0 },
   alerta: { padding: '15px 20px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '600' },
-  cardForm: { background: '#fff', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid #f3f4f6' },
-  cardTitle: { margin: '0 0 20px 0', color: '#111827', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' },
+  cardForm: { background: 'var(--fx-card)', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid var(--fx-line)' },
+  cardTitle: { margin: '0 0 20px 0', color: 'var(--fx-text)', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' },
   form: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', alignItems: 'flex-start' },
   inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
-  label: { fontSize: '12px', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px' },
-  input: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', boxSizing: 'border-box', background: '#fff', color: '#111827' },
-  helperText: { fontSize: '11px', color: '#9ca3af', marginTop: '2px' },
-  btnGerarIA: { padding: '4px 10px', borderRadius: '6px', border: '1px solid #ddd6fe', background: '#f5f3ff', color: '#6d28d9', cursor: 'pointer', fontSize: '11px', fontWeight: '700' },
-  textareaDescricao: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', boxSizing: 'border-box', background: '#fff', color: '#111827', fontFamily: 'inherit', resize: 'vertical' },
+  label: { fontSize: '12px', fontWeight: '700', color: 'var(--fx-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  input: { padding: '12px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px', boxSizing: 'border-box', background: 'var(--fx-card)', color: 'var(--fx-text)' },
+  helperText: { fontSize: '11px', color: 'var(--fx-faint)', marginTop: '2px' },
+  btnGerarIA: { padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--fx-violet-line)', background: 'var(--fx-violet-bg)', color: 'var(--fx-violet)', cursor: 'pointer', fontSize: '11px', fontWeight: '700' },
+  textareaDescricao: { padding: '12px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px', boxSizing: 'border-box', background: 'var(--fx-card)', color: 'var(--fx-text)', fontFamily: 'inherit', resize: 'vertical' },
   areaAcoes: { display: 'flex', gap: '10px', marginTop: '22px' }, 
   btnPrincipal: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', padding: '12px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '700', transition: '0.2s', flex: 1 },
-  btnCancelar: { background: '#f3f4f6', color: '#4b5563', padding: '12px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', transition: '0.2s' },
-  cardTabela: { background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid #f3f4f6' },
+  btnCancelar: { background: 'var(--fx-surface-2)', color: 'var(--fx-muted)', padding: '12px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', transition: '0.2s' },
+  cardTabela: { background: 'var(--fx-card)', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid var(--fx-line)' },
   table: { width: '100%', minWidth: '620px', borderCollapse: 'collapse', tableLayout: 'fixed' },
-  th: { padding: '15px 20px', background: '#f9fafb', color: '#6b7280', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' },
-  tr: { borderBottom: '1px solid #f3f4f6', transition: '0.2s' },
-  td: { padding: '18px 20px', fontSize: '14px', verticalAlign: 'middle', color: '#4b5563' },
-  badgeDuracao: { background: '#eef2ff', color: '#4f46e5', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' },
-  textoPreco: { fontWeight: '700', color: '#059669', whiteSpace: 'nowrap' },
-  btnIconEdit: { background: '#f3f4f6', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', flexShrink: 0, transition: '0.2s' },
-  btnIconDelete: { background: '#fef2f2', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', flexShrink: 0, transition: '0.2s' },
-  btnIconPower: { background: '#f9fafb', border: '1px solid #e5e7eb', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', flexShrink: 0, transition: '0.2s' }
+  th: { padding: '15px 20px', background: 'var(--fx-surface-2)', color: 'var(--fx-muted)', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid var(--fx-line)', whiteSpace: 'nowrap' },
+  tr: { borderBottom: '1px solid var(--fx-line)', transition: '0.2s' },
+  td: { padding: '18px 20px', fontSize: '14px', verticalAlign: 'middle', color: 'var(--fx-muted)' },
+  badgeDuracao: { background: 'var(--fx-violet-bg)', color: 'var(--fx-violet)', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' },
+  textoPreco: { fontWeight: '700', color: 'var(--fx-green)', whiteSpace: 'nowrap' },
+  btnIconEdit: { background: 'var(--fx-surface-2)', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', flexShrink: 0, transition: '0.2s' },
+  btnIconDelete: { background: 'var(--fx-red-bg)', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', flexShrink: 0, transition: '0.2s' },
+  btnIconPower: { background: 'var(--fx-surface-2)', border: '1px solid var(--fx-line)', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', flexShrink: 0, transition: '0.2s' }
 };
 
 export default GestaoServicos;

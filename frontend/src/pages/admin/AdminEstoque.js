@@ -280,10 +280,10 @@ function AdminEstoque({ empresaId }) {
       const linhas = dadosRelatorio.map(r => {
           const data = new Date(r.data_movimentacao).toLocaleString('pt-BR');
           const tipo = r.tipo === 'ADICIONAR' ? 'Entrada' : 'Saída';
-          const corTipo = r.tipo === 'ADICIONAR' ? '#059669' : '#dc2626';
-          return `<tr style='border-bottom:1px solid #f0f0f0'><td style='padding:9px 12px;font-size:12px;color:#374151'>${data}</td><td style='padding:9px 12px;font-size:12px'>${escaparHtml(r.usuario_nome)}</td><td style='padding:9px 12px;font-size:12px;font-weight:600;color:#111827'>${escaparHtml(r.produto_nome)}</td><td style='padding:9px 12px;font-size:12px;font-weight:700;color:${corTipo}'>${tipo}</td><td style='padding:9px 12px;font-size:12px;text-align:center;font-weight:700'>${r.quantidade}</td><td style='padding:9px 12px;font-size:12px;color:#6b7280'>${escaparHtml(r.justificativa) || '-'}</td></tr>`;
+          const corTipo = r.tipo === 'ADICIONAR' ? 'var(--fx-green)' : 'var(--fx-red)';
+          return `<tr style='border-bottom:1px solid var(--fx-surface-2)'><td style='padding:9px 12px;font-size:12px;color:var(--fx-text)'>${data}</td><td style='padding:9px 12px;font-size:12px'>${escaparHtml(r.usuario_nome)}</td><td style='padding:9px 12px;font-size:12px;font-weight:600;color:var(--fx-text)'>${escaparHtml(r.produto_nome)}</td><td style='padding:9px 12px;font-size:12px;font-weight:700;color:${corTipo}'>${tipo}</td><td style='padding:9px 12px;font-size:12px;text-align:center;font-weight:700'>${r.quantidade}</td><td style='padding:9px 12px;font-size:12px;color:var(--fx-muted)'>${escaparHtml(r.justificativa) || '-'}</td></tr>`;
       }).join('');
-      janela.document.write(`<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Relatório de Estoque</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:30px;color:#111827}h1{font-size:22px;font-weight:800;margin-bottom:4px}.sub{font-size:13px;color:#6b7280;margin-bottom:20px}.periodo{display:inline-block;background:#f3f4f6;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;color:#374151;margin-bottom:20px}table{width:100%;border-collapse:collapse}thead tr{background:#111827}th{padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.5px}tr:nth-child(even){background:#f9fafb}.footer{margin-top:20px;font-size:11px;color:#9ca3af;text-align:right}@media print{.no-print{display:none}}</style></head><body><h1>Relatório de Auditoria de Estoque</h1><p class='sub'>Movimentações no período</p><span class='periodo'>Período: ${periodo}</span><table><thead><tr><th>Data/Hora</th><th>Operador</th><th>Produto</th><th>Movimentação</th><th>Qtd</th><th>Justificativa</th></tr></thead><tbody>${linhas}</tbody></table><div class='footer'>Gerado em ${new Date().toLocaleString('pt-BR')} &bull; ${dadosRelatorio.length} registro(s)</div></body></html>`);
+      janela.document.write(`<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Relatório de Estoque</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:30px;color:var(--fx-text)}h1{font-size:22px;font-weight:800;margin-bottom:4px}.sub{font-size:13px;color:var(--fx-muted);margin-bottom:20px}.periodo{display:inline-block;background:var(--fx-surface-2);padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;color:var(--fx-text);margin-bottom:20px}table{width:100%;border-collapse:collapse}thead tr{background:var(--fx-text)}th{padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--fx-card);text-transform:uppercase;letter-spacing:.5px}tr:nth-child(even){background:var(--fx-surface-2)}.footer{margin-top:20px;font-size:11px;color:var(--fx-faint);text-align:right}@media print{.no-print{display:none}}</style></head><body><h1>Relatório de Auditoria de Estoque</h1><p class='sub'>Movimentações no período</p><span class='periodo'>Período: ${periodo}</span><table><thead><tr><th>Data/Hora</th><th>Operador</th><th>Produto</th><th>Movimentação</th><th>Qtd</th><th>Justificativa</th></tr></thead><tbody>${linhas}</tbody></table><div class='footer'>Gerado em ${new Date().toLocaleString('pt-BR')} &bull; ${dadosRelatorio.length} registro(s)</div></body></html>`);
       janela.document.close();
       setTimeout(() => { janela.print(); }, 400);
   };
@@ -295,11 +295,11 @@ function AdminEstoque({ empresaId }) {
     return (
       <div style={{...styles.container, minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
         <div style={{...styles.cardPadrao, width: '100%', maxWidth: '400px', textAlign: 'center', padding: '40px'}}>
-          <div style={{ background: '#f3f4f6', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-             <Icons.Lock color="#111827" />
+          <div style={{ background: 'var(--fx-surface-2)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+             <Icons.Lock color="var(--fx-text)" />
           </div>
-          <h2 style={{margin: '0 0 5px 0', color: '#111827'}}>Acesso ao Estoque</h2>
-          <p style={{color: '#6b7280', fontSize: '14px', marginBottom: '25px'}}>Insira suas credenciais para gerenciar os produtos.</p>
+          <h2 style={{margin: '0 0 5px 0', color: 'var(--fx-text)'}}>Acesso ao Estoque</h2>
+          <p style={{color: 'var(--fx-muted)', fontSize: '14px', marginBottom: '25px'}}>Insira suas credenciais para gerenciar os produtos.</p>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left' }}>
             
@@ -315,7 +315,7 @@ function AdminEstoque({ empresaId }) {
                       <option key={u.id} value={u.nome}>{u.nome}</option>
                   ))}
               </select>
-              <small style={{ color: '#9ca3af', fontSize: '11.5px' }}>
+              <small style={{ color: 'var(--fx-faint)', fontSize: '11.5px' }}>
                 {listaUsuarios.length > 0
                   ? `Quem tem acesso: Administrador, ${listaUsuarios.map(u => u.nome).join(', ')}.`
                   : 'Ainda não há colaboradores cadastrados, só o Administrador tem acesso.'}
@@ -345,7 +345,7 @@ function AdminEstoque({ empresaId }) {
       
       <header style={styles.header}>
         <div>
-          <h2 style={styles.title}><Icons.Package color="#111827" /> Gestão de Estoque</h2>
+          <h2 style={styles.title}>Gestão de Estoque</h2>
           <p style={styles.subtitle}>Gerencie entradas, saídas e cadastro de produtos.</p>
         </div>
         
@@ -358,10 +358,10 @@ function AdminEstoque({ empresaId }) {
           {autorizado.nivel === 'admin' && (
             <>
                 <button onClick={() => setModalRelatorio(true)} style={styles.btnAcaoClaro}>
-                    <Icons.FileText color="#4b5563" /> Relatório
+                    <Icons.FileText color="var(--fx-muted)" /> Relatório
                 </button>
                 <button onClick={() => setModalSublogin(true)} style={styles.btnAcaoClaro}>
-                    <Icons.UserPlus color="#4b5563" /> Criar Acesso
+                    <Icons.UserPlus color="var(--fx-muted)" /> Criar Acesso
                 </button>
             </>
           )}
@@ -372,7 +372,7 @@ function AdminEstoque({ empresaId }) {
       <div style={styles.cardPadrao}>
         <div style={styles.cardHeader}>
             <h4 style={styles.cardTitle}>
-            {editandoId ? <><Icons.Edit color="#4b5563" /> Editando: {formData.nome}</> : <><Icons.Plus color="#4b5563" /> Cadastrar Novo Produto</>}
+            {editandoId ? <><Icons.Edit color="var(--fx-muted)" /> Editando: {formData.nome}</> : <><Icons.Plus color="var(--fx-muted)" /> Cadastrar Novo Produto</>}
             </h4>
         </div>
         
@@ -390,7 +390,7 @@ function AdminEstoque({ empresaId }) {
             <input 
               type="number" min="0" value={formData.quantidade} disabled={!!editandoId}
               onChange={e => setFormData({...formData, quantidade: e.target.value})} required 
-              style={{...styles.input, backgroundColor: editandoId ? '#f3f4f6' : '#fff', cursor: editandoId ? 'not-allowed' : 'text'}}
+              style={{...styles.input, backgroundColor: editandoId ? 'var(--fx-surface-2)' : 'var(--fx-card)', cursor: editandoId ? 'not-allowed' : 'text'}}
             />
           </div>
 
@@ -423,22 +423,22 @@ function AdminEstoque({ empresaId }) {
                 const estoqueBaixo = p.quantidade <= 3;
                 return (
                     <tr key={p.id} style={{...styles.tr, opacity: isAtivo ? 1 : 0.6}}>
-                    <td style={{...styles.td, paddingLeft: '25px'}}><strong style={{color: '#111827', textDecoration: isAtivo ? 'none' : 'line-through'}}>{p.nome}</strong></td>
+                    <td style={{...styles.td, paddingLeft: '25px'}}><strong style={{color: 'var(--fx-text)', textDecoration: isAtivo ? 'none' : 'line-through'}}>{p.nome}</strong></td>
                     <td style={{...styles.td, textAlign: 'center'}}>
-                        <span style={{...styles.badgeQuantidade, backgroundColor: estoqueBaixo ? '#fef2f2' : '#f3f4f6', color: estoqueBaixo ? '#dc2626' : '#374151', border: `1px solid ${estoqueBaixo ? '#fecaca' : '#d1d5db'}`}}>
+                        <span style={{...styles.badgeQuantidade, backgroundColor: estoqueBaixo ? 'var(--fx-red-bg)' : 'var(--fx-surface-2)', color: estoqueBaixo ? 'var(--fx-red)' : 'var(--fx-text)', border: `1px solid ${estoqueBaixo ? 'var(--fx-red-line)' : 'var(--fx-line-2)'}`}}>
                             {p.quantidade} un
                         </span>
                     </td>
                     <td style={{...styles.td, textAlign: 'center'}}><span style={styles.textoPreco}>R$ {parseFloat(p.valor || 0).toFixed(2).replace('.', ',')}</span></td>
                     <td style={{...styles.td, textAlign: 'center'}}>
-                        <span style={{ padding: '4px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', backgroundColor: isAtivo ? '#ecfdf5' : '#fef2f2', color: isAtivo ? '#059669' : '#dc2626' }}>{isAtivo ? 'Venda Ativa' : 'Oculto'}</span>
+                        <span style={{ padding: '4px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', backgroundColor: isAtivo ? 'var(--fx-green-bg)' : 'var(--fx-red-bg)', color: isAtivo ? 'var(--fx-green)' : 'var(--fx-red)' }}>{isAtivo ? 'Venda Ativa' : 'Oculto'}</span>
                     </td>
                     <td style={{...styles.td, textAlign: 'right', paddingRight: '25px'}}>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                            <button onClick={() => setModalAjuste({ ...p, tipo: 'ADICIONAR', quantidade: '', justificativa: '' })} style={{...styles.btnIcon, backgroundColor: '#eef2ff', color: '#4f46e5'}} title="Ajustar Estoque"><Icons.Trending color="#4f46e5" /></button>
-                            <button onClick={() => alternarStatus(p.id, p.ativo, p.nome)} style={styles.btnIcon} title={isAtivo ? "Inativar" : "Ativar"}><Icons.Power color={isAtivo ? "#10b981" : "#9ca3af"} /></button>
-                            <button onClick={() => prepararEdicao(p)} style={styles.btnIcon} title="Editar Cadastro"><Icons.Edit color="#4b5563" /></button>
-                            <button onClick={() => deletar(p.id, p.nome)} style={{...styles.btnIcon, backgroundColor: '#fef2f2'}} title="Excluir"><Icons.Trash color="#ef4444" /></button>
+                            <button onClick={() => setModalAjuste({ ...p, tipo: 'ADICIONAR', quantidade: '', justificativa: '' })} style={{...styles.btnIcon, backgroundColor: 'var(--fx-violet-bg)', color: 'var(--fx-violet)'}} title="Ajustar Estoque"><Icons.Trending color="var(--fx-violet)" /></button>
+                            <button onClick={() => alternarStatus(p.id, p.ativo, p.nome)} style={styles.btnIcon} title={isAtivo ? "Inativar" : "Ativar"}><Icons.Power color={isAtivo ? "var(--fx-green)" : "var(--fx-faint)"} /></button>
+                            <button onClick={() => prepararEdicao(p)} style={styles.btnIcon} title="Editar Cadastro"><Icons.Edit color="var(--fx-muted)" /></button>
+                            <button onClick={() => deletar(p.id, p.nome)} style={{...styles.btnIcon, backgroundColor: 'var(--fx-red-bg)'}} title="Excluir"><Icons.Trash color="var(--fx-red)" /></button>
                         </div>
                     </td>
                     </tr>
@@ -460,10 +460,10 @@ function AdminEstoque({ empresaId }) {
       {modalAjuste && (
         <div style={styles.overlay}>
           <div style={styles.modalCard}>
-            <h3 style={{marginTop: 0, color: '#111827', fontSize: '18px'}}>Ajuste: {modalAjuste.nome}</h3>
+            <h3 style={{marginTop: 0, color: 'var(--fx-text)', fontSize: '18px'}}>Ajuste: {modalAjuste.nome}</h3>
             <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-              <button onClick={() => setModalAjuste({...modalAjuste, tipo: 'ADICIONAR'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', backgroundColor: modalAjuste.tipo === 'ADICIONAR' ? '#10b981' : '#f3f4f6', color: modalAjuste.tipo === 'ADICIONAR' ? '#fff' : '#6b7280' }}>Adicionar (+)</button>
-              <button onClick={() => setModalAjuste({...modalAjuste, tipo: 'RETIRAR'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', backgroundColor: modalAjuste.tipo === 'RETIRAR' ? '#ef4444' : '#f3f4f6', color: modalAjuste.tipo === 'RETIRAR' ? '#fff' : '#6b7280' }}>Retirar (-)</button>
+              <button onClick={() => setModalAjuste({...modalAjuste, tipo: 'ADICIONAR'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', backgroundColor: modalAjuste.tipo === 'ADICIONAR' ? '#10b981' : 'var(--fx-surface-2)', color: modalAjuste.tipo === 'ADICIONAR' ? '#fff' : 'var(--fx-muted)' }}>Adicionar (+)</button>
+              <button onClick={() => setModalAjuste({...modalAjuste, tipo: 'RETIRAR'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', backgroundColor: modalAjuste.tipo === 'RETIRAR' ? '#ef4444' : 'var(--fx-surface-2)', color: modalAjuste.tipo === 'RETIRAR' ? '#fff' : 'var(--fx-muted)' }}>Retirar (-)</button>
             </div>
             <form onSubmit={realizarMovimentacao}>
               <div style={styles.inputGroup}>
@@ -486,8 +486,8 @@ function AdminEstoque({ empresaId }) {
       {modalSublogin && (
         <div style={styles.overlay}>
           <div style={styles.modalCard}>
-            <h3 style={{marginTop: 0, color: '#111827', fontSize: '18px'}}>Acesso para {termos.profissionalPlural}</h3>
-            <p style={{fontSize: '13px', color: '#6b7280', marginBottom: '20px', lineHeight: '1.4'}}>Crie uma senha para o seu colaborador. As movimentações que ele fizer ficarão registradas no relatório.</p>
+            <h3 style={{marginTop: 0, color: 'var(--fx-text)', fontSize: '18px'}}>Acesso para {termos.profissionalPlural}</h3>
+            <p style={{fontSize: '13px', color: 'var(--fx-muted)', marginBottom: '20px', lineHeight: '1.4'}}>Crie uma senha para o seu colaborador. As movimentações que ele fizer ficarão registradas no relatório.</p>
             <form onSubmit={criarSublogin}>
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Sua Senha de Administrador (Autorização)</label>
@@ -524,7 +524,7 @@ function AdminEstoque({ empresaId }) {
         <div style={styles.overlay}>
           <div style={{...styles.modalCard, maxWidth: '850px', width: '95%'}}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{margin: 0, color: '#111827', fontSize: '20px'}}>Relatório de Auditoria</h3>
+                <h3 style={{margin: 0, color: 'var(--fx-text)', fontSize: '20px'}}>Relatório de Auditoria</h3>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <button onClick={exportarParaExcel} style={{...styles.btnPrincipal, background: '#059669', color: '#fff', display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 15px', height: 'auto'}}>
                         <Icons.Download color="#fff" /> Exportar Excel
@@ -532,11 +532,11 @@ function AdminEstoque({ empresaId }) {
                     <button onClick={exportarParaPDF} style={{...styles.btnPrincipal, background: '#dc2626', color: '#fff', display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 15px', height: 'auto'}}>
                         <Icons.FileText color="#fff" /> Exportar PDF
                     </button>
-                    <button onClick={() => setModalRelatorio(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', marginLeft: '10px', display: 'flex', alignItems: 'center' }}><Icons.Close color="#999" /></button>
+                    <button onClick={() => setModalRelatorio(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fx-faint)', marginLeft: '10px', display: 'flex', alignItems: 'center' }}><Icons.Close color="var(--fx-faint)" /></button>
                 </div>
             </div>
             
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', background: '#f9fafb', borderRadius: '10px', border: '1px solid #e5e7eb', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', background: 'var(--fx-surface-2)', borderRadius: '10px', border: '1px solid var(--fx-line)', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1 }}>
                     <label style={styles.label}>Data Inicial:</label>
                     <input type="date" style={styles.input} value={filtroRelatorio.inicio} onChange={e => setFiltroRelatorio({...filtroRelatorio, inicio: e.target.value})} />
@@ -553,9 +553,9 @@ function AdminEstoque({ empresaId }) {
                 </button>
             </div>
 
-            <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
+            <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--fx-line)', borderRadius: '10px' }}>
                 <table style={styles.table}>
-                    <thead style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                    <thead style={{ position: 'sticky', top: 0, background: 'var(--fx-surface-2)', zIndex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                         <tr>
                             <th style={styles.th}>Data/Hora</th>
                             <th style={styles.th}>Operador</th>
@@ -571,14 +571,14 @@ function AdminEstoque({ empresaId }) {
                                 <td style={styles.td}><b>{r.usuario_nome}</b></td>
                                 <td style={styles.td}>{r.produto_nome}</td>
                                 <td style={styles.td}>
-                                    <span style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', background: r.tipo === 'ADICIONAR' ? '#ecfdf5' : '#fef2f2', color: r.tipo === 'ADICIONAR' ? '#059669' : '#dc2626' }}>
+                                    <span style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', background: r.tipo === 'ADICIONAR' ? 'var(--fx-green-bg)' : 'var(--fx-red-bg)', color: r.tipo === 'ADICIONAR' ? 'var(--fx-green)' : 'var(--fx-red)' }}>
                                         {r.tipo === 'ADICIONAR' ? '+' : '-'}{r.quantidade}
                                     </span>
                                 </td>
-                                <td style={{...styles.td, fontSize: '12px', color: '#6b7280'}}>{r.justificativa}</td>
+                                <td style={{...styles.td, fontSize: '12px', color: 'var(--fx-muted)'}}>{r.justificativa}</td>
                             </tr>
                         )) : (
-                            <tr><td colSpan="5" style={{ padding: '30px', textAlign: 'center', color: '#999' }}>Nenhuma movimentação encontrada neste período.</td></tr>
+                            <tr><td colSpan="5" style={{ padding: '30px', textAlign: 'center', color: 'var(--fx-faint)' }}>Nenhuma movimentação encontrada neste período.</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -613,40 +613,40 @@ const Icons = {
 
 const styles = {
   container: { padding: '40px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', borderBottom: '1px solid #e5e7eb', paddingBottom: '20px' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', paddingBottom: '4px' },
   headerAcoes: { display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap', justifyContent: 'flex-end' },
-  title: { fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 5px 0', letterSpacing: '-0.5px' },
-  subtitle: { color: '#6b7280', fontSize: '15px', margin: 0 },
+  title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  subtitle: { color: 'var(--fx-muted)', fontSize: '15px', margin: 0 },
   
-  badgeOperador: { background: '#111827', color: '#fff', padding: '8px 16px', borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '8px' },
-  btnAcaoClaro: { background: '#fff', color: '#374151', border: '1px solid #d1d5db', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'inline-flex', alignItems: 'center', transition: '0.2s' },
-  btnSair: { background: '#fef2f2', color: '#dc2626', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
+  badgeOperador: { background: 'var(--fx-strong)', color: '#fff', padding: '8px 16px', borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '8px' },
+  btnAcaoClaro: { background: 'var(--fx-card)', color: 'var(--fx-text)', border: '1px solid var(--fx-line-2)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'inline-flex', alignItems: 'center', transition: '0.2s' },
+  btnSair: { background: 'var(--fx-red-bg)', color: 'var(--fx-red)', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
   
   alerta: { padding: '15px 20px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '600' },
   
-  cardPadrao: { background: '#fff', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', marginBottom: '30px', border: '1px solid #f3f4f6' },
-  cardHeader: { borderBottom: '1px solid #f3f4f6', paddingBottom: '15px', marginBottom: '20px' },
-  cardTitle: { margin: 0, color: '#111827', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' },
+  cardPadrao: { background: 'var(--fx-card)', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', marginBottom: '30px', border: '1px solid var(--fx-line)' },
+  cardHeader: { borderBottom: '1px solid var(--fx-line)', paddingBottom: '15px', marginBottom: '20px' },
+  cardTitle: { margin: 0, color: 'var(--fx-text)', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' },
   
   formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', alignItems: 'flex-end' },
   inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  label: { fontSize: '12px', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px' },
-  input: { padding: '12px 15px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', boxSizing: 'border-box', background: '#fff', color: '#111827', outline: 'none', transition: '0.2s' },
-  select: { padding: '12px 15px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', boxSizing: 'border-box', background: '#fff', color: '#111827', outline: 'none', cursor: 'pointer', appearance: 'menulist' },
+  label: { fontSize: '12px', fontWeight: '700', color: 'var(--fx-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  input: { padding: '12px 15px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px', boxSizing: 'border-box', background: 'var(--fx-card)', color: 'var(--fx-text)', outline: 'none', transition: '0.2s' },
+  select: { padding: '12px 15px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px', boxSizing: 'border-box', background: 'var(--fx-card)', color: 'var(--fx-text)', outline: 'none', cursor: 'pointer', appearance: 'menulist' },
   
   btnPrincipal: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', padding: '12px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '700', transition: '0.2s', flex: 1 },
   
   table: { width: '100%', borderCollapse: 'collapse', minWidth: '600px' },
-  th: { padding: '18px 15px', background: '#f9fafb', color: '#6b7280', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb', textAlign: 'left' },
-  tr: { borderBottom: '1px solid #f3f4f6', transition: '0.2s' },
-  td: { padding: '18px 15px', fontSize: '14px', verticalAlign: 'middle', color: '#4b5563' },
+  th: { padding: '18px 15px', background: 'var(--fx-surface-2)', color: 'var(--fx-muted)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid var(--fx-line)', textAlign: 'left' },
+  tr: { borderBottom: '1px solid var(--fx-line)', transition: '0.2s' },
+  td: { padding: '18px 15px', fontSize: '14px', verticalAlign: 'middle', color: 'var(--fx-muted)' },
   badgeQuantidade: { padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' },
-  textoPreco: { fontWeight: '700', color: '#059669' },
+  textoPreco: { fontWeight: '700', color: 'var(--fx-green)' },
   
-  btnIcon: { background: '#f9fafb', border: '1px solid #e5e7eb', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', transition: '0.2s' },
+  btnIcon: { background: 'var(--fx-surface-2)', border: '1px solid var(--fx-line)', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', transition: '0.2s' },
   
   overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '20px', backdropFilter: 'blur(4px)' },
-  modalCard: { background: '#fff', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '450px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }
+  modalCard: { background: 'var(--fx-card)', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '450px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }
 };
 
 export default AdminEstoque;

@@ -1,6 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import './estilo/app-oficio.css';
+import './estilo/admin-oficio.css';
+import './estilo/tema';
 import './services/authFetch';
 import App from './App';
 import reportWebVitals from './reportWebVitals';

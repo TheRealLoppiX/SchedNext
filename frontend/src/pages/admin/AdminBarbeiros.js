@@ -341,19 +341,19 @@ function AdminBarbeiros({ empresaId }) {
         }
     };
 
-    if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280', fontSize: '16px' }}>Carregando equipe...</p>;
+    if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: 'var(--fx-muted)', fontSize: '16px' }}>Carregando equipe...</p>;
 
     return (
         <div className="admin-page-container" style={styles.container}>
             <header style={styles.header}>
                 <div>
-                    <h2 style={styles.title}><Icons.Users color="#111827" /> Gestão de {termos.profissionalPlural}</h2>
+                    <h2 style={styles.title}>Gestão de {termos.profissionalPlural}</h2>
                     <p style={styles.subtitle}>Gerencie sua equipe, horários e vínculos de serviços.</p>
                 </div>
             </header>
 
             <div style={styles.cardForm}>
-                <h4 style={styles.cardTitle}><Icons.UserPlus color="#4b5563" /> Cadastrar Novo Profissional</h4>
+                <h4 style={styles.cardTitle}><Icons.UserPlus color="var(--fx-muted)" /> Cadastrar Novo Profissional</h4>
                 <form onSubmit={handleCadastrar} style={styles.form}>
                     <div style={styles.inputGroup}>
                         <label style={styles.label}>Nome do {termos.profissional}</label>
@@ -402,25 +402,25 @@ function AdminBarbeiros({ empresaId }) {
             <div style={styles.grid}>
                 {barbeiros.length > 0 ? barbeiros.map(b => (
                     <div key={b.id} style={{...styles.card, borderTop: b.ativo ? '4px solid #059669' : '4px solid #dc2626'}}>
-                        <button onClick={() => deletarBarbeiro(b.id, b.nome)} style={styles.btnXCard} title={`Excluir ${termos.profissional}`}><Icons.Trash color="#dc2626" /></button>
+                        <button onClick={() => deletarBarbeiro(b.id, b.nome)} style={styles.btnXCard} title={`Excluir ${termos.profissional}`}><Icons.Trash color="var(--fx-red)" /></button>
                         
                         <div style={styles.info}>
                             <div style={styles.avatar}>
-                                {b.foto_url ? <img src={b.foto_url} style={styles.img} alt={b.nome} /> : <Icons.User color="#9ca3af" />}
+                                {b.foto_url ? <img src={b.foto_url} style={styles.img} alt={b.nome} /> : <Icons.User color="var(--fx-faint)" />}
                             </div>
                             <div>
                                 <h3 style={styles.nomeCard}>{b.nome}</h3>
                                 <div style={styles.badgeRow}>
-                                    <span style={{ ...styles.badgeStatus, backgroundColor: b.ativo ? '#d1fae5' : '#fee2e2', color: b.ativo ? '#065f46' : '#991b1b' }}>
+                                    <span style={{ ...styles.badgeStatus, backgroundColor: b.ativo ? 'var(--fx-green-bg)' : 'var(--fx-red-bg)', color: b.ativo ? 'var(--fx-green)' : 'var(--fx-red)' }}>
                                         {b.ativo ? 'Ativo na Plataforma' : 'Inativo / Oculto'}
                                     </span>
                                     {b.percentual_comissao != null && (
-                                        <span style={{ ...styles.badgeStatus, backgroundColor: '#ede9fe', color: '#6d28d9' }}>
+                                        <span style={{ ...styles.badgeStatus, backgroundColor: 'var(--fx-violet-bg)', color: 'var(--fx-violet)' }}>
                                             Comissão {Number(b.percentual_comissao)}%
                                         </span>
                                     )}
                                     {b.unidade_id && (
-                                        <span style={{ ...styles.badgeStatus, backgroundColor: '#e0f2fe', color: '#0369a1' }}>
+                                        <span style={{ ...styles.badgeStatus, backgroundColor: 'var(--fx-blue-bg)', color: 'var(--fx-blue)' }}>
                                             {unidades.find(u => u.id === b.unidade_id)?.nome || 'Unidade'}
                                         </span>
                                     )}
@@ -429,7 +429,7 @@ function AdminBarbeiros({ empresaId }) {
                         </div>
 
                         <div style={styles.areaBloqueios}>
-                            <strong style={styles.tituloBloqueio}><Icons.Lock color="#6b7280" /> Bloqueios de Agenda:</strong>
+                            <strong style={styles.tituloBloqueio}><Icons.Lock color="var(--fx-muted)" /> Bloqueios de Agenda:</strong>
                             {b.bloqueios && b.bloqueios.length > 0 ? b.bloqueios.map(bloq => {
                                 const dataParaUsar = bloq.data_bloqueio || bloq.data_inicio;
                                 if (!dataParaUsar) return null;
@@ -448,31 +448,31 @@ function AdminBarbeiros({ empresaId }) {
                                     <div key={bloq.id} style={styles.itemBloqueio}>
                                         <span>{periodo} | {horario}</span>
                                         <button onClick={() => excluirBloqueio(bloq.id)} style={styles.btnX} title="Remover Bloqueio">
-                                            <Icons.Trash color="#ef4444" />
+                                            <Icons.Trash color="var(--fx-red)" />
                                         </button>
                                     </div>
                                 );
-                            }) : <small style={{color: '#9ca3af', fontSize: '12px'}}>Agenda totalmente livre.</small>}
+                            }) : <small style={{color: 'var(--fx-faint)', fontSize: '12px'}}>Agenda totalmente livre.</small>}
                         </div>
 
                         <div style={styles.containerBotoes}>
                             <div style={{ display: 'flex', gap: '10px' }}>
-                                <button onClick={() => setEditando(b)} style={styles.btnSecundario}><Icons.Edit color="#4b5563" /> Editar</button>
-                                <button onClick={() => { setDadosBloqueio({ data: '', dataFim: '', inicio: '', fim: '', diaTodo: false, motivo: 'Intervalo/Folga' }); setBloqueando(b); }} style={styles.btnSecundario}><Icons.Lock color="#4b5563" /> Bloquear</button>
+                                <button onClick={() => setEditando(b)} style={styles.btnSecundario}><Icons.Edit color="var(--fx-muted)" /> Editar</button>
+                                <button onClick={() => { setDadosBloqueio({ data: '', dataFim: '', inicio: '', fim: '', diaTodo: false, motivo: 'Intervalo/Folga' }); setBloqueando(b); }} style={styles.btnSecundario}><Icons.Lock color="var(--fx-muted)" /> Bloquear</button>
                             </div>
                             
                             <button onClick={() => abrirModalServicos(b)} style={styles.btnVincular}>
-                                <Icons.Link color="#4f46e5" /> Vincular Serviços
+                                <Icons.Link color="var(--fx-violet)" /> Vincular Serviços
                             </button>
                             
-                            <button onClick={() => alternarStatus(b.id, b.ativo, b.nome)} style={{...styles.btnStatus, backgroundColor: b.ativo ? '#fef2f2' : '#ecfdf5', color: b.ativo ? '#dc2626' : '#059669', border: `1px solid ${b.ativo ? '#fecaca' : '#a7f3d0'}`}}>
-                                <Icons.Power color={b.ativo ? "#dc2626" : "#059669"} /> 
+                            <button onClick={() => alternarStatus(b.id, b.ativo, b.nome)} style={{...styles.btnStatus, backgroundColor: b.ativo ? 'var(--fx-red-bg)' : 'var(--fx-green-bg)', color: b.ativo ? 'var(--fx-red)' : 'var(--fx-green)', border: `1px solid ${b.ativo ? 'var(--fx-red-line)' : 'var(--fx-green-line)'}`}}>
+                                <Icons.Power color={b.ativo ? "var(--fx-red)" : "var(--fx-green)"} /> 
                                 {b.ativo ? `Desativar ${termos.profissional}` : `Reativar ${termos.profissional}`}
                             </button>
                         </div>
                     </div>
                 )) : (
-                    <div style={{ gridColumn: '1 / -1', backgroundColor: '#fff', borderRadius: '12px', border: '1px dashed #d1d5db' }}>
+                    <div style={{ gridColumn: '1 / -1', backgroundColor: 'var(--fx-card)', borderRadius: '12px', border: '1px dashed var(--fx-line-2)' }}>
                         <EmptyState
                             title={`Nenhum ${termos.profissional.toLowerCase()} cadastrado nesta unidade ainda.`}
                             hint="Use o formulário acima para cadastrar o primeiro profissional da equipe."
@@ -490,7 +490,7 @@ function AdminBarbeiros({ empresaId }) {
                                 <h3 style={styles.modalTitle}>Editar Perfil</h3>
                                 <div style={{ textAlign: 'center', marginBottom: '15px' }}>
                                     <div style={{...styles.avatar, margin: '0 auto 15px', width: '80px', height: '80px'}}>
-                                        {editando.foto_url ? <img src={editando.foto_url} style={styles.img} alt="Preview" /> : <Icons.User color="#9ca3af" />}
+                                        {editando.foto_url ? <img src={editando.foto_url} style={styles.img} alt="Preview" /> : <Icons.User color="var(--fx-faint)" />}
                                     </div>
                                     <label style={styles.btnUpload}>
                                         Escolher Nova Foto
@@ -555,7 +555,7 @@ function AdminBarbeiros({ empresaId }) {
                                         <input type="date" style={styles.inputData} min={dadosBloqueio.data || undefined} value={dadosBloqueio.dataFim} onChange={e => setDadosBloqueio({...dadosBloqueio, dataFim: e.target.value})} />
                                     </div>
                                 </div>
-                                <small style={{ display: 'block', marginTop: '4px', fontSize: '11px', color: '#9ca3af' }}>
+                                <small style={{ display: 'block', marginTop: '4px', fontSize: '11px', color: 'var(--fx-faint)' }}>
                                     Deixe "Até" em branco pra bloquear só o dia "De". Com um período, o horário abaixo (ou "Dia todo") vale pra todos os dias do período.
                                 </small>
                                 <div style={{ display: 'flex', gap: '10px', marginTop: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -589,15 +589,15 @@ function AdminBarbeiros({ empresaId }) {
                                     {Array.isArray(listaServicos) && listaServicos.length > 0 ? (
                                         listaServicos.map(s => (
                                             <label key={s.id} style={styles.itemServico}>
-                                                <input type="checkbox" checked={servicosMarcados.includes(s.id)} onChange={() => toggleServico(s.id)} style={{accentColor: '#111827', width: '16px', height: '16px'}} />
+                                                <input type="checkbox" checked={servicosMarcados.includes(s.id)} onChange={() => toggleServico(s.id)} style={{accentColor: 'var(--fx-text)', width: '16px', height: '16px'}} />
                                                 <div>
-                                                    <strong style={{color: '#111827', fontSize: '14px'}}>{s.nome}</strong>
-                                                    <div style={{fontSize: '12px', color: '#6b7280'}}>R$ {s.valor || s.preco} • {s.duracao} min</div>
+                                                    <strong style={{color: 'var(--fx-text)', fontSize: '14px'}}>{s.nome}</strong>
+                                                    <div style={{fontSize: '12px', color: 'var(--fx-muted)'}}>R$ {s.valor || s.preco} • {s.duracao} min</div>
                                                 </div>
                                             </label>
                                         ))
                                     ) : (
-                                        <p style={{fontSize: '13px', color: '#9ca3af', textAlign: 'center', padding: '20px'}}>Nenhum serviço cadastrado.</p>
+                                        <p style={{fontSize: '13px', color: 'var(--fx-faint)', textAlign: 'center', padding: '20px'}}>Nenhum serviço cadastrado.</p>
                                     )}
                                 </div>
                                 <div style={styles.modalAcoes}>
@@ -626,56 +626,56 @@ const Icons = {
 
 const styles = {
     container: { padding: '40px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Inter', sans-serif" },
-    header: { marginBottom: '30px', borderBottom: '1px solid #e5e7eb', paddingBottom: '20px' },
-    title: { fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 5px 0', letterSpacing: '-0.5px' },
-    subtitle: { color: '#6b7280', fontSize: '15px', margin: 0 },
+    header: { marginBottom: '30px', paddingBottom: '4px' },
+    title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+    subtitle: { color: 'var(--fx-muted)', fontSize: '15px', margin: 0 },
     
-    cardForm: { background: '#fff', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid #f3f4f6' },
-    cardTitle: { margin: '0 0 20px 0', color: '#111827', fontSize: '16px', fontWeight: '700' },
+    cardForm: { background: 'var(--fx-card)', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid var(--fx-line)' },
+    cardTitle: { margin: '0 0 20px 0', color: 'var(--fx-text)', fontSize: '16px', fontWeight: '700' },
     form: { display: 'flex', gap: '20px', alignItems: 'flex-end', flexWrap: 'wrap' },
     inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' },
-    label: { fontSize: '12px', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px' },
-    input: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', boxSizing: 'border-box', background: '#fff', color: '#111827' },
+    label: { fontSize: '12px', fontWeight: '700', color: 'var(--fx-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
+    input: { padding: '12px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px', boxSizing: 'border-box', background: 'var(--fx-card)', color: 'var(--fx-text)' },
     btnPrincipal: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', transition: '0.2s', height: '43px' },
     
     grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' },
-    card: { position: 'relative', backgroundColor: '#fff', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #f3f4f6' },
-    btnXCard: { position: 'absolute', top: '15px', right: '15px', background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    card: { position: 'relative', backgroundColor: 'var(--fx-card)', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid var(--fx-line)' },
+    btnXCard: { position: 'absolute', top: '15px', right: '15px', background: 'var(--fx-red-bg)', color: 'var(--fx-red)', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
     info: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' },
     
-    avatar: { width: '65px', height: '65px', borderRadius: '50%', backgroundColor: '#f3f4f6', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #e5e7eb' },
+    avatar: { width: '65px', height: '65px', borderRadius: '50%', backgroundColor: 'var(--fx-surface-2)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--fx-line)' },
     img: { width: '100%', height: '100%', objectFit: 'cover' },
     
-    nomeCard: { margin: '0 0 6px 0', fontSize: '18px', color: '#111827', fontWeight: '700' },
+    nomeCard: { margin: '0 0 6px 0', fontSize: '18px', color: 'var(--fx-text)', fontWeight: '700' },
     badgeRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' },
     badgeStatus: { display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', lineHeight: 1.4, whiteSpace: 'nowrap' },
     
-    areaBloqueios: { backgroundColor: '#f9fafb', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #e5e7eb' },
-    tituloBloqueio: { fontSize: '11px', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' },
-    itemBloqueio: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '8px 0', borderBottom: '1px solid #e5e7eb', color: '#374151' },
+    areaBloqueios: { backgroundColor: 'var(--fx-surface-2)', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid var(--fx-line)' },
+    tituloBloqueio: { fontSize: '11px', color: 'var(--fx-muted)', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' },
+    itemBloqueio: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '8px 0', borderBottom: '1px solid var(--fx-line)', color: 'var(--fx-text)' },
     btnX: { background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center' },
     
     containerBotoes: { display: 'flex', flexDirection: 'column', gap: '10px' },
-    btnSecundario: { flex: 1, padding: '10px', cursor: 'pointer', backgroundColor: '#fff', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px', fontWeight: '600', color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: '0.2s' },
-    btnVincular: { padding: '10px', backgroundColor: '#eef2ff', border: '1px solid #c7d2fe', color: '#4f46e5', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: '0.2s' },
+    btnSecundario: { flex: 1, padding: '10px', cursor: 'pointer', backgroundColor: 'var(--fx-card)', border: '1px solid var(--fx-line-2)', borderRadius: '8px', fontSize: '13px', fontWeight: '600', color: 'var(--fx-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: '0.2s' },
+    btnVincular: { padding: '10px', backgroundColor: 'var(--fx-violet-bg)', border: '1px solid var(--fx-violet-line)', color: 'var(--fx-violet)', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: '0.2s' },
     btnStatus: { padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: '0.2s' },
     
     overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 },
-    modal: { backgroundColor: '#fff', padding: '30px', borderRadius: '15px', width: '90%', maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '15px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', boxSizing: 'border-box' },
-    modalTitle: { margin: '0 0 10px 0', fontSize: '20px', color: '#111827', fontWeight: '800' },
-    inputModal: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', width: '100%', boxSizing: 'border-box', fontSize: '14px', outline: 'none' },
+    modal: { backgroundColor: 'var(--fx-card)', padding: '30px', borderRadius: '15px', width: '90%', maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '15px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', boxSizing: 'border-box' },
+    modalTitle: { margin: '0 0 10px 0', fontSize: '20px', color: 'var(--fx-text)', fontWeight: '800' },
+    inputModal: { padding: '12px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', width: '100%', boxSizing: 'border-box', fontSize: '14px', outline: 'none' },
     // Variante só pra type="date"/type="time" — no Safari/iOS esses inputs renderizam um pouco
     // mais largos que a caixa pedida (ignoram box-sizing:border-box nesse ponto e vazam pra
     // direita, ver bloqueio de horário). WebkitAppearance:none tira o estilo nativo que causa
     // isso; maxWidth:100% é reforço pro overflow:hidden do wrapper cortar sem esticar o layout.
-    inputData: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', width: '100%', maxWidth: '100%', boxSizing: 'border-box', fontSize: '14px', outline: 'none', WebkitAppearance: 'none', appearance: 'none' },
-    btnUpload: { display: 'inline-block', padding: '8px 16px', backgroundColor: '#f3f4f6', color: '#4b5563', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', border: '1px solid #d1d5db' },
-    listaServicosModal: { maxHeight: '300px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '5px' },
-    itemServico: { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', borderRadius: '6px' },
+    inputData: { padding: '12px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', width: '100%', maxWidth: '100%', boxSizing: 'border-box', fontSize: '14px', outline: 'none', WebkitAppearance: 'none', appearance: 'none' },
+    btnUpload: { display: 'inline-block', padding: '8px 16px', backgroundColor: 'var(--fx-surface-2)', color: 'var(--fx-muted)', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', border: '1px solid var(--fx-line-2)' },
+    listaServicosModal: { maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--fx-line)', borderRadius: '8px', padding: '5px' },
+    itemServico: { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderBottom: '1px solid var(--fx-line)', cursor: 'pointer', borderRadius: '6px' },
     modalAcoes: { display: 'flex', gap: '10px', marginTop: '15px' },
     btnSalvarModal: { flex: 1, padding: '12px', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' },
-    btnCancelarModal: { flex: 1, padding: '12px', backgroundColor: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
-    btnDiaTodo: { padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', color: '#4b5563', fontWeight: '600', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' },
+    btnCancelarModal: { flex: 1, padding: '12px', backgroundColor: 'var(--fx-surface-2)', color: 'var(--fx-muted)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
+    btnDiaTodo: { padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', color: 'var(--fx-muted)', fontWeight: '600', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' },
     btnDiaTodoAtivo: { padding: '10px 14px', borderRadius: '8px', border: '1px solid #2554eb', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '700', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }
 };
 

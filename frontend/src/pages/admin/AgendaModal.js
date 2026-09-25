@@ -126,10 +126,10 @@ const toggleServico = (servico) => {
     };
 
     const getStatusVisual = (ag) => {
-        if (ag.status === 'cancelado') return { bg: '#fee2e2', cor: '#dc2626', label: 'cancelado' };
-        if (ag.status === 'concluido') return { bg: '#d1fae5', cor: '#059669', label: 'Concluído' };
-        if (ehNaoCompareceu(ag)) return { bg: '#f3f4f6', cor: '#4b5563', label: 'não compareceu' };
-        return { bg: '#fef3c7', cor: '#d97706', label: ag.status };
+        if (ag.status === 'cancelado') return { bg: 'var(--fx-red-bg)', cor: 'var(--fx-red)', label: 'cancelado' };
+        if (ag.status === 'concluido') return { bg: 'var(--fx-green-bg)', cor: 'var(--fx-green)', label: 'Concluído' };
+        if (ehNaoCompareceu(ag)) return { bg: 'var(--fx-surface-2)', cor: 'var(--fx-muted)', label: 'não compareceu' };
+        return { bg: 'var(--fx-amber-bg)', cor: 'var(--fx-amber)', label: ag.status };
     };
 
     const handleConfirmar = async () => {
@@ -240,13 +240,13 @@ const toggleServico = (servico) => {
 
     const subModalStyles = {
         overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000, borderRadius: '15px' },
-        card: { background: 'white', padding: '25px', borderRadius: '15px', width: '90%', maxWidth: '360px', boxSizing: 'border-box' },
-        cardCheckout: { background: 'white', padding: '25px', borderRadius: '15px', width: '90%', maxWidth: '400px', display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box' },
-        clientBadge: { background: '#f8f9fa', padding: '15px', borderRadius: '10px', borderLeft: '5px solid #28a745', marginBottom: '15px' },
-        label: { fontSize: '12px', fontWeight: 'bold', color: '#666', marginBottom: '4px', display: 'block', textTransform: 'uppercase' },
-        btnConfirm: { flex: 1, padding: '15px', borderRadius: '8px', border: 'none', background: '#333', color: 'white', fontWeight: 'bold', cursor: 'pointer' },
-        btnCancel: { flex: 1, padding: '15px', borderRadius: '8px', border: '1px solid #ddd', background: 'white', color: '#666', cursor: 'pointer' },
-        btnQtd: { width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px', transition: '0.2s', padding: 0, lineHeight: 0 },
+        card: { background: 'var(--fx-card)', border: '1px solid var(--fx-line)', color: 'var(--fx-text)', padding: '25px', borderRadius: '20px', width: '90%', maxWidth: '360px', boxSizing: 'border-box' },
+        cardCheckout: { background: 'var(--fx-card)', border: '1px solid var(--fx-line)', color: 'var(--fx-text)', padding: '25px', borderRadius: '20px', width: '90%', maxWidth: '400px', display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box' },
+        clientBadge: { background: 'var(--fx-surface-2)', padding: '15px', borderRadius: '10px', borderLeft: '5px solid #28a745', marginBottom: '15px' },
+        label: { fontSize: '12px', fontWeight: 'bold', color: 'var(--fx-muted)', marginBottom: '4px', display: 'block', textTransform: 'uppercase' },
+        btnConfirm: { flex: 1, padding: '15px', borderRadius: '8px', border: 'none', background: 'var(--fx-strong)', color: 'white', fontWeight: 'bold', cursor: 'pointer' },
+        btnCancel: { flex: 1, padding: '15px', borderRadius: '8px', border: '1px solid var(--fx-line)', background: 'transparent', color: 'var(--fx-muted)', cursor: 'pointer' },
+        btnQtd: { width: '24px', height: '24px', borderRadius: '50%', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px', transition: '0.2s', padding: 0, lineHeight: 0 },
     };
 
     const totalPago = () => pagamentos.reduce((acc, p) => acc + (parseFloat(String(p.valor).replace(',', '.')) || 0), 0);
@@ -481,13 +481,13 @@ const toggleServico = (servico) => {
                         {barbeiro.foto_url ? (
                             <img src={barbeiro.foto_url} alt="Profissional" style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover' }} />
                         ) : (
-                            <div style={{ width: '45px', height: '45px', borderRadius: '50%', background: '#333', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                            <div style={{ width: '45px', height: '45px', borderRadius: '50%', background: 'var(--fx-strong)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
                                 {barbeiro.nome.charAt(0)}
                             </div>
                         )}
                         <div>
                             <h3 style={{ margin: 0, fontSize: '18px' }}>{barbeiro.nome}</h3>
-                            <span style={{ fontSize: '13px', color: '#666' }}>{dataFormatadaBr}</span>
+                            <span style={{ fontSize: '13px', color: 'var(--fx-muted)' }}>{dataFormatadaBr}</span>
                         </div>
                     </div>
                     <button onClick={onClose} style={styles.closeBtn}>
@@ -523,8 +523,8 @@ const toggleServico = (servico) => {
                                                     {st.label}
                                                 </span>
                                             </div>
-                                            <strong style={{ display: 'block', fontSize: '14px', color: '#333' }}>{ag.cliente_nome}</strong>
-                                            <p style={{ margin: '2px 0 10px 0', fontSize: '12px', color: '#666' }}>{ag.servicos || ag.servico_nome}</p>
+                                            <strong style={{ display: 'block', fontSize: '14px', color: 'var(--fx-text)' }}>{ag.cliente_nome}</strong>
+                                            <p style={{ margin: '2px 0 10px 0', fontSize: '12px', color: 'var(--fx-muted)' }}>{ag.servicos || ag.servico_nome}</p>
                                             
                                             <div style={{ display: 'flex', gap: '5px', marginTop: 'auto' }}>
                                                 {ag.status === 'pendente' || ag.status === 'confirmado' ? (
@@ -538,10 +538,10 @@ const toggleServico = (servico) => {
                                                         >
                                                             Finalizar / PDV
                                                         </button>
-                                                        <button style={{...styles.btnAcao, background: '#fef2f2', color: '#dc2626'}} onClick={() => setModalCancelamento(ag)}>X</button>
+                                                        <button style={{...styles.btnAcao, background: 'var(--fx-red-bg)', color: 'var(--fx-red)'}} onClick={() => setModalCancelamento(ag)}>X</button>
                                                     </>
                                                 ) : (
-                                                    <span style={{ fontSize: '11px', color: '#999', fontStyle: 'italic' }}>Ações bloqueadas para este status.</span>
+                                                    <span style={{ fontSize: '11px', color: 'var(--fx-faint)', fontStyle: 'italic' }}>Ações bloqueadas para este status.</span>
                                                 )}
                                             </div>
                                         </div>
@@ -549,7 +549,7 @@ const toggleServico = (servico) => {
                                 } else {
                                     return (
                                         <div key={hora} style={styles.slotLivre} onClick={() => { setHoraAtiva(hora); setModo('adicionar'); }}>
-                                            <strong style={{ fontSize: '16px', color: '#999' }}>{hora}</strong>
+                                            <strong style={{ fontSize: '16px', color: 'var(--fx-faint)' }}>{hora}</strong>
                                             <span style={{ fontSize: '12px', color: '#ccc' }}>Livre (Clique para encaixar)</span>
                                         </div>
                                     );
@@ -562,11 +562,11 @@ const toggleServico = (servico) => {
                         <div style={styles.formAdicionar}>
                             
                             {horaPreSelecionada || horaAtiva ? (
-                                <div style={{ background: '#fef3c7', padding: '10px', borderRadius: '8px', borderLeft: '4px solid #f59e0b', marginBottom: '15px' }}>
-                                    <strong style={{ color: '#92400e', fontSize: '14px' }}>Horário do Encaixe: {horaPreSelecionada || horaAtiva}</strong>
+                                <div style={{ background: 'var(--fx-amber-bg)', padding: '10px', borderRadius: '8px', borderLeft: '4px solid #f59e0b', marginBottom: '15px' }}>
+                                    <strong style={{ color: 'var(--fx-amber)', fontSize: '14px' }}>Horário do Encaixe: {horaPreSelecionada || horaAtiva}</strong>
                                 </div>
                             ) : (
-                                <div style={{ color: '#dc2626', fontSize: '12px', marginBottom: '15px', background: '#fef2f2', padding: '10px', borderRadius: '8px' }}>
+                                <div style={{ color: 'var(--fx-red)', fontSize: '12px', marginBottom: '15px', background: 'var(--fx-red-bg)', padding: '10px', borderRadius: '8px' }}>
                                     Nenhum horário selecionado. Volte para a aba "Ver Agenda" e clique em um horário livre.
                                 </div>
                             )}
@@ -574,12 +574,12 @@ const toggleServico = (servico) => {
                             <label style={styles.label}>1. Busque o Cliente</label>
                             
                             {clienteSelecionado ? (
-                                <div style={{ background: '#ecfdf5', padding: '12px', borderRadius: '8px', border: '1px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <div style={{ background: 'var(--fx-green-bg)', padding: '12px', borderRadius: '8px', border: '1px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                     <div>
-                                        <strong style={{ display: 'block', color: '#065f46' }}>{clienteSelecionado.nome || clienteSelecionado.nome_completo}</strong>
-                                        <span style={{ fontSize: '12px', color: '#047857' }}>{clienteSelecionado.telefone || clienteSelecionado.tel}</span>
+                                        <strong style={{ display: 'block', color: 'var(--fx-green)' }}>{clienteSelecionado.nome || clienteSelecionado.nome_completo}</strong>
+                                        <span style={{ fontSize: '12px', color: 'var(--fx-green)' }}>{clienteSelecionado.telefone || clienteSelecionado.tel}</span>
                                     </div>
-                                    <button onClick={() => setClienteSelecionado(null)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontWeight: 'bold' }}>Trocar</button>
+                                    <button onClick={() => setClienteSelecionado(null)} style={{ background: 'none', border: 'none', color: 'var(--fx-red)', cursor: 'pointer', fontWeight: 'bold' }}>Trocar</button>
                                 </div>
                             ) : (
                                 <div style={{ marginBottom: '20px', position: 'relative' }}>
@@ -591,19 +591,19 @@ const toggleServico = (servico) => {
                                     />
                                     
                                     {clientesEncontrados.length > 0 && (
-                                        <div style={{ position: 'absolute', top: '45px', left: 0, right: 0, background: '#ffffff', border: '1px solid #d1d5db', borderRadius: '8px', maxHeight: '180px', overflowY: 'auto', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 9999 }}>
+                                        <div style={{ position: 'absolute', top: '45px', left: 0, right: 0, background: 'var(--fx-card)', border: '1px solid var(--fx-line-2)', borderRadius: '8px', maxHeight: '180px', overflowY: 'auto', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 9999 }}>
                                             {clientesEncontrados.map(c => (
-                                                <div key={c.id} style={{ padding: '12px 15px', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', background: '#fff' }} onClick={() => { setClienteSelecionado(c); setBuscaCliente(''); setClientesEncontrados([]); }}>
-                                                    <strong style={{ display: 'block', fontSize: '14px', color: '#111827' }}>
+                                                <div key={c.id} style={{ padding: '12px 15px', borderBottom: '1px solid var(--fx-line)', cursor: 'pointer', background: 'var(--fx-card)' }} onClick={() => { setClienteSelecionado(c); setBuscaCliente(''); setClientesEncontrados([]); }}>
+                                                    <strong style={{ display: 'block', fontSize: '14px', color: 'var(--fx-text)' }}>
                                                         {c.nome || c.nome_completo || 'Cliente'} | {c.telefone || c.tel || 'Sem número'}
                                                     </strong>
-                                                    <span style={{ fontSize: '12px', color: '#6b7280' }}>{c.email}</span>
+                                                    <span style={{ fontSize: '12px', color: 'var(--fx-muted)' }}>{c.email}</span>
                                                 </div>
                                             ))}
                                         </div>
                                     )}
 
-                                    <div style={{ textAlign: 'center', margin: '15px 0', fontSize: '12px', color: '#999', fontWeight: 'bold' }}>OU CADASTRAR NOVO CLIENTE</div>
+                                    <div style={{ textAlign: 'center', margin: '15px 0', fontSize: '12px', color: 'var(--fx-faint)', fontWeight: 'bold' }}>OU CADASTRAR NOVO CLIENTE</div>
                                     
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                         <input style={{...styles.input, gridColumn: 'span 2', marginBottom: 0}} placeholder="Nome Completo *" value={novoCliente.nome} onChange={e => setNovoCliente({...novoCliente, nome: e.target.value})} />
@@ -618,11 +618,11 @@ const toggleServico = (servico) => {
                                         <input style={{...styles.input, marginBottom: 0}} placeholder="Senha (Para o app) *" type="password" value={novoCliente.senha} onChange={e => setNovoCliente({...novoCliente, senha: e.target.value})} />
                                         
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '10px', color: '#6b7280', marginBottom: '2px', fontWeight: 'bold', textTransform: 'uppercase' }}>Data de Nasc. *</span>
+                                            <span style={{ fontSize: '10px', color: 'var(--fx-muted)', marginBottom: '2px', fontWeight: 'bold', textTransform: 'uppercase' }}>Data de Nasc. *</span>
                                             <input style={{...styles.input, marginBottom: 0, width: '100%'}} type="date" value={novoCliente.nasc} onChange={e => setNovoCliente({...novoCliente, nasc: e.target.value})} />
                                         </div>
                                     </div>
-                                    <small style={{display: 'block', color: '#9ca3af', fontSize: '11px', marginTop: '8px'}}>* Todos os campos são obrigatórios.</small>
+                                    <small style={{display: 'block', color: 'var(--fx-faint)', fontSize: '11px', marginTop: '8px'}}>* Todos os campos são obrigatórios.</small>
                                 </div>
                             )}
 
@@ -631,7 +631,7 @@ const toggleServico = (servico) => {
                                 {servicos.map(s => {
                                     const isSel = servicosSelecionados.find(sel => sel.id === s.id);
                                     return (
-                                        <div key={s.id} onClick={() => toggleServico(s)} style={{ padding: '10px', border: `1px solid ${isSel ? '#111827' : '#e5e7eb'}`, background: isSel ? '#111827' : '#f9fafb', color: isSel ? '#fff' : '#333', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', fontSize: '13px', transition: '0.2s' }}>
+                                        <div key={s.id} onClick={() => toggleServico(s)} style={{ padding: '10px', border: `1px solid ${isSel ? 'var(--fx-strong)' : 'var(--fx-line)'}`, background: isSel ? 'var(--fx-strong)' : 'var(--fx-surface-2)', color: isSel ? '#fff' : 'var(--fx-text)', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', fontSize: '13px', transition: '0.2s' }}>
                                             <strong style={{ display: 'block' }}>{s.nome}</strong>
                                             <span>R$ {s.preco || s.valor}</span>
                                         </div>
@@ -652,15 +652,15 @@ const toggleServico = (servico) => {
             {modalFinalizar && (
                 <div style={subModalStyles.overlay}>
                     <div style={subModalStyles.cardCheckout}>
-                        <h3 style={{ marginTop: 0, borderBottom: '1px solid #eee', paddingBottom: '10px', color: '#111827' }}>Finalizar Atendimento (PDV)</h3>
+                        <h3 style={{ marginTop: 0, borderBottom: '1px solid var(--fx-line)', paddingBottom: '10px', color: 'var(--fx-text)' }}>Finalizar Atendimento (PDV)</h3>
                         
                         <div style={subModalStyles.clientBadge}>
-                            <strong style={{ display: 'block', fontSize: '16px', color: '#111827' }}>{modalFinalizar.cliente_nome}</strong>
-                            <span style={{ fontSize: '13px', color: '#059669', fontWeight: 'bold' }}>{modalFinalizar.servicos}</span>
+                            <strong style={{ display: 'block', fontSize: '16px', color: 'var(--fx-text)' }}>{modalFinalizar.cliente_nome}</strong>
+                            <span style={{ fontSize: '13px', color: 'var(--fx-green)', fontWeight: 'bold' }}>{modalFinalizar.servicos}</span>
                         </div>
 
                         <label style={subModalStyles.label}>Adicionar Mais Serviços:</label>
-                        <div style={{ maxHeight: '130px', overflowY: 'auto', marginBottom: '15px', border: '1px solid #f0f0f0', padding: '5px', borderRadius: '8px', background: '#f9fafb' }}>
+                        <div style={{ maxHeight: '130px', overflowY: 'auto', marginBottom: '15px', border: '1px solid var(--fx-line)', padding: '5px', borderRadius: '8px', background: 'var(--fx-surface-2)' }}>
                             {servicos.map(s => {
                                 // Comparação exata contra a lista já dividida, não substring da
                                 // string toda: "Corte" dentro de "Corte Infantil" não pode
@@ -683,8 +683,8 @@ const toggleServico = (servico) => {
                                         }}
                                         style={{ 
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
-                                            padding: '8px 12px', borderBottom: '1px solid #eee',
-                                            backgroundColor: selecionado ? '#ecfdf5' : '#fff',
+                                            padding: '8px 12px', borderBottom: '1px solid var(--fx-line)',
+                                            backgroundColor: selecionado ? 'var(--fx-green-bg)' : 'var(--fx-card)',
                                             cursor: jaAgendado ? 'default' : 'pointer',
                                             opacity: jaAgendado ? 0.4 : 1,
                                             borderRadius: '6px', transition: '0.2s',
@@ -692,13 +692,13 @@ const toggleServico = (servico) => {
                                         }}
                                     >
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '13px', fontWeight: '600', color: selecionado ? '#065f46' : '#333' }}>
-                                                {s.nome} {jaAgendado && <small style={{ fontWeight: 'normal', color: '#999' }}>(Já incluso)</small>}
+                                            <span style={{ fontSize: '13px', fontWeight: '600', color: selecionado ? 'var(--fx-green)' : 'var(--fx-text)' }}>
+                                                {s.nome} {jaAgendado && <small style={{ fontWeight: 'normal', color: 'var(--fx-faint)' }}>(Já incluso)</small>}
                                             </span>
-                                            <span style={{ fontSize: '11px', color: selecionado ? '#059669' : '#6b7280' }}>+ R$ {parseFloat(String(s.valor || s.preco || '0').replace(',', '.')).toFixed(2)}</span>
+                                            <span style={{ fontSize: '11px', color: selecionado ? 'var(--fx-green)' : 'var(--fx-muted)' }}>+ R$ {parseFloat(String(s.valor || s.preco || '0').replace(',', '.')).toFixed(2)}</span>
                                         </div>
                                         
-                                        <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: selecionado ? 'none' : '1px solid #d1d5db', backgroundColor: selecionado ? '#10b981' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: selecionado ? 'none' : '1px solid var(--fx-line-2)', backgroundColor: selecionado ? '#10b981' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                             {selecionado && (
                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                                     <polyline points="20 6 9 17 4 12"></polyline>
@@ -711,16 +711,16 @@ const toggleServico = (servico) => {
                         </div>
 
                         <label style={subModalStyles.label}>Vender Produtos de Estoque:</label>
-                        <div style={{ maxHeight: '150px', overflowY: 'auto', marginBottom: '20px', border: '1px solid #f0f0f0', padding: '5px', borderRadius: '8px', background: '#f9fafb' }}>
+                        <div style={{ maxHeight: '150px', overflowY: 'auto', marginBottom: '20px', border: '1px solid var(--fx-line)', padding: '5px', borderRadius: '8px', background: 'var(--fx-surface-2)' }}>
                             {estoque.length > 0 ? estoque.filter(p => p.ativo !== 0).map(p => {
                                 const itemNoCarrinho = extrasSelecionados.find(item => item.id === p.id && item.tipo === 'produto');
                                 const qtd = itemNoCarrinho ? itemNoCarrinho.quantidade : 0;
 
                                 return (
-                                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #eee', backgroundColor: qtd > 0 ? '#eff6ff' : '#fff', borderRadius: '6px', marginBottom: '4px' }}>
+                                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid var(--fx-line)', backgroundColor: qtd > 0 ? 'var(--fx-blue-bg)' : 'var(--fx-card)', borderRadius: '6px', marginBottom: '4px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '13px', fontWeight: '600', color: '#333' }}>{p.nome}</span>
-                                            <span style={{ fontSize: '11px', color: '#666' }}>R$ {parseFloat(String(p.valor || '0').replace(',', '.')).toFixed(2)} | <small>{p.quantidade} un</small></span>
+                                            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--fx-text)' }}>{p.nome}</span>
+                                            <span style={{ fontSize: '11px', color: 'var(--fx-muted)' }}>R$ {parseFloat(String(p.valor || '0').replace(',', '.')).toFixed(2)} | <small>{p.quantidade} un</small></span>
                                         </div>
                                         
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -744,19 +744,19 @@ const toggleServico = (servico) => {
                                                 } else {
                                                     toast.error(`Estoque insuficiente! Você só tem ${p.quantidade} unidades de ${p.nome}.`);
                                                 }
-                                            }} style={{...subModalStyles.btnQtd, backgroundColor: qtd >= p.quantidade ? '#e5e7eb' : '#111827', color: qtd >= p.quantidade ? '#999' : '#fff', cursor: qtd >= p.quantidade ? 'not-allowed' : 'pointer' }} disabled={qtd >= p.quantidade}>+</button>
+                                            }} style={{...subModalStyles.btnQtd, backgroundColor: qtd >= p.quantidade ? 'var(--fx-surface-2)' : 'var(--fx-strong)', color: qtd >= p.quantidade ? 'var(--fx-faint)' : '#fff', cursor: qtd >= p.quantidade ? 'not-allowed' : 'pointer' }} disabled={qtd >= p.quantidade}>+</button>
                                         </div>
                                     </div>
                                 );
-                            }) : <p style={{textAlign:'center', color:'#999', fontSize:'12px', margin: '15px 0'}}>Estoque vazio.</p>}
+                            }) : <p style={{textAlign:'center', color:'var(--fx-faint)', fontSize:'12px', margin: '15px 0'}}>Estoque vazio.</p>}
                         </div>
 
-                        <div style={{ marginBottom: '15px', borderTop: '2px solid #e5e7eb', paddingTop: '15px' }}>
+                        <div style={{ marginBottom: '15px', borderTop: '2px solid var(--fx-line)', paddingTop: '15px' }}>
                             {assinaturaCheckout.assinante && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '6px 10px', background: '#faf5ff', borderRadius: '6px', border: '1px solid #c4b5fd' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '6px 10px', background: 'var(--fx-violet-bg)', borderRadius: '6px', border: '1px solid var(--fx-violet-line)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"></path><path d="M11 3L8 9l4 13 4-13-3-6"></path><line x1="2" y1="9" x2="22" y2="9"></line></svg>
-                                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#6d28d9' }}>Assinante: serviços do plano descontados</span>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fx-violet)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"></path><path d="M11 3L8 9l4 13 4-13-3-6"></path><line x1="2" y1="9" x2="22" y2="9"></line></svg>
+                                        <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--fx-violet)' }}>Assinante: serviços do plano descontados</span>
                                     </div>
                                     {assinaturaCheckout.servicos_agendados_ids
                                         .filter(id => assinaturaCheckout.servicos_ids.includes(id))
@@ -764,7 +764,7 @@ const toggleServico = (servico) => {
                                             const nome = servicos.find(sv => Number(sv.id) === Number(id))?.nome || 'Serviço';
                                             const restante = assinaturaCheckout.restantes[id];
                                             return (
-                                                <span key={id} style={{ fontSize: '11px', color: '#6d28d9', paddingLeft: '18px' }}>
+                                                <span key={id} style={{ fontSize: '11px', color: 'var(--fx-violet)', paddingLeft: '18px' }}>
                                                     {nome}: {restante == null ? 'ilimitado' : `${Math.max(0, restante)} restante(s) neste ciclo`}
                                                 </span>
                                             );
@@ -772,14 +772,14 @@ const toggleServico = (servico) => {
                                 </div>
                             )}
                             <div style={{ textAlign: 'right' }}>
-                                <span style={{ fontSize: '13px', color: '#6b7280' }}>Base: R$ {getValorBaseSeguro().toFixed(2)}</span><br/>
-                                <strong style={{ fontSize: '22px', color: '#111827' }}>Total: R$ {(getValorBaseSeguro() + getValorAdicionais()).toFixed(2)}</strong>
+                                <span style={{ fontSize: '13px', color: 'var(--fx-muted)' }}>Base: R$ {getValorBaseSeguro().toFixed(2)}</span><br/>
+                                <strong style={{ fontSize: '22px', color: 'var(--fx-text)' }}>Total: R$ {(getValorBaseSeguro() + getValorAdicionais()).toFixed(2)}</strong>
                             </div>
                         </div>
 
                         {modalFinalizar.status !== 'concluido' && (getValorBaseSeguro() + getValorAdicionais() > 0) && (
                             <div style={{ marginBottom: '15px' }}>
-                                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#666', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Forma de pagamento</span>
+                                <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--fx-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Forma de pagamento</span>
                                 {pagamentos.map((p, i) => (
                                     <div key={i} style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
                                         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -795,9 +795,9 @@ const toggleServico = (servico) => {
                                                     onClick={() => setFormaLinha(i, p.forma_pagamento === opcao.valor ? null : opcao.valor)}
                                                     style={{
                                                         padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', cursor: 'pointer',
-                                                        border: p.forma_pagamento === opcao.valor ? '1px solid #111827' : '1px solid #d1d5db',
-                                                        background: p.forma_pagamento === opcao.valor ? '#111827' : '#fff',
-                                                        color: p.forma_pagamento === opcao.valor ? '#fff' : '#374151'
+                                                        border: p.forma_pagamento === opcao.valor ? '1px solid var(--fx-strong)' : '1px solid var(--fx-line-2)',
+                                                        background: p.forma_pagamento === opcao.valor ? 'var(--fx-strong)' : 'var(--fx-card)',
+                                                        color: p.forma_pagamento === opcao.valor ? '#fff' : 'var(--fx-text)'
                                                     }}
                                                 >
                                                     {opcao.rotulo}
@@ -810,24 +810,24 @@ const toggleServico = (servico) => {
                                                     type="number" min="0" step="0.01" placeholder="0,00"
                                                     value={p.valor}
                                                     onChange={(e) => setValorLinha(i, e.target.value)}
-                                                    style={{ width: '80px', padding: '6px 8px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '13px' }}
+                                                    style={{ width: '80px', padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '13px' }}
                                                 />
-                                                <button type="button" onClick={() => removerLinhaPagamento(i)} title="Remover linha" style={{ border: 'none', background: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '18px', padding: '0 4px', lineHeight: 1 }}>×</button>
+                                                <button type="button" onClick={() => removerLinhaPagamento(i)} title="Remover linha" style={{ border: 'none', background: 'none', color: 'var(--fx-red)', cursor: 'pointer', fontSize: '18px', padding: '0 4px', lineHeight: 1 }}>×</button>
                                             </>
                                         )}
                                     </div>
                                 ))}
                                 {pagamentos.length === 1 ? (
-                                    <button type="button" onClick={adicionarLinhaPagamento} style={{ border: 'none', background: 'none', color: '#2554eb', cursor: 'pointer', fontSize: '12px', fontWeight: '600', padding: 0, marginTop: '2px' }}>
+                                    <button type="button" onClick={adicionarLinhaPagamento} style={{ border: 'none', background: 'none', color: 'var(--fx-blue)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', padding: 0, marginTop: '2px' }}>
                                         + Dividir em mais de uma forma de pagamento
                                     </button>
                                 ) : (
                                     <>
-                                        <p style={{ margin: '4px 0 0', fontSize: '12px', fontWeight: '600', color: Math.abs(totalPago() - (getValorBaseSeguro() + getValorAdicionais())) > 0.01 ? '#dc2626' : '#059669' }}>
+                                        <p style={{ margin: '4px 0 0', fontSize: '12px', fontWeight: '600', color: Math.abs(totalPago() - (getValorBaseSeguro() + getValorAdicionais())) > 0.01 ? 'var(--fx-red)' : 'var(--fx-green)' }}>
                                             Somado: R$ {totalPago().toFixed(2)} de R$ {(getValorBaseSeguro() + getValorAdicionais()).toFixed(2)}
                                         </p>
                                         {pagamentos.length < 4 && (
-                                            <button type="button" onClick={adicionarLinhaPagamento} style={{ border: 'none', background: 'none', color: '#2554eb', cursor: 'pointer', fontSize: '12px', fontWeight: '600', padding: 0, marginTop: '4px' }}>
+                                            <button type="button" onClick={adicionarLinhaPagamento} style={{ border: 'none', background: 'none', color: 'var(--fx-blue)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', padding: 0, marginTop: '4px' }}>
                                                 + Adicionar outra forma
                                             </button>
                                         )}
@@ -837,24 +837,24 @@ const toggleServico = (servico) => {
                         )}
 
                         {modalFinalizar.status !== 'concluido' && linhaPix() && mpConectado && (
-                            <div style={{ marginBottom: '15px', padding: '14px', borderRadius: '10px', border: '1px solid #e5e7eb', background: '#f9fafb' }}>
+                            <div style={{ marginBottom: '15px', padding: '14px', borderRadius: '10px', border: '1px solid var(--fx-line)', background: 'var(--fx-surface-2)' }}>
                                 {!pixInfo ? (
                                     <LoadingButton
                                         loading={gerandoPix}
                                         onClick={gerarPix}
-                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', background: '#111827', color: '#fff', fontWeight: '600', cursor: 'pointer' }}
+                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', background: 'var(--fx-strong)', color: '#fff', fontWeight: '600', cursor: 'pointer' }}
                                     >
                                         {pagamentos.length > 1 ? `Gerar Pix (R$ ${(parseFloat(String(linhaPix()?.valor).replace(',', '.')) || 0).toFixed(2)})` : 'Gerar Pix'}
                                     </LoadingButton>
                                 ) : pixInfo.pago ? (
-                                    <p style={{ margin: 0, textAlign: 'center', color: '#059669', fontWeight: '700', fontSize: '14px' }}>Pix recebido.</p>
+                                    <p style={{ margin: 0, textAlign: 'center', color: 'var(--fx-green)', fontWeight: '700', fontSize: '14px' }}>Pix recebido.</p>
                                 ) : pixInfo.falhou ? (
                                     <div style={{ textAlign: 'center' }}>
-                                        <p style={{ margin: '0 0 10px', color: '#dc2626', fontWeight: '700', fontSize: '13px' }}>Esse Pix não foi confirmado (recusado ou expirado).</p>
+                                        <p style={{ margin: '0 0 10px', color: 'var(--fx-red)', fontWeight: '700', fontSize: '13px' }}>Esse Pix não foi confirmado (recusado ou expirado).</p>
                                         <LoadingButton
                                             loading={gerandoPix}
                                             onClick={gerarPix}
-                                            style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#111827', color: '#fff', fontWeight: '600', cursor: 'pointer' }}
+                                            style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'var(--fx-strong)', color: '#fff', fontWeight: '600', cursor: 'pointer' }}
                                         >
                                             Gerar novo Pix
                                         </LoadingButton>
@@ -865,18 +865,18 @@ const toggleServico = (servico) => {
                                             <img
                                                 src={`data:image/png;base64,${pixInfo.qr_code_base64}`}
                                                 alt="QR Code do Pix"
-                                                style={{ width: '160px', maxWidth: '100%', height: 'auto', aspectRatio: '1', border: '1px solid #f3f4f6', borderRadius: '8px', padding: '6px', background: '#fff' }}
+                                                style={{ width: '160px', maxWidth: '100%', height: 'auto', aspectRatio: '1', border: '1px solid var(--fx-line)', borderRadius: '8px', padding: '6px', background: 'var(--fx-card)' }}
                                             />
                                         )}
-                                        <p style={{ margin: '10px 0 6px', fontSize: '12px', color: '#6b7280' }}>Peça pro cliente escanear ou copiar o código Pix abaixo.</p>
+                                        <p style={{ margin: '10px 0 6px', fontSize: '12px', color: 'var(--fx-muted)' }}>Peça pro cliente escanear ou copiar o código Pix abaixo.</p>
                                         <button
                                             type="button"
                                             onClick={copiarCodigoPix}
-                                            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '12px' }}
+                                            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', cursor: 'pointer', fontSize: '12px' }}
                                         >
                                             Copiar código Pix
                                         </button>
-                                        <p style={{ margin: '10px 0 0', fontSize: '11px', color: '#9ca3af' }}>Aguardando confirmação do pagamento...</p>
+                                        <p style={{ margin: '10px 0 0', fontSize: '11px', color: 'var(--fx-faint)' }}>Aguardando confirmação do pagamento...</p>
                                     </div>
                                 )}
                             </div>
@@ -893,7 +893,7 @@ const toggleServico = (servico) => {
                                     </LoadingButton>
                                 </>
                             ) : (
-                                <button style={{...subModalStyles.btnConfirm, background: '#9ca3af', cursor: 'not-allowed'}} disabled>Atendimento Fechado</button>
+                                <button style={{...subModalStyles.btnConfirm, background: 'var(--fx-surface-3)', cursor: 'not-allowed'}} disabled>Atendimento Fechado</button>
                             )}
                         </div>
                     </div>
@@ -904,12 +904,12 @@ const toggleServico = (servico) => {
             {modalCancelamento && (
                 <div style={subModalStyles.overlay}>
                     <div style={subModalStyles.card}>
-                        <h3 style={{ marginTop: 0, color: '#111827' }}>Cancelar Agendamento</h3>
-                        <p style={{ fontSize: '14px', color: '#6b7280' }}>Deseja cancelar o horário de <b>{modalCancelamento.cliente_nome}</b>?</p>
+                        <h3 style={{ marginTop: 0, color: 'var(--fx-text)' }}>Cancelar Agendamento</h3>
+                        <p style={{ fontSize: '14px', color: 'var(--fx-muted)' }}>Deseja cancelar o horário de <b>{modalCancelamento.cliente_nome}</b>?</p>
                         
                         <label style={subModalStyles.label}>Motivo do Cancelamento</label>
                         <textarea 
-                            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', height: '80px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }}
+                            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', height: '80px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }}
                             placeholder="Obrigatório registrar a justificativa..."
                             value={justificativaCanc}
                             onChange={e => setJustificativaCanc(e.target.value)}
@@ -928,23 +928,23 @@ const toggleServico = (servico) => {
 
 const styles = {
     overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'flex-end', zIndex: 1000 },
-    modal: { width: '450px', maxWidth: '100%', height: '100vh', backgroundColor: '#fff', boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', animation: 'slideIn 0.3s ease-out' },
-    header: { padding: '25px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fafafa' },
-    closeBtn: { background: 'none', border: 'none', fontSize: '20px', color: '#999', cursor: 'pointer' },
-    tabs: { display: 'flex', borderBottom: '1px solid #e5e7eb' },
-    tab: { flex: 1, padding: '15px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', color: '#9ca3af' },
-    tabAtiva: { flex: 1, padding: '15px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', color: '#111827', borderBottom: '3px solid #111827' },
+    modal: { width: '450px', maxWidth: '100%', height: '100vh', backgroundColor: 'var(--fx-card)', boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', animation: 'slideIn 0.3s ease-out' },
+    header: { padding: '25px', borderBottom: '1px solid var(--fx-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--fx-card)' },
+    closeBtn: { background: 'none', border: 'none', fontSize: '20px', color: 'var(--fx-faint)', cursor: 'pointer' },
+    tabs: { display: 'flex', borderBottom: '1px solid var(--fx-line)' },
+    tab: { flex: 1, padding: '15px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', color: 'var(--fx-faint)' },
+    tabAtiva: { flex: 1, padding: '15px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', color: 'var(--fx-text)', borderBottom: '3px solid var(--fx-acento)' },
     content: { padding: '25px', overflowY: 'auto', flex: 1 },
     
     horariosGrid: { display: 'grid', gap: '15px' },
-    slotLivre: { padding: '15px', border: '1px dashed #cbd5e1', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: '0.2s', background: '#f8fafc' },
-    slotOcupado: { padding: '15px', border: '1px solid #f0f0f0', borderRadius: '12px', display: 'flex', flexDirection: 'column', background: '#fff', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' },
+    slotLivre: { padding: '15px', border: '1px dashed #cbd5e1', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: '0.2s', background: 'var(--fx-card)' },
+    slotOcupado: { padding: '15px', border: '1px solid var(--fx-line)', borderRadius: '12px', display: 'flex', flexDirection: 'column', background: 'var(--fx-card)', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' },
     btnAcao: { padding: '10px 12px', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' },
     
     formAdicionar: { display: 'flex', flexDirection: 'column' },
-    label: { fontSize: '13px', fontWeight: '800', color: '#4b5563', marginBottom: '10px', display: 'block', textTransform: 'uppercase' },
-    input: { width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', marginBottom: '10px', boxSizing: 'border-box', fontSize: '14px', outline: 'none' },
-    btnSalvar: { background: '#111827', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }
+    label: { fontSize: '13px', fontWeight: '800', color: 'var(--fx-muted)', marginBottom: '10px', display: 'block', textTransform: 'uppercase' },
+    input: { width: '100%', padding: '12px', border: '1px solid var(--fx-line-2)', borderRadius: '8px', marginBottom: '10px', boxSizing: 'border-box', fontSize: '14px', outline: 'none' },
+    btnSalvar: { background: 'var(--fx-strong)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }
 };
 
 export default AgendaModal;

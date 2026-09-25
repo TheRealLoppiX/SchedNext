@@ -141,8 +141,8 @@ function AdminAcoes() {
                             {sugestaoIA ? 'Gerar outra' : 'Sugerir campanha'}
                         </LoadingButton>
                     </div>
-                    {sugestaoIA && <p style={{ margin: '14px 0 0', fontSize: '14px', color: '#374151', lineHeight: '1.6' }}>{sugestaoIA}</p>}
-                    {!sugestaoIA && <p style={{ margin: '10px 0 0', fontSize: '13px', color: '#6b7280' }}>Baseada no faturamento e frequência de atendimento dos últimos 30 dias.</p>}
+                    {sugestaoIA && <p style={{ margin: '14px 0 0', fontSize: '14px', color: 'var(--fx-text)', lineHeight: '1.6' }}>{sugestaoIA}</p>}
+                    {!sugestaoIA && <p style={{ margin: '10px 0 0', fontSize: '13px', color: 'var(--fx-muted)' }}>Baseada no faturamento e frequência de atendimento dos últimos 30 dias.</p>}
                 </div>
             )}
 
@@ -205,14 +205,14 @@ function AdminAcoes() {
                                         value={form.valor_desconto}
                                         onChange={e => setForm({...form, valor_desconto: e.target.value, premio_selecionado: e.target.value + '%'})}
                                     />
-                                    <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#374151' }}>%</span>
-                                    <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>de desconto</span>
+                                    <span style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--fx-text)' }}>%</span>
+                                    <span style={{ fontSize: '12px', color: 'var(--fx-muted)', whiteSpace: 'nowrap' }}>de desconto</span>
                                 </div>
                             )}
 
                             {form.tipo_premio === 'desconto_valor' && (
                                 <div style={{ display: 'flex', alignItems: 'center', flex: 2, gap: '8px' }}>
-                                    <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#374151' }}>R$</span>
+                                    <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--fx-text)' }}>R$</span>
                                     <input
                                         type="number" min="0.01" step="0.01"
                                         style={{...s.input, flex: 1}}
@@ -221,17 +221,17 @@ function AdminAcoes() {
                                         value={form.valor_desconto}
                                         onChange={e => setForm({...form, valor_desconto: e.target.value, premio_selecionado: 'R$ ' + e.target.value})}
                                     />
-                                    <span style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>de desconto</span>
+                                    <span style={{ fontSize: '12px', color: 'var(--fx-muted)', whiteSpace: 'nowrap' }}>de desconto</span>
                                 </div>
                             )}
                         </div>
 
                         {/* Preview do prêmio */}
                         {form.premio_selecionado && (
-                            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ background: 'var(--fx-green-bg)', border: '1px solid var(--fx-green-line)', borderRadius: '8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <div>
-                                    <span style={{ fontSize: '12px', color: '#6b7280', display: 'block' }}>O cliente vai ganhar:</span>
-                                    <strong style={{ color: '#065f46', fontSize: '14px' }}>
+                                    <span style={{ fontSize: '12px', color: 'var(--fx-muted)', display: 'block' }}>O cliente vai ganhar:</span>
+                                    <strong style={{ color: 'var(--fx-green)', fontSize: '14px' }}>
                                         {form.tipo_premio === 'servico' && `Serviço gratuito: ${form.premio_selecionado}`}
                                         {form.tipo_premio === 'produto' && `Produto gratuito: ${form.premio_selecionado}`}
                                         {form.tipo_premio === 'desconto_percent' && `${form.valor_desconto}% de desconto no próximo serviço`}
@@ -274,9 +274,9 @@ function AdminAcoes() {
                                 <td style={s.td}><b>{c.nome}</b></td>
                                 <td style={s.td}>{formatarDataSemFuso(c.data_inicio)} a {formatarDataSemFuso(c.data_fim)}</td>
                                 <td style={s.td}>{c.cortes_necessarios}x (Min: R${c.valor_minimo})</td>
-                                <td style={{...s.td, color: '#059669', fontWeight: 'bold'}}>{c.premio_descritivo}</td>
+                                <td style={{...s.td, color: 'var(--fx-green)', fontWeight: 'bold'}}>{c.premio_descritivo}</td>
                                 <td style={s.td}>
-                                    <span style={{ padding: '4px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', backgroundColor: c.ativa ? '#d1fae5' : '#f3f4f6', color: c.ativa ? '#065f46' : '#6b7280' }}>
+                                    <span style={{ padding: '4px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', backgroundColor: c.ativa ? 'var(--fx-green-bg)' : 'var(--fx-surface-2)', color: c.ativa ? 'var(--fx-green)' : 'var(--fx-muted)' }}>
                                         {c.ativa ? 'ATIVA' : 'INATIVA'}
                                     </span>
                                 </td>
@@ -297,20 +297,20 @@ function AdminAcoes() {
 const s = {
     container: { padding: '40px', maxWidth: '1000px', margin: '0 auto', fontFamily: "'Inter', sans-serif" },
     header: { marginBottom: '30px' },
-    title: { fontSize: '28px', color: '#111827', margin: '0 0 5px 0' },
-    subtitle: { color: '#6b7280', margin: 0 },
-    card: { background: '#fff', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid #f3f4f6' },
+    title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+    subtitle: { color: 'var(--fx-muted)', margin: 0 },
+    card: { background: 'var(--fx-card)', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid var(--fx-line)' },
     cardTitle: { margin: '0 0 20px 0', fontSize: '18px' },
     formGrid: { display: 'flex', flexDirection: 'column', gap: '15px' },
     inputGroup: { display: 'flex', flexDirection: 'column', gap: '5px' },
-    label: { fontSize: '12px', fontWeight: 'bold', color: '#4b5563', textTransform: 'uppercase' },
-    input: { padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', width: '100%', boxSizing: 'border-box' },
+    label: { fontSize: '12px', fontWeight: 'bold', color: 'var(--fx-muted)', textTransform: 'uppercase' },
+    input: { padding: '12px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', outline: 'none', width: '100%', boxSizing: 'border-box' },
     btnPrincipal: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', padding: '15px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' },
     table: { width: '100%', borderCollapse: 'collapse' },
-    th: { padding: '15px', textAlign: 'left', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontSize: '12px', textTransform: 'uppercase' },
-    tr: { borderBottom: '1px solid #f3f4f6' },
-    td: { padding: '15px', fontSize: '14px', color: '#374151' },
-    btnIcon: { background: 'none', border: 'none', cursor: 'pointer', color: '#4f46e5', fontWeight: 'bold', marginRight: '10px' }
+    th: { padding: '15px', textAlign: 'left', borderBottom: '1px solid var(--fx-line)', color: 'var(--fx-muted)', fontSize: '12px', textTransform: 'uppercase' },
+    tr: { borderBottom: '1px solid var(--fx-line)' },
+    td: { padding: '15px', fontSize: '14px', color: 'var(--fx-text)' },
+    btnIcon: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fx-violet)', fontWeight: 'bold', marginRight: '10px' }
 };
 
 export default AdminAcoes;

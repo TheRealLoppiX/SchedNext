@@ -12,9 +12,9 @@ import { API_URL } from '../../services/api';
 // cobrança confirmada (baixa manual ou pagamento real) — ver PUT /admin/clientes/:id/plano no
 // backend. Trata-lo como "Em dia" seria mostrar o cliente pagando sem nenhuma baixa de verdade.
 function infoStatusAssinatura(status) {
-    if (status === 'inadimplente') return { label: 'Inadimplente', labelLonga: 'Mensalidade em atraso', cor: '#dc2626', bg: '#fee2e2', fg: '#991b1b' };
-    if (status === 'em_dia') return { label: 'Em dia', labelLonga: 'Mensalidade em dia', cor: '#059669', bg: '#d1fae5', fg: '#065f46' };
-    return { label: 'Pendente', labelLonga: 'Aguardando 1ª cobrança, sem benefício de assinante ainda', cor: '#b45309', bg: '#fef3c7', fg: '#92400e' };
+    if (status === 'inadimplente') return { label: 'Inadimplente', labelLonga: 'Mensalidade em atraso', cor: 'var(--fx-red)', bg: 'var(--fx-red-bg)', fg: 'var(--fx-red)' };
+    if (status === 'em_dia') return { label: 'Em dia', labelLonga: 'Mensalidade em dia', cor: 'var(--fx-green)', bg: 'var(--fx-green-bg)', fg: 'var(--fx-green)' };
+    return { label: 'Pendente', labelLonga: 'Aguardando 1ª cobrança, sem benefício de assinante ainda', cor: 'var(--fx-amber)', bg: 'var(--fx-amber-bg)', fg: 'var(--fx-amber)' };
 }
 
 function formatarMoedaBRL(valor) {
@@ -589,7 +589,7 @@ function AdminClientes({ empresaId }) {
         <div className="admin-page-container" style={s.container}>
             <header style={s.header}>
                 <div>
-                    <h2 style={s.title}><Icons.Users color="#111827" /> Clientes</h2>
+                    <h2 style={s.title}>Clientes</h2>
                     <p style={s.subtitle}>Gerencie sua base de clientes, assinantes e disparos de follow-up.</p>
                 </div>
             </header>
@@ -597,11 +597,11 @@ function AdminClientes({ empresaId }) {
             {mensagem.texto && (
                 <div style={{
                     ...s.alerta,
-                    backgroundColor: mensagem.tipo === 'sucesso' ? '#ecfdf5' : '#fef2f2',
-                    color: mensagem.tipo === 'sucesso' ? '#065f46' : '#991b1b',
-                    border: `1px solid ${mensagem.tipo === 'sucesso' ? '#a7f3d0' : '#fecaca'}`
+                    backgroundColor: mensagem.tipo === 'sucesso' ? 'var(--fx-green-bg)' : 'var(--fx-red-bg)',
+                    color: mensagem.tipo === 'sucesso' ? 'var(--fx-green)' : 'var(--fx-red)',
+                    border: `1px solid ${mensagem.tipo === 'sucesso' ? 'var(--fx-green-line)' : 'var(--fx-red-line)'}`
                 }}>
-                    {mensagem.tipo === 'sucesso' ? <Icons.CheckCircle color="#059669" /> : <Icons.Alert color="#dc2626" />}
+                    {mensagem.tipo === 'sucesso' ? <Icons.CheckCircle color="var(--fx-green)" /> : <Icons.Alert color="var(--fx-red)" />}
                     <span>{mensagem.texto}</span>
                 </div>
             )}
@@ -613,12 +613,12 @@ function AdminClientes({ empresaId }) {
                         <span style={s.statNum}>{clientes.length}</span>
                         <span style={s.statLabel}>Total</span>
                     </div>
-                    <div style={{ ...s.statPill, borderColor: '#c4b5fd' }}>
-                        <span style={{ ...s.statNum, color: '#6d28d9' }}>{clientes.filter(c => c.assinante).length}</span>
+                    <div style={{ ...s.statPill, borderColor: 'var(--fx-violet-line)' }}>
+                        <span style={{ ...s.statNum, color: 'var(--fx-violet)' }}>{clientes.filter(c => c.assinante).length}</span>
                         <span style={s.statLabel}>Assinantes</span>
                     </div>
-                    <div style={{ ...s.statPill, borderColor: '#fcd34d' }}>
-                        <span style={{ ...s.statNum, color: '#92400e' }}>{clientes.filter(c => diasSemCortar(c.ultimo_agendamento) > 30).length}</span>
+                    <div style={{ ...s.statPill, borderColor: 'var(--fx-amber-line)' }}>
+                        <span style={{ ...s.statNum, color: 'var(--fx-amber)' }}>{clientes.filter(c => diasSemCortar(c.ultimo_agendamento) > 30).length}</span>
                         <span style={s.statLabel}>Inativos +30d</span>
                     </div>
                 </div>
@@ -651,15 +651,15 @@ function AdminClientes({ empresaId }) {
             {/* BARRA DE AÇÕES EM LOTE */}
             {selecionados.length > 0 && (
                 <div style={s.barraLote}>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--fx-text)' }}>
                         {selecionados.length} selecionado(s)
                     </span>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <LoadingButton loading={processandoLote} onClick={enviarFollowUpEmLote} style={s.btnLote}>
-                            <Icons.Mail color="#1d4ed8" /> Enviar "sentimos sua falta"
+                            <Icons.Mail color="var(--fx-blue)" /> Enviar "sentimos sua falta"
                         </LoadingButton>
-                        <LoadingButton loading={processandoLote} onClick={excluirEmLote} style={{ ...s.btnLote, backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
-                            <Icons.Trash color="#dc2626" /> Excluir selecionados
+                        <LoadingButton loading={processandoLote} onClick={excluirEmLote} style={{ ...s.btnLote, backgroundColor: 'var(--fx-red-bg)', color: 'var(--fx-red)', border: '1px solid var(--fx-red-line)' }}>
+                            <Icons.Trash color="var(--fx-red)" /> Excluir selecionados
                         </LoadingButton>
                         <button onClick={() => setSelecionados([])} style={{ ...s.btnLote, background: 'none', border: 'none' }}>Limpar seleção</button>
                     </div>
@@ -692,7 +692,7 @@ function AdminClientes({ empresaId }) {
                             const aniversario = aniversarioHoje(c.data_nascimento);
 
                             return (
-                                <tr key={c.id} style={{ ...s.tr, backgroundColor: selecionados.includes(c.id) ? '#eff6ff' : (aniversario ? '#fffbeb' : 'white') }}>
+                                <tr key={c.id} style={{ ...s.tr, backgroundColor: selecionados.includes(c.id) ? 'var(--fx-blue-bg)' : (aniversario ? 'var(--fx-amber-bg)' : 'transparent') }}>
                                     <td style={s.td}>
                                         <input type="checkbox" checked={selecionados.includes(c.id)} onChange={() => toggleSelecionado(c.id)} style={{ cursor: 'pointer' }} />
                                     </td>
@@ -703,36 +703,36 @@ function AdminClientes({ empresaId }) {
                                             </div>
                                             <div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                                                    <strong style={{ color: '#111827', fontSize: '14px', fontWeight: '600' }}>
+                                                    <strong style={{ color: 'var(--fx-text)', fontSize: '14px', fontWeight: '600' }}>
                                                         {c.nome_completo}
                                                     </strong>
-                                                    {c.assinante && <Icons.Diamond color="#6d28d9" />}
-                                                    {aniversario && <Icons.Gift color="#d97706" />}
+                                                    {c.assinante && <Icons.Diamond color="var(--fx-violet)" />}
+                                                    {aniversario && <Icons.Gift color="var(--fx-amber)" />}
                                                 </div>
                                                 {c.assinante && <span style={s.badgeAssinante}>Assinante</span>}
                                             </div>
                                         </div>
                                     </td>
                                     <td style={s.td}>
-                                        <span style={{ display: 'block', fontSize: '13px', color: '#374151', fontWeight: '500' }}>{c.telefone || '—'}</span>
-                                        <span style={{ display: 'block', fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>{c.email}</span>
+                                        <span style={{ display: 'block', fontSize: '13px', color: 'var(--fx-text)', fontWeight: '500' }}>{c.telefone || '—'}</span>
+                                        <span style={{ display: 'block', fontSize: '12px', color: 'var(--fx-faint)', marginTop: '2px' }}>{c.email}</span>
                                     </td>
                                     <td style={s.td}>
-                                        <span style={{ fontSize: '13px', fontWeight: aniversario ? '700' : '500', color: aniversario ? '#d97706' : '#374151' }}>
+                                        <span style={{ fontSize: '13px', fontWeight: aniversario ? '700' : '500', color: aniversario ? 'var(--fx-amber)' : 'var(--fx-text)' }}>
                                             {c.data_nascimento ? formatarDataSemFuso(c.data_nascimento, { somenteDiaMes: true }) : '—'}
                                         </span>
                                     </td>
                                     <td style={s.td}>
-                                        <span style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>{c.agendamentos_mes || 0}</span>
-                                        <span style={{ fontSize: '12px', color: '#9ca3af' }}> / mês</span>
+                                        <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--fx-text)' }}>{c.agendamentos_mes || 0}</span>
+                                        <span style={{ fontSize: '12px', color: 'var(--fx-faint)' }}> / mês</span>
                                         <br />
-                                        <span style={{ fontSize: '12px', color: '#9ca3af' }}>{c.agendamentos_ano || 0} / ano</span>
+                                        <span style={{ fontSize: '12px', color: 'var(--fx-faint)' }}>{c.agendamentos_ano || 0} / ano</span>
                                     </td>
                                     <td style={s.td}>
                                         {dias === null ? (
-                                            <span style={{ fontSize: '13px', color: '#9ca3af' }}>Nunca agendou</span>
+                                            <span style={{ fontSize: '13px', color: 'var(--fx-faint)' }}>Nunca agendou</span>
                                         ) : (
-                                            <span style={{ fontSize: '13px', fontWeight: '600', color: inativo ? '#dc2626' : quaseInativo ? '#d97706' : '#059669' }}>
+                                            <span style={{ fontSize: '13px', fontWeight: '600', color: inativo ? 'var(--fx-red)' : quaseInativo ? 'var(--fx-amber)' : 'var(--fx-green)' }}>
                                                 {dias === 0 ? 'Hoje' : `${dias}d atrás`}
                                             </span>
                                         )}
@@ -742,53 +742,53 @@ function AdminClientes({ empresaId }) {
                                             display: 'inline-block', padding: '5px 12px',
                                             borderRadius: '6px', fontSize: '11px', fontWeight: '700',
                                             textTransform: 'uppercase', letterSpacing: '0.3px',
-                                            backgroundColor: c.assinante ? '#ede9fe' : '#f3f4f6',
-                                            color: c.assinante ? '#6d28d9' : '#6b7280',
-                                            border: c.assinante ? '1px solid #c4b5fd' : '1px solid #e5e7eb'
+                                            backgroundColor: c.assinante ? 'var(--fx-violet-bg)' : 'var(--fx-surface-2)',
+                                            color: c.assinante ? 'var(--fx-violet)' : 'var(--fx-muted)',
+                                            border: c.assinante ? '1px solid var(--fx-violet-line)' : '1px solid var(--fx-line)'
                                         }}>
                                             {c.assinante ? 'Assinante' : 'Comum'}
                                         </span>
                                         {c.assinante && (
                                             <div style={{ marginTop: '5px', fontSize: '11px', fontWeight: '600', color: infoStatusAssinatura(c.status_assinatura).cor }}>
                                                 {infoStatusAssinatura(c.status_assinatura).label}
-                                                {c.proxima_cobranca && <span style={{ color: '#9ca3af', fontWeight: '500' }}> · próx. {formatarDataSemFuso(c.proxima_cobranca, { somenteDiaMes: true })}</span>}
+                                                {c.proxima_cobranca && <span style={{ color: 'var(--fx-faint)', fontWeight: '500' }}> · próx. {formatarDataSemFuso(c.proxima_cobranca, { somenteDiaMes: true })}</span>}
                                             </div>
                                         )}
                                     </td>
                                     <td style={{ ...s.td, textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                                             <button onClick={() => { setClienteSelecionado({ ...c, telefone: formatarTelefone(c.telefone || '') }); setSugestaoIA(''); setMostrarBaixaManual(false); setBaixaObservacoes(''); setPixAssinaturaInfo(null); setMostrarEditarVencimento(false); }} style={s.btnIcone} title="Editar">
-                                                <Icons.Edit color="#4b5563" />
+                                                <Icons.Edit color="var(--fx-muted)" />
                                             </button>
-                                            <button onClick={() => abrirRelatorio(c)} style={{ ...s.btnIcone, backgroundColor: '#f5f3ff' }} title="Relatório do cliente">
-                                                <Icons.FileText color="#6d28d9" />
+                                            <button onClick={() => abrirRelatorio(c)} style={{ ...s.btnIcone, backgroundColor: 'var(--fx-violet-bg)' }} title="Relatório do cliente">
+                                                <Icons.FileText color="var(--fx-violet)" />
                                             </button>
                                             <button
                                                 onClick={() => enviarFollowUp(c, 'saudade', 'email')}
                                                 disabled={loadingId === c.id + 'saudadeemail'}
-                                                style={{ ...s.btnIcone, backgroundColor: '#eff6ff' }}
+                                                style={{ ...s.btnIcone, backgroundColor: 'var(--fx-blue-bg)' }}
                                                 title="Enviar 'Sentimos sua falta' por e-mail"
                                             >
-                                                <Icons.Mail color="#1d4ed8" />
+                                                <Icons.Mail color="var(--fx-blue)" />
                                             </button>
                                             {permiteWhatsapp && c.telefone && (
                                                 <button
                                                     onClick={() => enviarFollowUp(c, 'saudade', 'whatsapp')}
                                                     disabled={loadingId === c.id + 'saudadewhatsapp'}
-                                                    style={{ ...s.btnIcone, backgroundColor: '#ecfdf5' }}
+                                                    style={{ ...s.btnIcone, backgroundColor: 'var(--fx-green-bg)' }}
                                                     title="Enviar 'Sentimos sua falta' por WhatsApp"
                                                 >
-                                                    <Icons.Whatsapp color="#059669" />
+                                                    <Icons.Whatsapp color="var(--fx-green)" />
                                                 </button>
                                             )}
                                             {aniversario && (
                                                 <button
                                                     onClick={() => enviarFollowUp(c, 'aniversario', 'email')}
                                                     disabled={loadingId === c.id + 'aniversarioemail'}
-                                                    style={{ ...s.btnIcone, backgroundColor: '#fffbeb' }}
+                                                    style={{ ...s.btnIcone, backgroundColor: 'var(--fx-amber-bg)' }}
                                                     title="Enviar parabéns por e-mail"
                                                 >
-                                                    <Icons.Gift color="#d97706" />
+                                                    <Icons.Gift color="var(--fx-amber)" />
                                                 </button>
                                             )}
                                         </div>
@@ -797,7 +797,7 @@ function AdminClientes({ empresaId }) {
                             );
                         }) : (
                             <tr>
-                                <td colSpan="8" style={{ padding: '50px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                                <td colSpan="8" style={{ padding: '50px', textAlign: 'center', color: 'var(--fx-faint)', fontSize: '14px' }}>
                                     Nenhum cliente encontrado.
                                 </td>
                             </tr>
@@ -818,17 +818,17 @@ function AdminClientes({ empresaId }) {
                                 </div>
                                 <div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#111827' }}>
+                                        <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: 'var(--fx-text)' }}>
                                             {clienteSelecionado.nome_completo}
                                         </h3>
-                                        {clienteSelecionado.assinante && <Icons.Diamond color="#6d28d9" size={16} />}
+                                        {clienteSelecionado.assinante && <Icons.Diamond color="var(--fx-violet)" size={16} />}
                                     </div>
                                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
                                         {clienteSelecionado.assinante && <span style={s.badgeAssinante}>Assinante</span>}
                                         {riscoFaltas && (riscoFaltas.risco === 'alto' || riscoFaltas.risco === 'medio') && (
                                             <span
                                                 title={`${riscoFaltas.faltas} de ${riscoFaltas.total} atendimentos passados cancelados ou sem comparecimento (${riscoFaltas.percentual}%)`}
-                                                style={{ ...s.badgeAssinante, backgroundColor: riscoFaltas.risco === 'alto' ? '#fef2f2' : '#fffbeb', color: riscoFaltas.risco === 'alto' ? '#dc2626' : '#b45309' }}
+                                                style={{ ...s.badgeAssinante, backgroundColor: riscoFaltas.risco === 'alto' ? 'var(--fx-red-bg)' : 'var(--fx-amber-bg)', color: riscoFaltas.risco === 'alto' ? 'var(--fx-red)' : 'var(--fx-amber)' }}
                                             >
                                                 Risco de falta {riscoFaltas.risco === 'alto' ? 'alto' : 'médio'}
                                             </span>
@@ -836,23 +836,23 @@ function AdminClientes({ empresaId }) {
                                     </div>
                                 </div>
                             </div>
-                            <button onClick={() => setClienteSelecionado(null)} style={s.btnFechar}><Icons.Close color="#9ca3af" /></button>
+                            <button onClick={() => setClienteSelecionado(null)} style={s.btnFechar}><Icons.Close color="var(--fx-faint)" /></button>
                         </div>
 
                         {/* Stats */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                             {[
-                                { valor: clienteSelecionado.agendamentos_mes || 0, label: 'Agend. no mês', cor: '#6366f1' },
-                                { valor: clienteSelecionado.agendamentos_ano || 0, label: 'Agend. no ano', cor: '#059669' },
+                                { valor: clienteSelecionado.agendamentos_mes || 0, label: 'Agend. no mês', cor: 'var(--fx-violet)' },
+                                { valor: clienteSelecionado.agendamentos_ano || 0, label: 'Agend. no ano', cor: 'var(--fx-green)' },
                                 {
                                     valor: diasSemCortar(clienteSelecionado.ultimo_agendamento) === null ? '—' : `${diasSemCortar(clienteSelecionado.ultimo_agendamento)}d`,
                                     label: 'Dias sem cortar',
-                                    cor: diasSemCortar(clienteSelecionado.ultimo_agendamento) > 30 ? '#dc2626' : '#111827'
+                                    cor: diasSemCortar(clienteSelecionado.ultimo_agendamento) > 30 ? 'var(--fx-red)' : 'var(--fx-text)'
                                 }
                             ].map((item, i) => (
-                                <div key={i} style={{ background: '#f9fafb', border: '1px solid #f3f4f6', borderRadius: '8px', padding: '14px 10px', textAlign: 'center' }}>
+                                <div key={i} style={{ background: 'var(--fx-surface-2)', border: '1px solid var(--fx-line)', borderRadius: '8px', padding: '14px 10px', textAlign: 'center' }}>
                                     <strong style={{ fontSize: '24px', fontWeight: '800', color: item.cor, display: 'block' }}>{item.valor}</strong>
-                                    <span style={{ fontSize: '12px', color: '#9ca3af' }}>{item.label}</span>
+                                    <span style={{ fontSize: '12px', color: 'var(--fx-faint)' }}>{item.label}</span>
                                 </div>
                             ))}
                         </div>
@@ -882,7 +882,7 @@ function AdminClientes({ empresaId }) {
                                                 [campo.key]: campo.key === 'telefone' ? formatarTelefone(e.target.value) : e.target.value
                                             }))}
                                         />
-                                        {emailInvalido && <small style={{ color: '#dc2626', fontSize: '11px' }}>Formato de e-mail inválido.</small>}
+                                        {emailInvalido && <small style={{ color: 'var(--fx-red)', fontSize: '11px' }}>Formato de e-mail inválido.</small>}
                                     </div>
                                 );
                             })}
@@ -900,12 +900,12 @@ function AdminClientes({ empresaId }) {
                         {/* Painel assinatura — escolher um plano abaixo vincula E ativa na hora (persiste
                             direto no backend); não depende mais de clicar em "Salvar Alterações", então
                             dar baixa/gerar Pix já funciona no mesmo instante em que o plano é escolhido. */}
-                        <div style={{ borderRadius: '10px', padding: '16px', backgroundColor: clienteSelecionado.plano_id ? '#faf5ff' : '#f9fafb', border: `1px solid ${clienteSelecionado.plano_id ? '#c4b5fd' : '#e5e7eb'}`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ borderRadius: '10px', padding: '16px', backgroundColor: clienteSelecionado.plano_id ? 'var(--fx-violet-bg)' : 'var(--fx-surface-2)', border: `1px solid ${clienteSelecionado.plano_id ? 'var(--fx-violet-line)' : 'var(--fx-line)'}`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <Icons.Diamond color={clienteSelecionado.plano_id ? '#6d28d9' : '#9ca3af'} size={18} />
+                                <Icons.Diamond color={clienteSelecionado.plano_id ? 'var(--fx-violet)' : 'var(--fx-faint)'} size={18} />
                                 <div>
-                                    <strong style={{ fontSize: '14px', color: clienteSelecionado.plano_id ? '#6d28d9' : '#374151', display: 'block' }}>Plano Assinante</strong>
-                                    <span style={{ fontSize: '12px', color: '#6b7280' }}>{clienteSelecionado.plano_id ? 'Ativo' : 'Inativo'}</span>
+                                    <strong style={{ fontSize: '14px', color: clienteSelecionado.plano_id ? 'var(--fx-violet)' : 'var(--fx-text)', display: 'block' }}>Plano Assinante</strong>
+                                    <span style={{ fontSize: '12px', color: 'var(--fx-muted)' }}>{clienteSelecionado.plano_id ? 'Ativo' : 'Inativo'}</span>
                                 </div>
                             </div>
 
@@ -923,14 +923,14 @@ function AdminClientes({ empresaId }) {
                                             <option key={p.id} value={p.id}>{p.nome} · R$ {parseFloat(p.preco).toFixed(2).replace('.', ',')}/mês</option>
                                         ))}
                                     </select>
-                                    <small style={{ fontSize: '11px', color: '#9ca3af' }}>Escolher um plano vincula e ativa a assinatura na hora, já dá pra cobrar em seguida.</small>
+                                    <small style={{ fontSize: '11px', color: 'var(--fx-faint)' }}>Escolher um plano vincula e ativa a assinatura na hora, já dá pra cobrar em seguida.</small>
                                 </div>
                             ) : (
-                                <p style={{ margin: 0, fontSize: '12px', color: '#92400e' }}>Cadastre um plano em "Assinaturas" antes de vincular um cliente.</p>
+                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--fx-amber)' }}>Cadastre um plano em "Assinaturas" antes de vincular um cliente.</p>
                             )}
 
                             {!!clienteSelecionado.plano_id && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid var(--fx-line)', paddingTop: '12px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                         <span style={{
                                             fontSize: '11px', fontWeight: '700', padding: '3px 9px', borderRadius: '20px',
@@ -939,12 +939,12 @@ function AdminClientes({ empresaId }) {
                                         }}>
                                             {infoStatusAssinatura(clienteSelecionado.status_assinatura).labelLonga}
                                         </span>
-                                        <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                        <span style={{ fontSize: '12px', color: 'var(--fx-muted)' }}>
                                             Cobrança automática: {clienteSelecionado.assinatura_forma_pagamento === 'pix' ? 'Pix' : clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? 'Cartão (configurada pelo cliente)' : 'não configurada'}
                                         </span>
                                     </div>
                                     {clienteSelecionado.status_assinatura !== 'em_dia' && clienteSelecionado.status_assinatura !== 'inadimplente' && (
-                                        <p style={{ margin: 0, fontSize: '11px', color: '#92400e' }}>
+                                        <p style={{ margin: 0, fontSize: '11px', color: 'var(--fx-amber)' }}>
                                             O cliente só passa a valer o preço/cota de assinante depois de uma baixa real. Dê baixa manual, gere um Pix (e aguarde o pagamento) ou ative a cobrança automática.
                                         </p>
                                     )}
@@ -952,7 +952,7 @@ function AdminClientes({ empresaId }) {
                                     {/* Datas do ciclo — mesma âncora de dia-do-mês usada no cálculo de cota/preço do
                                         backend (ver proxima_cobranca em routes/clientes.js), só pra deixar visível pro
                                         admin quando a próxima mensalidade vence. */}
-                                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', fontSize: '12px', color: '#4b5563', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px' }}>
+                                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', fontSize: '12px', color: 'var(--fx-muted)', background: 'var(--fx-card)', border: '1px solid var(--fx-line)', borderRadius: '8px', padding: '10px 12px' }}>
                                         <span>Assinante desde: <strong>{clienteSelecionado.assinante_desde ? formatarDataSemFuso(clienteSelecionado.assinante_desde) : '—'}</strong></span>
                                         <span>Próxima cobrança: <strong>{clienteSelecionado.proxima_cobranca ? formatarDataSemFuso(clienteSelecionado.proxima_cobranca) : '—'}</strong></span>
                                         <button
@@ -961,14 +961,14 @@ function AdminClientes({ empresaId }) {
                                                 setNovoVencimento(clienteSelecionado.proxima_cobranca ? clienteSelecionado.proxima_cobranca.slice(0, 10) : '');
                                                 setMostrarEditarVencimento(v => !v);
                                             }}
-                                            style={{ ...s.btnFollowUp, backgroundColor: '#f3f4f6', color: '#374151', padding: '3px 9px', fontSize: '11px' }}
+                                            style={{ ...s.btnFollowUp, backgroundColor: 'var(--fx-surface-2)', color: 'var(--fx-text)', padding: '3px 9px', fontSize: '11px' }}
                                         >
                                             Alterar vencimento
                                         </button>
                                     </div>
 
                                     {mostrarEditarVencimento && (
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px' }}>
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', background: 'var(--fx-surface-2)', border: '1px solid var(--fx-line)', borderRadius: '8px', padding: '10px' }}>
                                             <input
                                                 type="date"
                                                 style={{ ...s.inputModal, width: 'auto' }}
@@ -978,14 +978,14 @@ function AdminClientes({ empresaId }) {
                                             <LoadingButton
                                                 loading={loadingId === clienteSelecionado.id + 'vencimento'}
                                                 onClick={() => salvarVencimento(clienteSelecionado)}
-                                                style={{ ...s.btnFollowUp, backgroundColor: '#eef2ff', color: '#4338ca', border: 'none' }}
+                                                style={{ ...s.btnFollowUp, backgroundColor: 'var(--fx-violet-bg)', color: 'var(--fx-violet)', border: 'none' }}
                                             >
                                                 Salvar novo vencimento
                                             </LoadingButton>
                                             {clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? (
-                                                <span style={{ fontSize: '11px', color: '#c2410c' }}>Cobrança por cartão: o Mercado Pago não deixa só mudar a data de uma assinatura já autorizada, então isso cancela o cadastro de cartão atual e manda um novo link pro cliente autorizar de novo pra essa data.</span>
+                                                <span style={{ fontSize: '11px', color: 'var(--fx-amber)' }}>Cobrança por cartão: o Mercado Pago não deixa só mudar a data de uma assinatura já autorizada, então isso cancela o cadastro de cartão atual e manda um novo link pro cliente autorizar de novo pra essa data.</span>
                                             ) : (
-                                                <span style={{ fontSize: '11px', color: '#9ca3af' }}>A próxima cobrança passa a cair nessa data (e as seguintes, todo mês no mesmo dia).</span>
+                                                <span style={{ fontSize: '11px', color: 'var(--fx-faint)' }}>A próxima cobrança passa a cair nessa data (e as seguintes, todo mês no mesmo dia).</span>
                                             )}
                                         </div>
                                     )}
@@ -996,14 +996,14 @@ function AdminClientes({ empresaId }) {
                                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                                         <button
                                             onClick={() => setMostrarBaixaManual(v => !v)}
-                                            style={{ ...s.btnFollowUp, backgroundColor: '#eff6ff', color: '#1d4ed8' }}
+                                            style={{ ...s.btnFollowUp, backgroundColor: 'var(--fx-blue-bg)', color: 'var(--fx-blue)' }}
                                         >
                                             Dar baixa manual (pagamento por fora)
                                         </button>
                                         <LoadingButton
                                             loading={loadingId === clienteSelecionado.id + 'pix'}
                                             onClick={() => gerarPixAgora(clienteSelecionado)}
-                                            style={{ ...s.btnFollowUp, backgroundColor: '#ecfdf5', color: '#059669', border: 'none' }}
+                                            style={{ ...s.btnFollowUp, backgroundColor: 'var(--fx-green-bg)', color: 'var(--fx-green)', border: 'none' }}
                                         >
                                             Gerar Pix agora (Mercado Pago)
                                         </LoadingButton>
@@ -1018,7 +1018,7 @@ function AdminClientes({ empresaId }) {
                                             <LoadingButton
                                                 loading={loadingId === clienteSelecionado.id + 'ativar'}
                                                 onClick={() => ativarRecorrente(clienteSelecionado)}
-                                                style={{ ...s.btnFollowUp, backgroundColor: '#eef2ff', color: '#4338ca', border: 'none' }}
+                                                style={{ ...s.btnFollowUp, backgroundColor: 'var(--fx-violet-bg)', color: 'var(--fx-violet)', border: 'none' }}
                                             >
                                                 {clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? 'Trocar para cobrança automática por Pix' : 'Ativar cobrança automática por Pix'}
                                             </LoadingButton>
@@ -1027,7 +1027,7 @@ function AdminClientes({ empresaId }) {
                                             <LoadingButton
                                                 loading={loadingId === clienteSelecionado.id + 'lembrete'}
                                                 onClick={() => enviarLembreteCartao(clienteSelecionado)}
-                                                style={{ ...s.btnFollowUp, backgroundColor: '#fff7ed', color: '#c2410c', border: 'none' }}
+                                                style={{ ...s.btnFollowUp, backgroundColor: 'var(--fx-amber-bg)', color: 'var(--fx-amber)', border: 'none' }}
                                             >
                                                 Enviar lembrete de cobrança
                                             </LoadingButton>
@@ -1047,32 +1047,32 @@ function AdminClientes({ empresaId }) {
                                             <LoadingButton
                                                 loading={loadingId === clienteSelecionado.id + 'linkcartao'}
                                                 onClick={() => enviarLinkCartao(clienteSelecionado)}
-                                                style={{ ...s.btnFollowUp, backgroundColor: '#f0f9ff', color: '#0369a1', border: 'none' }}
+                                                style={{ ...s.btnFollowUp, backgroundColor: 'var(--fx-blue-bg)', color: 'var(--fx-blue)', border: 'none' }}
                                             >
                                                 {clienteSelecionado.assinatura_forma_pagamento === 'cartao' ? 'Reenviar link para cadastrar cartão' : 'Enviar link para cadastrar cartão'}
                                             </LoadingButton>
-                                            <span style={{ fontSize: '11px', color: '#9ca3af' }}>Manda por e-mail e WhatsApp o link da área dele pra cadastrar cartão (ou escolher Pix). Use se o cliente perdeu o link ou ele expirou.</span>
+                                            <span style={{ fontSize: '11px', color: 'var(--fx-faint)' }}>Manda por e-mail e WhatsApp o link da área dele pra cadastrar cartão (ou escolher Pix). Use se o cliente perdeu o link ou ele expirou.</span>
                                         </div>
                                     )}
 
                                     {pixAssinaturaInfo && (
-                                        <div style={{ textAlign: 'center', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px' }}>
+                                        <div style={{ textAlign: 'center', background: 'var(--fx-surface-2)', border: '1px solid var(--fx-line)', borderRadius: '8px', padding: '14px' }}>
                                             {pixAssinaturaInfo.qr_code_base64 && (
                                                 <img
                                                     src={`data:image/png;base64,${pixAssinaturaInfo.qr_code_base64}`}
                                                     alt="QR Code do Pix da assinatura"
-                                                    style={{ width: '160px', maxWidth: '100%', height: 'auto', border: '1px solid #eee', borderRadius: '8px', padding: '6px', background: '#fff' }}
+                                                    style={{ width: '160px', maxWidth: '100%', height: 'auto', border: '1px solid var(--fx-line)', borderRadius: '8px', padding: '6px', background: 'var(--fx-card)' }}
                                                 />
                                             )}
                                             <div style={{ marginTop: '8px' }}>
-                                                <button type="button" onClick={copiarCodigoPixAssinatura} style={{ ...s.btnFollowUp, backgroundColor: '#fff' }}>Copiar código Pix</button>
+                                                <button type="button" onClick={copiarCodigoPixAssinatura} style={{ ...s.btnFollowUp, backgroundColor: 'var(--fx-card)' }}>Copiar código Pix</button>
                                             </div>
-                                            <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#9ca3af' }}>Já enviado por e-mail/WhatsApp pro cliente. Dá baixa automaticamente quando for pago.</p>
+                                            <p style={{ margin: '8px 0 0', fontSize: '11px', color: 'var(--fx-faint)' }}>Já enviado por e-mail/WhatsApp pro cliente. Dá baixa automaticamente quando for pago.</p>
                                         </div>
                                     )}
 
                                     {mostrarBaixaManual && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--fx-surface-2)', border: '1px solid var(--fx-line)', borderRadius: '8px', padding: '10px' }}>
                                             <label style={s.label}>Forma de pagamento</label>
                                             <select style={{ ...s.inputModal, cursor: 'pointer' }} value={baixaFormaPagamento} onChange={e => setBaixaFormaPagamento(e.target.value)}>
                                                 <option value='dinheiro'>Dinheiro</option>
@@ -1103,12 +1103,12 @@ function AdminClientes({ empresaId }) {
                         {permiteIA && (
                             <div style={s.cardSugestaoIA}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontWeight: '700', fontSize: '13px', color: '#111827' }}>Sugestão de mensagem com IA</span>
+                                    <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--fx-text)' }}>Sugestão de mensagem com IA</span>
                                     <button onClick={() => gerarSugestaoFollowUp(clienteSelecionado)} disabled={gerandoSugestao} style={s.btnGerarSugestao}>
                                         {gerandoSugestao ? 'Gerando...' : 'Gerar'}
                                     </button>
                                 </div>
-                                {sugestaoIA && <p style={{ margin: '10px 0 0', fontSize: '13px', color: '#374151', lineHeight: '1.5' }}>{sugestaoIA}</p>}
+                                {sugestaoIA && <p style={{ margin: '10px 0 0', fontSize: '13px', color: 'var(--fx-text)', lineHeight: '1.5' }}>{sugestaoIA}</p>}
                             </div>
                         )}
 
@@ -1116,15 +1116,15 @@ function AdminClientes({ empresaId }) {
                         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                             <LoadingButton loading={salvandoEdicao} onClick={salvarEdicao} style={s.btnSalvarModal}>Salvar Alterações</LoadingButton>
                             <button onClick={() => enviarFollowUp(clienteSelecionado, 'saudade', 'email')} style={s.btnFollowUp}>
-                                <Icons.Mail color="#1d4ed8" /> Sentimos sua falta (e-mail)
+                                <Icons.Mail color="var(--fx-blue)" /> Sentimos sua falta (e-mail)
                             </button>
                             {permiteWhatsapp && clienteSelecionado.telefone && (
-                                <button onClick={() => enviarFollowUp(clienteSelecionado, 'saudade', 'whatsapp')} style={{ ...s.btnFollowUp, backgroundColor: '#ecfdf5', color: '#059669' }}>
-                                    <Icons.Whatsapp color="#059669" /> Por WhatsApp
+                                <button onClick={() => enviarFollowUp(clienteSelecionado, 'saudade', 'whatsapp')} style={{ ...s.btnFollowUp, backgroundColor: 'var(--fx-green-bg)', color: 'var(--fx-green)' }}>
+                                    <Icons.Whatsapp color="var(--fx-green)" /> Por WhatsApp
                                 </button>
                             )}
                             <button onClick={() => excluirCliente(clienteSelecionado.id, clienteSelecionado.nome_completo)} style={s.btnExcluir} title="Excluir cliente">
-                                <Icons.Trash color="#dc2626" />
+                                <Icons.Trash color="var(--fx-red)" />
                             </button>
                         </div>
                     </div>
@@ -1138,20 +1138,20 @@ function AdminClientes({ empresaId }) {
                     <div style={{ ...s.modal, maxWidth: '860px' }}>
                         <div style={s.modalHeader}>
                             <div>
-                                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#111827' }}>
+                                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: 'var(--fx-text)' }}>
                                     Relatório{relatorioCliente ? ` de ${relatorioCliente.cliente.nome_completo}` : ''}
                                 </h3>
                                 {relatorioCliente && (
-                                    <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                    <span style={{ fontSize: '12px', color: 'var(--fx-muted)' }}>
                                         {relatorioCliente.agendamentos.length} agendamento(s) · {relatorioCliente.pagamentos_assinatura.length} pagamento(s) de assinatura
                                     </span>
                                 )}
                             </div>
-                            <button onClick={fecharRelatorio} style={s.btnFechar}><Icons.Close color="#9ca3af" /></button>
+                            <button onClick={fecharRelatorio} style={s.btnFechar}><Icons.Close color="var(--fx-faint)" /></button>
                         </div>
 
                         {carregandoRelatorio ? (
-                            <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Gerando relatório...</p>
+                            <p style={{ padding: '40px', textAlign: 'center', color: 'var(--fx-muted)' }}>Gerando relatório...</p>
                         ) : relatorioCliente ? (
                             <>
                                 {/* Sem padding horizontal aqui de propósito — o modal (s.modal) já tem 30px de
@@ -1167,9 +1167,9 @@ function AdminClientes({ empresaId }) {
                                 </div>
 
                                 <div style={{ paddingTop: '16px', maxHeight: '60vh', overflowY: 'auto' }}>
-                                    <h4 style={{ margin: '10px 0', fontSize: '14px', color: '#111827' }}>Agendamentos</h4>
+                                    <h4 style={{ margin: '10px 0', fontSize: '14px', color: 'var(--fx-text)' }}>Agendamentos</h4>
                                     {relatorioCliente.agendamentos.length === 0 ? (
-                                        <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#9ca3af' }}>Nenhum agendamento registrado.</p>
+                                        <p style={{ margin: '0 0 16px', fontSize: '13px', color: 'var(--fx-faint)' }}>Nenhum agendamento registrado.</p>
                                     ) : (
                                         <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
                                             <table style={s.table}>
@@ -1204,9 +1204,9 @@ function AdminClientes({ empresaId }) {
                                         </div>
                                     )}
 
-                                    <h4 style={{ margin: '10px 0', fontSize: '14px', color: '#111827' }}>Pagamentos de assinatura</h4>
+                                    <h4 style={{ margin: '10px 0', fontSize: '14px', color: 'var(--fx-text)' }}>Pagamentos de assinatura</h4>
                                     {relatorioCliente.pagamentos_assinatura.length === 0 ? (
-                                        <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af' }}>Nenhum pagamento de assinatura registrado.</p>
+                                        <p style={{ margin: 0, fontSize: '13px', color: 'var(--fx-faint)' }}>Nenhum pagamento de assinatura registrado.</p>
                                     ) : (
                                         <div style={{ overflowX: 'auto' }}>
                                             <table style={s.table}>
@@ -1262,41 +1262,41 @@ const Icons = {
 
 const s = {
     container: { padding: '40px', maxWidth: '1300px', margin: '0 auto', fontFamily: "'Inter', sans-serif" },
-    header: { marginBottom: '30px', borderBottom: '1px solid #e5e7eb', paddingBottom: '20px' },
-    title: { fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 5px 0', letterSpacing: '-0.5px' },
-    subtitle: { color: '#6b7280', fontSize: '15px', margin: 0 },
+    header: { marginBottom: '30px', paddingBottom: '4px' },
+    title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+    subtitle: { color: 'var(--fx-muted)', fontSize: '15px', margin: 0 },
     alerta: { padding: '14px 18px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '600' },
     barraTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' },
     statsRow: { display: 'flex', gap: '12px', flexWrap: 'wrap' },
-    statPill: { background: '#fff', border: '1px solid #e5e7eb', padding: '12px 20px', borderRadius: '10px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' },
-    statNum: { fontSize: '22px', fontWeight: '800', color: '#111827', lineHeight: 1 },
-    statLabel: { fontSize: '12px', color: '#6b7280', fontWeight: '500' },
-    inputBusca: { padding: '11px 16px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', outline: 'none', width: '100%', maxWidth: '280px', color: '#111827', boxSizing: 'border-box' },
+    statPill: { background: 'var(--fx-card)', border: '1px solid var(--fx-line)', padding: '12px 20px', borderRadius: '10px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' },
+    statNum: { fontSize: '22px', fontWeight: '800', color: 'var(--fx-text)', lineHeight: 1 },
+    statLabel: { fontSize: '12px', color: 'var(--fx-muted)', fontWeight: '500' },
+    inputBusca: { padding: '11px 16px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px', outline: 'none', width: '100%', maxWidth: '280px', color: 'var(--fx-text)', boxSizing: 'border-box' },
     filtrosBtns: { display: 'flex', gap: '6px' },
-    btnFiltro: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#6b7280', transition: '0.2s', whiteSpace: 'nowrap' },
+    btnFiltro: { padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--fx-line)', background: 'var(--fx-card)', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: 'var(--fx-muted)', transition: '0.2s', whiteSpace: 'nowrap' },
     btnFiltroAtivo: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', border: '1px solid #2554eb', fontWeight: '700' },
-    barraLote: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '12px 18px', marginBottom: '16px', flexWrap: 'wrap' },
-    btnLote: { padding: '9px 14px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', color: '#111827', cursor: 'pointer', fontWeight: '600', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
-    cardTabela: { background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid #f3f4f6' },
+    barraLote: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', background: 'var(--fx-blue-bg)', border: '1px solid var(--fx-blue-line)', borderRadius: '10px', padding: '12px 18px', marginBottom: '16px', flexWrap: 'wrap' },
+    btnLote: { padding: '9px 14px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', color: 'var(--fx-text)', cursor: 'pointer', fontWeight: '600', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+    cardTabela: { background: 'var(--fx-card)', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid var(--fx-line)' },
     table: { width: '100%', borderCollapse: 'collapse' },
-    th: { padding: '13px 20px', background: '#f9fafb', color: '#6b7280', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #e5e7eb', textAlign: 'left' },
-    tr: { borderBottom: '1px solid #f3f4f6' },
-    td: { padding: '15px 20px', fontSize: '13px', verticalAlign: 'middle', color: '#374151' },
+    th: { padding: '13px 20px', background: 'var(--fx-surface-2)', color: 'var(--fx-muted)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--fx-line)', textAlign: 'left' },
+    tr: { borderBottom: '1px solid var(--fx-line)' },
+    td: { padding: '15px 20px', fontSize: '13px', verticalAlign: 'middle', color: 'var(--fx-text)' },
     avatar: { width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#334155', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', flexShrink: 0 },
-    badgeAssinante: { background: '#ede9fe', color: '#6d28d9', fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '4px', display: 'inline-block', textTransform: 'uppercase', letterSpacing: '0.3px' },
+    badgeAssinante: { background: 'var(--fx-violet-bg)', color: 'var(--fx-violet)', fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '4px', display: 'inline-block', textTransform: 'uppercase', letterSpacing: '0.3px' },
     btnPlano: { padding: '5px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: '0.2s', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.3px' },
-    btnIcone: { background: '#f3f4f6', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' },
+    btnIcone: { background: 'var(--fx-surface-2)', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' },
     overlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 },
-    modal: { backgroundColor: '#fff', padding: '30px', borderRadius: '14px', width: '90%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '20px', boxSizing: 'border-box' },
-    modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '18px', borderBottom: '1px solid #f0f0f0' },
-    btnFechar: { background: 'none', border: 'none', fontSize: '18px', color: '#9ca3af', cursor: 'pointer', lineHeight: 1 },
-    label: { fontSize: '12px', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px' },
-    inputModal: { padding: '11px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', outline: 'none', boxSizing: 'border-box', width: '100%', color: '#111827' },
+    modal: { backgroundColor: 'var(--fx-card)', padding: '30px', borderRadius: '14px', width: '90%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '20px', boxSizing: 'border-box' },
+    modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '18px', borderBottom: '1px solid var(--fx-line)' },
+    btnFechar: { background: 'none', border: 'none', fontSize: '18px', color: 'var(--fx-faint)', cursor: 'pointer', lineHeight: 1 },
+    label: { fontSize: '12px', fontWeight: '700', color: 'var(--fx-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
+    inputModal: { padding: '11px 14px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px', outline: 'none', boxSizing: 'border-box', width: '100%', color: 'var(--fx-text)' },
     btnSalvarModal: { flex: 2, padding: '12px', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' },
-    btnFollowUp: { flex: 2, padding: '12px', backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' },
-    cardSugestaoIA: { background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '10px', padding: '14px', marginBottom: '14px' },
+    btnFollowUp: { flex: 2, padding: '12px', backgroundColor: 'var(--fx-blue-bg)', color: 'var(--fx-blue)', border: '1px solid var(--fx-blue-line)', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' },
+    cardSugestaoIA: { background: 'var(--fx-violet-bg)', border: '1px solid var(--fx-violet-line)', borderRadius: '10px', padding: '14px', marginBottom: '14px' },
     btnGerarSugestao: { padding: '6px 14px', borderRadius: '6px', border: 'none', background: '#6d28d9', color: '#fff', fontWeight: '700', fontSize: '12px', cursor: 'pointer' },
-    btnExcluir: { padding: '12px 14px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    btnExcluir: { padding: '12px 14px', backgroundColor: 'var(--fx-red-bg)', border: '1px solid var(--fx-red-line)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
     btnExportarCsv: { display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '8px', border: 'none', background: '#059669', color: '#fff', fontWeight: '600', fontSize: '13px', cursor: 'pointer' },
     btnExportarPdf: { display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '8px', border: 'none', background: '#dc2626', color: '#fff', fontWeight: '600', fontSize: '13px', cursor: 'pointer' },
 };

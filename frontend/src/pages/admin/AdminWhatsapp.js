@@ -187,14 +187,14 @@ function AdminWhatsapp() {
     }
   };
 
-  if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Carregando...</p>;
+  if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: 'var(--fx-muted)' }}>Carregando...</p>;
 
   if (!permitido) {
     return (
       <div style={styles.container}>
-        <h2 style={styles.title}><Icons.MessageCircle color="#111827" /> WhatsApp</h2>
+        <h2 style={styles.title}>WhatsApp</h2>
         <div style={styles.upsell}>
-          <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+          <p style={{ margin: 0, fontSize: '14px', color: 'var(--fx-muted)' }}>
             Deixar clientes marcarem horário direto pelo WhatsApp é um recurso exclusivo dos planos <strong>Profissional</strong> e <strong>Enterprise</strong>.
             Fale com o suporte para fazer upgrade.
           </p>
@@ -205,7 +205,7 @@ function AdminWhatsapp() {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}><Icons.MessageCircle color="#111827" /> WhatsApp</h2>
+      <h2 style={styles.title}>WhatsApp</h2>
       <p style={styles.subtitle}>Conecte um número de WhatsApp para seus clientes agendarem horário direto por lá.</p>
 
       {conectado ? (
@@ -214,15 +214,15 @@ function AdminWhatsapp() {
             <div>
               <strong style={{ fontSize: '16px' }}>{instancia}</strong>
               <div style={{ marginTop: '4px' }}>
-                <span style={{ ...styles.badge, backgroundColor: '#d1fae5', color: '#065f46' }}>Conectado</span>
+                <span style={{ ...styles.badge, backgroundColor: 'var(--fx-green-bg)', color: 'var(--fx-green)' }}>Conectado</span>
               </div>
             </div>
             <LoadingButton loading={desconectando} onClick={desconectar} style={styles.btnExcluir}>Desconectar</LoadingButton>
           </div>
 
           <div style={styles.blocoTeste}>
-            <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>Testar o envio</p>
-            <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#6b7280' }}>
+            <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: '600', color: 'var(--fx-text)' }}>Testar o envio</p>
+            <p style={{ margin: '0 0 10px', fontSize: '12px', color: 'var(--fx-muted)' }}>
               Envie uma mensagem de teste pro seu próprio WhatsApp pra confirmar que a conexão está funcionando. Pra testar o bot de agendamento completo, mande uma mensagem qualquer (ex: "oi") de outro número pra este WhatsApp conectado.
             </p>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -239,14 +239,14 @@ function AdminWhatsapp() {
         </div>
       ) : qrcode ? (
         <div style={styles.cardAtual}>
-          <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#374151' }}>
+          <p style={{ margin: '0 0 16px', fontSize: '14px', color: 'var(--fx-text)' }}>
             Abra o WhatsApp no celular que vai atender seus clientes e escaneie o QR Code abaixo em
             <strong> Configurações → Aparelhos conectados → Conectar um aparelho</strong>.
           </p>
           <div style={{ textAlign: 'center' }}>
             <img src={qrcode} alt="QR Code de conexão do WhatsApp" style={styles.qrImg} />
           </div>
-          <p style={{ margin: '16px 0 0', fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>
+          <p style={{ margin: '16px 0 0', fontSize: '12px', color: 'var(--fx-muted)', textAlign: 'center' }}>
             Essa página confere sozinha a cada poucos segundos se você já conectou. Se o QR expirar antes de escanear, gere um novo.
           </p>
           <div style={{ textAlign: 'center', marginTop: '14px' }}>
@@ -255,14 +255,14 @@ function AdminWhatsapp() {
         </div>
       ) : (
         <div style={styles.cardForm}>
-          <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#374151' }}>Nenhum WhatsApp conectado ainda.</p>
+          <p style={{ margin: '0 0 16px', fontSize: '14px', color: 'var(--fx-text)' }}>Nenhum WhatsApp conectado ainda.</p>
           <LoadingButton loading={conectando} onClick={conectar} style={styles.btnCadastrar}>Conectar WhatsApp</LoadingButton>
         </div>
       )}
 
       <div style={{ ...styles.cardForm, marginTop: '20px' }}>
         <h3 style={styles.tituloSecao}>Personalidade do assistente</h3>
-        <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#6b7280' }}>
+        <p style={{ margin: '0 0 16px', fontSize: '13px', color: 'var(--fx-muted)' }}>
           Personalize como o bot fala com seus clientes.
         </p>
 
@@ -278,7 +278,7 @@ function AdminWhatsapp() {
 
         {!botConfig.permiteIa ? (
           <div style={{ ...styles.upsell, marginTop: '16px' }}>
-            <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--fx-muted)' }}>
               Modo de conversa, nome, personalidade e criatividade do assistente são recursos de IA, exclusivos dos planos <strong>Profissional</strong> e <strong>Enterprise</strong>.
             </p>
           </div>
@@ -301,7 +301,7 @@ function AdminWhatsapp() {
                 Livre (IA conduz a conversa)
               </button>
             </div>
-            <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#9ca3af' }}>
+            <p style={{ margin: '8px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>
               {botConfig.modo === 'livre'
                 ? 'A IA conversa livremente com o cliente, decidindo quando checar horários, cadastrar e agendar.'
                 : 'O bot segue um menu numerado fixo, entendendo texto livre só pra identificar a intenção inicial.'}
@@ -338,7 +338,7 @@ function AdminWhatsapp() {
               onChange={(e) => setBotConfig((c) => ({ ...c, temperatura: Number(e.target.value) }))}
               style={{ width: '100%' }}
             />
-            <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#9ca3af' }}>
+            <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>
               Mais baixo = respostas mais previsíveis e diretas. Mais alto = respostas mais variadas e criativas.
             </p>
           </>
@@ -351,12 +351,12 @@ function AdminWhatsapp() {
 
       <div style={{ ...styles.cardForm, marginTop: '20px' }}>
         <h3 style={styles.tituloSecao}>Resumo diário para os profissionais</h3>
-        <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#6b7280' }}>
+        <p style={{ margin: '0 0 16px', fontSize: '13px', color: 'var(--fx-muted)' }}>
           Todo dia, no horário definido abaixo, cada profissional ativo com telefone cadastrado (em Equipe) recebe uma
           mensagem no WhatsApp com os próprios atendimentos do dia.
         </p>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#374151', cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: 'var(--fx-text)', cursor: 'pointer' }}>
           <input
             type="checkbox"
             checked={botConfig.resumoProfissionaisAtivo}
@@ -375,7 +375,7 @@ function AdminWhatsapp() {
               onChange={(e) => setBotConfig((c) => ({ ...c, resumoProfissionaisHorario: e.target.value }))}
               style={{ ...styles.inputTexto, maxWidth: '160px' }}
             />
-            <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#9ca3af' }}>Horário de Brasília.</p>
+            <p style={{ margin: '8px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>Horário de Brasília.</p>
           </>
         )}
 
@@ -387,31 +387,28 @@ function AdminWhatsapp() {
   );
 }
 
-const Icons = {
-  MessageCircle: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>,
-};
 
 const styles = {
   container: { padding: '40px', maxWidth: '800px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },
-  title: { fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 5px 0' },
-  subtitle: { color: '#6b7280', fontSize: '15px', marginBottom: '25px' },
-  upsell: { padding: '20px', backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px dashed #d1d5db' },
-  cardForm: { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6' },
-  cardAtual: { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6' },
+  title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  subtitle: { color: 'var(--fx-muted)', fontSize: '15px', marginBottom: '25px' },
+  upsell: { padding: '20px', backgroundColor: 'var(--fx-surface-2)', borderRadius: '10px', border: '1px dashed var(--fx-line-2)' },
+  cardForm: { backgroundColor: 'var(--fx-card)', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--fx-line)' },
+  cardAtual: { backgroundColor: 'var(--fx-card)', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--fx-line)' },
   linhaTopo: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' },
   badge: { display: 'inline-block', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' },
   btnCadastrar: { padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '600', cursor: 'pointer' },
-  btnSecundario: { padding: '8px 14px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '13px' },
-  btnExcluir: { padding: '8px 14px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontSize: '13px' },
-  qrImg: { width: '220px', maxWidth: '100%', height: 'auto', aspectRatio: '1', border: '1px solid #f3f4f6', borderRadius: '8px', padding: '8px' },
-  blocoTeste: { marginTop: '18px', paddingTop: '16px', borderTop: '1px solid #f3f4f6' },
-  inputTeste: { flex: '1 1 200px', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px' },
-  tituloSecao: { fontSize: '17px', color: '#111827', fontWeight: '700', margin: '0 0 4px' },
-  label: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' },
-  inputTexto: { width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px', boxSizing: 'border-box' },
-  textarea: { width: '100%', minHeight: '80px', padding: '10px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' },
-  modoBtn: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', color: '#374151', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
-  modoBtnAtivo: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #2554eb', background: '#eef2ff', color: '#2554eb', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }
+  btnSecundario: { padding: '8px 14px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', cursor: 'pointer', fontSize: '13px' },
+  btnExcluir: { padding: '8px 14px', borderRadius: '6px', border: '1px solid var(--fx-red-line)', background: 'var(--fx-red-bg)', color: 'var(--fx-red)', cursor: 'pointer', fontSize: '13px' },
+  qrImg: { width: '220px', maxWidth: '100%', height: 'auto', aspectRatio: '1', border: '1px solid var(--fx-line)', borderRadius: '8px', padding: '8px' },
+  blocoTeste: { marginTop: '18px', paddingTop: '16px', borderTop: '1px solid var(--fx-line)' },
+  inputTeste: { flex: '1 1 200px', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', fontSize: '13px' },
+  tituloSecao: { fontSize: '17px', color: 'var(--fx-text)', fontWeight: '700', margin: '0 0 4px' },
+  label: { display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--fx-text)', marginBottom: '6px' },
+  inputTexto: { width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', fontSize: '13px', boxSizing: 'border-box' },
+  textarea: { width: '100%', minHeight: '80px', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', fontSize: '13px', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' },
+  modoBtn: { padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', color: 'var(--fx-text)', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+  modoBtnAtivo: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #2554eb', background: 'var(--fx-violet-bg)', color: 'var(--fx-blue)', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }
 };
 
 export default AdminWhatsapp;

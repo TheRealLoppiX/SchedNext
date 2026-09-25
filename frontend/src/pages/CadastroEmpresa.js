@@ -284,7 +284,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
                     style={{
                       padding: '14px 10px', borderRadius: '10px', cursor: 'pointer', textAlign: 'center',
                       border: selecionado ? '2px solid var(--bb-gold)' : '1px solid var(--bb-border)',
-                      background: selecionado ? 'rgba(37,84,235,0.08)' : '#fff',
+                      background: selecionado ? 'rgba(37,84,235,0.08)' : 'var(--fx-surface)',
                       fontWeight: selecionado ? 700 : 500
                     }}
                   >
@@ -316,7 +316,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
                     style={{
                       padding: '14px', borderRadius: '10px', cursor: 'pointer', textAlign: 'left',
                       border: selecionado ? '2px solid var(--bb-gold)' : '1px solid var(--bb-border)',
-                      background: selecionado ? 'rgba(37,84,235,0.08)' : '#fff'
+                      background: selecionado ? 'rgba(37,84,235,0.08)' : 'var(--fx-surface)'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>

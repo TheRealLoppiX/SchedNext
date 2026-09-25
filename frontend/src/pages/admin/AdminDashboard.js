@@ -125,28 +125,39 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
   // refresh de 30s ligava o loading e, com stats.total zerado (conta nova, período sem
   // agendamentos), o `if (loading && !stats.total)` mais abaixo trocava a tela inteira por
   // "Atualizando dashboard..." e DESMONTAVA o modal de encaixe, perdendo o que estava sendo digitado.
+  // Só a busca mais recente pode mexer na tela: ao abrir, a primeira busca sai com o período
+  // "hoje" antes do efeito que ajusta pro mês; se essa resposta chegasse depois da do mês, o
+  // placar ficava com os números de hoje.
+  const ultimaBuscaRef = useRef(0);
   const carregarDadosDashboard = useCallback(async (silencioso = false) => {
     if (!empresaIdEfetivo) return;
+    const busca = ++ultimaBuscaRef.current;
     if (!silencioso) setLoading(true);
 
     try {
       let urlParams = '';
       if (dataInicio || dataFim) urlParams = `?dataInicio=${dataInicio}&dataFim=${dataFim}`;
-      
+
       const [resStats, resBarbeiros, resAgs] = await Promise.all([
         fetch(`${API_URL}/admin/stats/${empresaIdEfetivo}${urlParams}`),
         fetch(`${API_URL}/admin/equipe/${empresaIdEfetivo}`),
         fetch(`${API_URL}/admin/agendamentos/${empresaIdEfetivo}`)
       ]);
 
-      if (resStats.ok) setStats(await resStats.json());
-      if (resBarbeiros.ok) setBarbeiros(await resBarbeiros.json());
-      if (resAgs.ok) setAgendamentos(await resAgs.json());
-      
+      const [dStats, dBarbeiros, dAgs] = await Promise.all([
+        resStats.ok ? resStats.json() : null,
+        resBarbeiros.ok ? resBarbeiros.json() : null,
+        resAgs.ok ? resAgs.json() : null
+      ]);
+      if (busca !== ultimaBuscaRef.current) return;
+      if (dStats) setStats(dStats);
+      if (dBarbeiros) setBarbeiros(dBarbeiros);
+      if (dAgs) setAgendamentos(dAgs);
+
     } catch (err) {
       console.error("Erro ao carregar dashboard:", err);
     } finally {
-      setLoading(false);
+      if (busca === ultimaBuscaRef.current) setLoading(false);
     }
   }, [empresaIdEfetivo, dataInicio, dataFim]);
 
@@ -261,22 +272,42 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
 
   modalAbertoRef.current = !!barbeiroSelecionado;
 
-  if (loading && !stats.total) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Atualizando dashboard...</p>;
+  if (loading && !stats.total) return <div className="oa-carregando">Atualizando painel...</div>;
+
+  const hojeStr = new Date().toLocaleDateString('en-CA');
+  const ativosPorDia = agendamentos.reduce((acc, ag) => {
+    if (!ag || ag.status === 'cancelado') return acc;
+    const d = String(ag.data_hora || ag.data).split('T')[0].split(' ')[0];
+    acc[d] = (acc[d] || 0) + 1;
+    return acc;
+  }, {});
+  const maxNoDia = Math.max(1, ...diasCalendario.map((d) => ativosPorDia[d.str] || 0));
+  const pct = (v) => Math.max(0, Math.min(100, Number(v) || 0));
+  const placas = [
+    { rotulo: 'Agendamentos', valor: stats.total, icone: Icons.Calendar, cor: 'var(--oc-acento)' },
+    { rotulo: 'Concluídos', valor: stats.concluidos, taxa: stats.taxa_conclusao, icone: Icons.CheckCircle, cor: 'var(--st-concluido)' },
+    { rotulo: 'Não compareceu', valor: naoCompareceramCount, taxa: taxaNaoCompareceu, icone: Icons.AlertTriangle, cor: 'var(--st-pendente)' },
+    { rotulo: 'Cancelados', valor: stats.cancelados, taxa: stats.taxa_cancelamento, icone: Icons.XCircle, cor: 'var(--st-cancelado)' },
+    { rotulo: 'Novos clientes', valor: stats.novos_clientes, icone: Icons.Users, cor: 'var(--fx-violet)' }
+  ];
+  const diaAgendaObj = new Date(`${dataAgenda}T12:00:00`);
+  const tituloDia = dataAgenda === hojeStr ? 'Hoje' : diaAgendaObj.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
 
   return (
     <div className="admin-dashboard-container" style={styles.container}>
-      <header style={styles.header}>
+      <header className="oa-cabeca">
         <div>
-          <h2 style={styles.title}>Visão Geral</h2>
-          <p style={styles.subtitle}>Resumo do desempenho {termos.artigoContraido} {termos.local.toLowerCase()}</p>
+          <h2 className="oa-titulo">Visão geral</h2>
+          <p className="oa-sub">Resumo do desempenho {termos.artigoContraido} {termos.local.toLowerCase()}</p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <div className="filtros-rapidos-container">
+          <div className="oa-segmento">
             {['ano', 'mes', 'semana', 'dia'].map(periodo => (
               <button
                 key={periodo}
-                className={`btn-filtro-rapido ${filtroPeriodo === periodo ? 'ativo' : ''}`}
+                type="button"
+                className={filtroPeriodo === periodo ? 'ativo' : ''}
                 onClick={() => setFiltroPeriodo(periodo)}
               >
                 {periodo === 'mes' ? 'Mês' : periodo.charAt(0).toUpperCase() + periodo.slice(1)}
@@ -284,26 +315,16 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
             ))}
           </div>
 
-          {/* Select de ano - aparece nos filtros Ano e Mes */}
           {(filtroPeriodo === 'ano' || filtroPeriodo === 'mes') && (
-            <select
-              value={anoSelecionado}
-              onChange={e => setAnoSelecionado(Number(e.target.value))}
-              style={styles.selectFiltro}
-            >
+            <select className="oa-select" value={anoSelecionado} onChange={e => setAnoSelecionado(Number(e.target.value))}>
               {Array.from({ length: new Date().getFullYear() - 2024 + 1 }, (_, i) => 2024 + i).reverse().map(ano => (
                 <option key={ano} value={ano}>{ano}</option>
               ))}
             </select>
           )}
 
-          {/* Select de mes - aparece apenas no filtro Mes */}
           {filtroPeriodo === 'mes' && (
-            <select
-              value={mesSelecionado}
-              onChange={e => setMesSelecionado(Number(e.target.value))}
-              style={styles.selectFiltro}
-            >
+            <select className="oa-select" value={mesSelecionado} onChange={e => setMesSelecionado(Number(e.target.value))}>
               {['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'].map((nome, i) => (
                 <option key={i} value={i}>{nome}</option>
               ))}
@@ -311,7 +332,7 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
           )}
 
           {filtroPeriodo !== '' && (
-            <button onClick={limparFiltros} style={{ ...styles.btnLimparFiltro, display: 'inline-flex', alignItems: 'center', gap: '5px' }} title="Voltar a ver todos os agendamentos, sem filtro de período">
+            <button type="button" onClick={limparFiltros} className="oa-limpar" title="Voltar a ver todos os agendamentos, sem filtro de período">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -322,111 +343,123 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
         </div>
       </header>
 
-      <div style={styles.gridStats}>
-        <div style={styles.card}>
-          <div style={styles.cardHeader}><span style={styles.cardLabel}>Agendamentos</span><Icons.Calendar color="#6b7280" /></div>
-          <div style={styles.cardBody}><span style={styles.bigNumber}>{stats.total}</span></div>
-        </div>
-        <div style={styles.card}>
-          <div style={styles.cardHeader}><span style={styles.cardLabel}>Concluídos</span><Icons.CheckCircle color="#059669" /></div>
-          <div style={styles.cardBody}><span style={styles.bigNumber}>{stats.concluidos}</span><span style={{...styles.badge, color: '#059669', background: '#ecfdf5'}}>{stats.taxa_conclusao}%</span></div>
-        </div>
-        <div style={styles.card}>
-          <div style={styles.cardHeader}><span style={styles.cardLabel}>Não Compareceu</span><Icons.AlertTriangle color="#d97706" /></div>
-          <div style={styles.cardBody}><span style={styles.bigNumber}>{naoCompareceramCount}</span><span style={{...styles.badge, color: '#d97706', background: '#fffbeb'}}>{taxaNaoCompareceu}%</span></div>
-        </div>
-        <div style={styles.card}>
-          <div style={styles.cardHeader}><span style={styles.cardLabel}>Cancelados</span><Icons.XCircle color="#dc2626" /></div>
-          <div style={styles.cardBody}><span style={styles.bigNumber}>{stats.cancelados}</span><span style={{...styles.badge, color: '#dc2626', background: '#fef2f2'}}>{stats.taxa_cancelamento}%</span></div>
-        </div>
-        <div style={styles.card}>
-          <div style={styles.cardHeader}><span style={styles.cardLabel}>Novos Clientes</span><Icons.Users color="#0891b2" /></div>
-          <div style={styles.cardBody}><span style={styles.bigNumber}>{stats.novos_clientes}</span></div>
-        </div>
+      <div className="oa-placar">
+        {placas.map((p) => {
+          const Icone = p.icone;
+          return (
+            <div key={p.rotulo} className="oa-placa" style={{ '--cor': p.cor }}>
+              <div className="oa-placa-rotulo"><span>{p.rotulo}</span><Icone color="currentColor" /></div>
+              <div className="oa-placa-numero">
+                {p.valor}
+                {p.taxa !== undefined && <span className="oa-placa-taxa">{p.taxa}%</span>}
+              </div>
+              {p.taxa !== undefined && <div className="oa-placa-barra"><i style={{ width: `${pct(p.taxa)}%` }} /></div>}
+            </div>
+          );
+        })}
       </div>
 
       {permiteIA && (
-        <div style={styles.cardResumoIA}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-            <span style={{ fontWeight: '700', color: '#111827' }}>Resumo executivo com IA</span>
-            <button onClick={gerarResumoIA} disabled={gerandoResumo} style={styles.btnGerarResumo}>
-              {gerandoResumo ? 'Gerando...' : resumoIA ? 'Gerar de novo' : 'Gerar resumo'}
-            </button>
+        <div className="oa-ia">
+          <div className="oa-ia-marca">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" /><path d="M19 17l.8 2.2L22 20l-2.2.8L19 23l-.8-2.2L16 20l2.2-.8z" /></svg>
           </div>
-          {resumoIA && <p style={{ marginTop: '12px', color: '#374151', fontSize: '14px', lineHeight: '1.6' }}>{resumoIA}</p>}
+          <div className="oa-ia-corpo">
+            <strong>Resumo executivo com IA</strong>
+            <small>Uma leitura rápida dos números do período selecionado.</small>
+            {resumoIA && <p>{resumoIA}</p>}
+          </div>
+          <button type="button" onClick={gerarResumoIA} disabled={gerandoResumo} className="oc-btn oc-btn-contorno oc-btn-p">
+            {gerandoResumo ? 'Gerando...' : resumoIA ? 'Gerar de novo' : 'Gerar resumo'}
+          </button>
         </div>
       )}
 
-      <hr style={{ margin: '40px 0', border: '0', borderTop: '1px solid #e5e7eb' }} />
+      <div className="oa-secao">
+        <div>
+          <span className="oc-kicker" style={{ marginBottom: 0 }}>Agenda da equipe</span>
+          <h3>{tituloDia}</h3>
+        </div>
+        <span className="oc-contagem">
+          {agendamentosDoDia.filter(ag => ag.status === 'pendente' || ag.status === 'confirmado').length} na fila · arraste um card para reagendar
+        </span>
+      </div>
 
-      <h3 style={{ fontSize: '20px', color: '#111827', marginBottom: '20px', fontWeight: 'bold' }}>Agenda da Equipe</h3>
-      
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div className="oa-regua-linha">
         <button
-          className="btn-filtro-rapido"
-          style={{ border: '1px solid #e5e7eb', flexShrink: 0 }}
+          type="button"
+          className="oa-seta"
           onClick={() => setAnchorDate(prev => {
             const d = new Date(prev);
             d.setDate(d.getDate() - 7);
             return d;
           })}
           title="Semana anterior"
+          aria-label="Semana anterior"
         >
           ‹
         </button>
 
-        <div className="calendario-horizontal-scroll" style={{ flex: 1, marginBottom: 0 }}>
+        <div className="oa-regua">
           {diasCalendario.map(diaObj => {
             const isSelected = dataAgenda === diaObj.str;
             const nomeDia = diaObj.obj.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
-            const numeroDia = diaObj.obj.getDate();
-
+            const qtd = ativosPorDia[diaObj.str] || 0;
             return (
-              <div key={diaObj.str} className={`dia-card-agenda ${isSelected ? 'ativo' : ''}`} onClick={() => setDataAgenda(diaObj.str)}>
-                <span className="dia-nome-agenda">{nomeDia}</span>
-                <span className="dia-numero-agenda">{numeroDia}</span>
-              </div>
+              <button
+                type="button"
+                key={diaObj.str}
+                className={`oa-dia${isSelected ? ' ativo' : ''}${diaObj.str === hojeStr ? ' hoje' : ''}`}
+                onClick={() => setDataAgenda(diaObj.str)}
+                title={`${qtd} agendamento${qtd === 1 ? '' : 's'}`}
+              >
+                <small>{diaObj.str === hojeStr ? 'hoje' : nomeDia}</small>
+                <strong>{diaObj.obj.getDate()}</strong>
+                <span className="oa-dia-marcas">
+                  {Array.from({ length: qtd ? Math.max(1, Math.round((qtd / maxNoDia) * 4)) : 0 }).map((_, i) => <i key={i} />)}
+                </span>
+              </button>
             );
           })}
         </div>
 
         <button
-          className="btn-filtro-rapido"
-          style={{ border: '1px solid #e5e7eb', flexShrink: 0 }}
+          type="button"
+          className="oa-seta"
           onClick={() => setAnchorDate(prev => {
             const d = new Date(prev);
             d.setDate(d.getDate() + 7);
             return d;
           })}
           title="Próxima semana"
+          aria-label="Próxima semana"
         >
           ›
         </button>
       </div>
 
-      <div className="agenda-viva-scroll">
+      <div className="oa-quadro">
         {barbeiros.map(barbeiro => {
           const agendaBarbeiro = agendamentosDoDia.filter(ag => ag.barbeiro_id === barbeiro.id);
-          
+          const naFila = agendaBarbeiro.filter(ag => ag.status === 'pendente' || ag.status === 'confirmado').length;
+
           return (
-            <div key={barbeiro.id} className="coluna-agenda">
-              
-              <div className="coluna-header">
-                <div className="barbeiro-info">
-                  {barbeiro.foto_url ? (
-                    <img src={barbeiro.foto_url} alt={barbeiro.nome} className="avatar-mini" />
-                  ) : (
-                    <div className="avatar-placeholder">{barbeiro.nome.charAt(0)}</div>
-                  )}
+            <div key={barbeiro.id} className="oa-coluna">
+              <div className="oa-coluna-cab">
+                <span className="oc-avatar-pro">
+                  {barbeiro.foto_url ? <img src={barbeiro.foto_url} alt="" /> : barbeiro.nome.charAt(0)}
+                </span>
+                <div className="oa-coluna-nome">
                   <strong>{barbeiro.nome}</strong>
+                  <small>{agendaBarbeiro.length} no dia</small>
                 </div>
-                <span className="qtd-badge">{agendaBarbeiro.filter(ag => ag.status === 'pendente' || ag.status === 'confirmado').length}</span>
+                <span className="oa-contador" title="Pendentes e confirmados">{naFila}</span>
               </div>
 
-              <div className="coluna-body-slots">
+              <div className="oa-coluna-corpo">
                 {(() => {
                   const elementos = [];
-                  let minOcupadoAte = 0; 
+                  let minOcupadoAte = 0;
 
                   for (let i = 0; i < slotsHorarios.length; i++) {
                     const hora = slotsHorarios[i];
@@ -441,22 +474,22 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
                       const duracao = ag.duracao ? parseInt(ag.duracao) : 30;
                       minOcupadoAte = minAtual + duracao;
 
-                      // Padrao: azul para confirmado/pendente
-                      let corBorda = '#3b82f6'; let corTexto = '#1d4ed8'; let bgStatus = '#eff6ff';
-                      let statusLabel = ag.status.toUpperCase();
-                      if (ag.status === 'cancelado') { corBorda = '#ef4444'; corTexto = '#dc2626'; bgStatus = '#fee2e2'; }
-                      else if (ag.status === 'concluido') { corBorda = '#10b981'; corTexto = '#059669'; bgStatus = '#d1fae5'; }
-                      else if (ehNaoCompareceu(ag)) { corBorda = '#6b7280'; corTexto = '#4b5563'; bgStatus = '#f3f4f6'; statusLabel = 'NÃO COMPARECEU'; }
+                      let cor = ag.status === 'pendente' ? 'var(--st-pendente)' : 'var(--st-confirmado)';
+                      let statusLabel = ag.status;
+                      if (ag.status === 'cancelado') cor = 'var(--st-cancelado)';
+                      else if (ag.status === 'concluido') { cor = 'var(--st-concluido)'; statusLabel = 'concluído'; }
+                      else if (ehNaoCompareceu(ag)) { cor = 'var(--st-falta)'; statusLabel = 'não compareceu'; }
 
                       // Só dá pra arrastar agendamento ativo (cancelado/concluído/não compareceu
                       // ficam fixos, são registro histórico — ver mesma regra no backend).
                       const podeArrastar = ag.status === 'pendente' || ag.status === 'confirmado';
+                      const inativo = ag.status === 'cancelado' || ag.status === 'concluido';
 
                       elementos.push(
                         <div
                           key={ag.id}
-                          className={`card-vivo ${agendamentoArrastando?.id === ag.id ? 'card-vivo-arrastando' : ''}`}
-                          style={{ borderLeftColor: corBorda, cursor: podeArrastar ? 'grab' : 'pointer' }}
+                          className={`oa-cartao${agendamentoArrastando?.id === ag.id ? ' arrastando' : ''}${inativo ? ' inativo' : ''}`}
+                          style={{ '--cor': cor, cursor: podeArrastar ? 'grab' : 'pointer' }}
                           draggable={podeArrastar}
                           onDragStart={(e) => {
                             if (!podeArrastar) return;
@@ -474,14 +507,12 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
                             setHoraEncaixe(null);
                           }}
                         >
-                          <div className="card-vivo-topo">
-                            <span className="hora-viva">{ag.hora}</span>
-                            <span className="status-viva" style={{ color: corTexto, backgroundColor: bgStatus }}>
-                              {statusLabel}
-                            </span>
+                          <div className="oa-cartao-topo">
+                            <span className="oa-cartao-hora">{ag.hora}<small>{duracao} min</small></span>
+                            <span className="oa-status">{statusLabel}</span>
                           </div>
-                          <strong className="cliente-viva">{ag.cliente_nome}</strong>
-                          <p className="servico-viva">{ag.servico_nome}</p>
+                          <strong>{ag.cliente_nome}</strong>
+                          <p>{ag.servico_nome}</p>
                         </div>
                       );
                     } else {
@@ -495,7 +526,7 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
                           elementos.push(
                             <div
                               key={slotKey}
-                              className={`slot-livre ${emDestaque ? 'slot-livre-destaque' : ''}`}
+                              className={`oa-livre${emDestaque ? ' destaque' : ''}`}
                               onClick={() => {
                                 setBarbeiroSelecionado(barbeiro);
                                 setHoraEncaixe(hora);
@@ -520,13 +551,14 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
                                 moverAgendamento(agArrastado, barbeiro, hora);
                               }}
                             >
-                              <span className="slot-hora-texto">{hora}</span>
-                              <span className="slot-livre-texto">{agendamentoArrastando ? 'Soltar aqui' : '+ Novo Encaixe'}</span>
+                              <span>{hora}</span>
+                              <span>{agendamentoArrastando ? 'Soltar aqui' : '+ Encaixe'}</span>
                             </div>
                           );
                       }
                     }
                   }
+                  if (elementos.length === 0) elementos.push(<div key="vazio" className="oa-vazio-coluna">Nenhum horário neste dia.</div>);
                   return elementos;
                 })()}
               </div>
@@ -536,7 +568,7 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
       </div>
 
       {barbeiroSelecionado && (
-        <AgendaModal 
+        <AgendaModal
           barbeiro={barbeiroSelecionado}
           empresaId={empresaIdEfetivo}
           dataSelecionada={dataAgenda}
@@ -551,8 +583,8 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
         />
       )}
 
-    </div> 
-  ); 
+    </div>
+  );
 }
 
 const Icons = {
@@ -564,22 +596,7 @@ const Icons = {
 };
 
 const styles = {
-  container: { padding: '30px 40px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px', marginBottom: '30px' },
-  title: { fontSize: '26px', color: '#111827', fontWeight: '800', margin: '0 0 5px 0', letterSpacing: '-0.5px' },
-  subtitle: { color: '#6b7280', fontSize: '14px', margin: 0 },
-  selectFiltro: { padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '13px', fontWeight: '600', color: '#374151', background: '#fff', cursor: 'pointer', outline: 'none' },
-  btnLimparFiltro: { padding: '8px 12px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', fontWeight: '600', color: '#dc2626', background: '#fef2f2', cursor: 'pointer' },
-  
-  gridStats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' },
-  cardResumoIA: { marginTop: '20px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '12px', padding: '18px' },
-  btnGerarResumo: { padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#6d28d9', color: '#fff', fontWeight: '700', fontSize: '13px', cursor: 'pointer' },
-  card: { background: '#fff', border: '1px solid #f3f4f6', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' },
-  cardLabel: { fontSize: '13px', color: '#4b5563', fontWeight: '600' },
-  cardBody: { display: 'flex', alignItems: 'baseline', gap: '10px' },
-  bigNumber: { fontSize: '32px', fontWeight: '800', color: '#111827', letterSpacing: '-1px' },
-  badge: { padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: '700' }
+  container: { maxWidth: '1240px', margin: '0 auto' }
 };
 
 export default AdminDashboard;

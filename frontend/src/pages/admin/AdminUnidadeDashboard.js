@@ -51,11 +51,11 @@ function AdminUnidadeDashboard() {
 
   useEffect(() => { carregarDados(); }, [carregarDados]);
 
-  if (carregandoUnidades) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Carregando...</p>;
+  if (carregandoUnidades) return <p style={{ padding: '40px', textAlign: 'center', color: 'var(--fx-muted)' }}>Carregando...</p>;
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}><Icons.Building color="#111827" /> Dashboard da unidade</h2>
+      <h2 style={styles.title}>Dashboard da unidade</h2>
 
       {unidades.length > 1 && (
         <div style={{ marginBottom: '20px' }}>
@@ -68,7 +68,7 @@ function AdminUnidadeDashboard() {
       )}
 
       {unidades.length === 0 && (
-        <p style={{ color: '#6b7280' }}>Nenhuma unidade encontrada.</p>
+        <p style={{ color: 'var(--fx-muted)' }}>Nenhuma unidade encontrada.</p>
       )}
 
       {unidadeId && (
@@ -90,19 +90,19 @@ function AdminUnidadeDashboard() {
           </div>
 
           {carregandoDados ? (
-            <p style={{ color: '#6b7280', padding: '20px 0' }}>Carregando dados da unidade...</p>
+            <p style={{ color: 'var(--fx-muted)', padding: '20px 0' }}>Carregando dados da unidade...</p>
           ) : (
             <>
               {aba === 'agenda' && (
                 <div style={styles.grid}>
                   {agendamentos.length === 0 ? (
-                    <p style={{ color: '#9ca3af' }}>Nenhum agendamento nesta unidade ainda.</p>
+                    <p style={{ color: 'var(--fx-faint)' }}>Nenhum agendamento nesta unidade ainda.</p>
                   ) : agendamentos.map((ag) => (
                     <div key={ag.id} style={styles.card}>
                       <strong>{ag.cliente_nome}</strong>
-                      <div style={{ fontSize: '13px', color: '#6b7280' }}>{ag.data} às {ag.hora}</div>
-                      <div style={{ fontSize: '13px', color: '#374151' }}>{ag.servicos}</div>
-                      <div style={{ fontSize: '13px', color: '#374151' }}>{ag.barbeiro_nome || 'Sem profissional'}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--fx-muted)' }}>{ag.data} às {ag.hora}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--fx-text)' }}>{ag.servicos}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--fx-text)' }}>{ag.barbeiro_nome || 'Sem profissional'}</div>
                       <span style={{ ...styles.badge, ...corStatus(ag.status) }}>{ag.status}</span>
                     </div>
                   ))}
@@ -112,11 +112,11 @@ function AdminUnidadeDashboard() {
               {aba === 'equipe' && (
                 <div style={styles.grid}>
                   {equipe.length === 0 ? (
-                    <p style={{ color: '#9ca3af' }}>Nenhum profissional atribuído a esta unidade ainda.</p>
+                    <p style={{ color: 'var(--fx-faint)' }}>Nenhum profissional atribuído a esta unidade ainda.</p>
                   ) : equipe.map((b) => (
                     <div key={b.id} style={styles.card}>
                       <strong>{b.nome}</strong>
-                      <div style={{ fontSize: '13px', color: b.ativo ? '#059669' : '#dc2626' }}>{b.ativo ? 'Ativo' : 'Inativo'}</div>
+                      <div style={{ fontSize: '13px', color: b.ativo ? 'var(--fx-green)' : 'var(--fx-red)' }}>{b.ativo ? 'Ativo' : 'Inativo'}</div>
                     </div>
                   ))}
                 </div>
@@ -140,30 +140,27 @@ function AdminUnidadeDashboard() {
 }
 
 function corStatus(status) {
-  if (status === 'concluido') return { backgroundColor: '#d1fae5', color: '#065f46' };
-  if (status === 'cancelado') return { backgroundColor: '#fee2e2', color: '#991b1b' };
-  return { backgroundColor: '#e0f2fe', color: '#0369a1' };
+  if (status === 'concluido') return { backgroundColor: 'var(--fx-green-bg)', color: 'var(--fx-green)' };
+  if (status === 'cancelado') return { backgroundColor: 'var(--fx-red-bg)', color: 'var(--fx-red)' };
+  return { backgroundColor: 'var(--fx-blue-bg)', color: 'var(--fx-blue)' };
 }
 
-const Icons = {
-  Building: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>,
-};
 
 const styles = {
   container: { padding: '40px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },
-  title: { fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 20px 0' },
-  label: { display: 'block', marginBottom: '6px', fontWeight: '700', fontSize: '12px', color: '#4b5563', textTransform: 'uppercase' },
-  select: { padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', minWidth: '220px' },
-  abas: { display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid #e5e7eb', paddingBottom: '10px' },
-  btnAba: { padding: '8px 16px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', color: '#374151', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
-  btnAbaAtiva: { background: '#111827', color: '#fff', borderColor: '#111827' },
+  title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  label: { display: 'block', marginBottom: '6px', fontWeight: '700', fontSize: '12px', color: 'var(--fx-muted)', textTransform: 'uppercase' },
+  select: { padding: '10px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px', minWidth: '220px' },
+  abas: { display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid var(--fx-line)', paddingBottom: '10px' },
+  btnAba: { padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', color: 'var(--fx-text)', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+  btnAbaAtiva: { background: 'var(--fx-strong)', color: '#fff', borderColor: 'var(--fx-strong)' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' },
-  card: { backgroundColor: '#fff', padding: '16px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: '4px' },
+  card: { backgroundColor: 'var(--fx-card)', padding: '16px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--fx-line)', display: 'flex', flexDirection: 'column', gap: '4px' },
   badge: { display: 'inline-block', marginTop: '6px', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', width: 'fit-content' },
   gridStats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '16px' },
-  cardStat: { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' },
-  numStat: { fontSize: '28px', fontWeight: '800', color: '#111827' },
-  labelStat: { fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', fontWeight: '700' }
+  cardStat: { backgroundColor: 'var(--fx-card)', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--fx-line)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' },
+  numStat: { fontSize: '28px', fontWeight: '800', color: 'var(--fx-text)' },
+  labelStat: { fontSize: '12px', color: 'var(--fx-muted)', textTransform: 'uppercase', fontWeight: '700' }
 };
 
 export default AdminUnidadeDashboard;

@@ -21,8 +21,8 @@ function AdminConta({ empresaId }) {
     const [horarios, setHorarios] = useState(HORARIOS_PADRAO);
     const [carregando, setCarregando] = useState(true);
     const [salvando, setSalvando] = useState(false);
-    const [corPrincipal, setCorPrincipal] = useState('#2554eb');
-    const [corDestaque, setCorDestaque] = useState('#173fb0');
+    const [corPrincipal, setCorPrincipal] = useState('var(--fx-blue)');
+    const [corDestaque, setCorDestaque] = useState('var(--fx-blue)');
     const [permitePaleta, setPermitePaleta] = useState(false);
     const [vertical, setVertical] = useState('barbearia');
     const termos = obterTerminologia(vertical);
@@ -287,7 +287,7 @@ function AdminConta({ empresaId }) {
         }
     };
 
-    if (carregando) return <p style={{ textAlign: 'center', marginTop: '50px', color: '#6b7280' }}>Carregando configurações...</p>;
+    if (carregando) return <p style={{ textAlign: 'center', marginTop: '50px', color: 'var(--fx-muted)' }}>Carregando configurações...</p>;
 
     // Mesma regra do bloqueio no backend (middleware/trialAuth.js): teste só conta enquanto não
     // houver plano pago em dia, chave promocional ou teste de plano do admin absoluto em vigor.
@@ -306,7 +306,7 @@ function AdminConta({ empresaId }) {
         <div className="admin-page-container" style={styles.container}>
             <header style={styles.header}>
                 <div>
-                    <h2 style={styles.title}><Icons.Settings color="#111827" /> Perfil {termos.artigoContraido} {termos.local}</h2>
+                    <h2 style={styles.title}>Perfil {termos.artigoContraido} {termos.local}</h2>
                     <p style={styles.subtitle}>Gerencie os detalhes visuais e horários do seu estabelecimento.</p>
                 </div>
                 <button onClick={salvarAlteracoes} disabled={salvando} style={styles.btnSalvarTopo}>
@@ -316,9 +316,9 @@ function AdminConta({ empresaId }) {
             
             {situacaoTeste && (
                 <div style={{
-                    background: situacaoTeste.expirado ? '#fee2e2' : '#dbeafe',
-                    color: situacaoTeste.expirado ? '#991b1b' : '#1e40af',
-                    border: `1px solid ${situacaoTeste.expirado ? '#fca5a5' : '#93c5fd'}`,
+                    background: situacaoTeste.expirado ? 'var(--fx-red-bg)' : 'var(--fx-blue-bg)',
+                    color: situacaoTeste.expirado ? 'var(--fx-red)' : '#1e40af',
+                    border: `1px solid ${situacaoTeste.expirado ? 'var(--fx-red-line)' : '#93c5fd'}`,
                     borderRadius: '10px', padding: '14px 18px', marginBottom: '18px', fontSize: '14px', lineHeight: 1.5
                 }}>
                     {situacaoTeste.expirado ? (
@@ -340,11 +340,11 @@ function AdminConta({ empresaId }) {
                         
                         <div style={styles.uploadArea}>
                             <div style={styles.previewFoto}>
-                                {dados.logo_url ? <img src={dados.logo_url} alt="Logo" style={styles.img} /> : <Icons.Image color="#9ca3af" />}
+                                {dados.logo_url ? <img src={dados.logo_url} alt="Logo" style={styles.img} /> : <Icons.Image color="var(--fx-faint)" />}
                             </div>
                             <div style={{flex: 1}}>
-                                <h4 style={{margin: '0 0 5px 0', fontSize: '14px', color: '#111827'}}>Logo {termos.artigoContraido} {termos.local}</h4>
-                                <p style={{margin: '0 0 15px 0', fontSize: '12px', color: '#6b7280'}}>Sua logo será exibida para os clientes no menu principal do sistema.</p>
+                                <h4 style={{margin: '0 0 5px 0', fontSize: '14px', color: 'var(--fx-text)'}}>Logo {termos.artigoContraido} {termos.local}</h4>
+                                <p style={{margin: '0 0 15px 0', fontSize: '12px', color: 'var(--fx-muted)'}}>Sua logo será exibida para os clientes no menu principal do sistema.</p>
                                 <label style={styles.btnUpload}>
                                     Escolher Imagem
                                     <input type="file" accept="image/*" style={{ display: 'none' }} onChange={aoMudarFoto} />
@@ -355,7 +355,7 @@ function AdminConta({ empresaId }) {
                         <div style={{ marginTop: '20px' }}>
                             <label style={styles.label}>Nome do Estabelecimento</label>
                             <div style={styles.inputWrapper}>
-                                <Icons.Store color="#9ca3af" />
+                                <Icons.Store color="var(--fx-faint)" />
                                 <input 
                                     style={styles.inputLimpo} value={dados.nome} 
                                     onChange={e => setDados({...dados, nome: e.target.value})}
@@ -369,7 +369,7 @@ function AdminConta({ empresaId }) {
                         <div style={styles.cardHeader}>
                             <h3 style={styles.cardTitle}>Link de acesso {termos.artigoContraido} {termos.local}</h3>
                         </div>
-                        <p style={{ margin: '0 0 15px 0', fontSize: '13px', color: '#6b7280' }}>
+                        <p style={{ margin: '0 0 15px 0', fontSize: '13px', color: 'var(--fx-muted)' }}>
                             Compartilhe este link com seus clientes para eles fazerem login e agendar.
                         </p>
                         {linkLogin ? (
@@ -379,7 +379,7 @@ function AdminConta({ empresaId }) {
                                 <a href={linkLogin} target="_blank" rel="noopener noreferrer" style={styles.btnAbrirLink}>Abrir</a>
                             </div>
                         ) : (
-                            <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af' }}>Link indisponível no momento.</p>
+                            <p style={{ margin: 0, fontSize: '13px', color: 'var(--fx-faint)' }}>Link indisponível no momento.</p>
                         )}
                     </div>
 
@@ -401,7 +401,7 @@ function AdminConta({ empresaId }) {
                             </div>
                         ) : (
                             <div style={styles.upsellPaleta}>
-                                <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>
+                                <p style={{ margin: 0, fontSize: '13px', color: 'var(--fx-muted)' }}>
                                     Personalize as cores do seu painel e da tela dos seus clientes. Disponível a partir do plano Essencial.
                                 </p>
                             </div>
@@ -478,7 +478,7 @@ function AdminConta({ empresaId }) {
                                     </div>
 
                                     {!planoEscolhidoEhEnterprise && planoSelecionado?.preco_mensal > 0 && planoEscolhidoId !== assinatura.plano?.id && (
-                                        <div style={{ display: 'flex', gap: '14px', marginTop: '10px', fontSize: '13px', color: '#374151' }}>
+                                        <div style={{ display: 'flex', gap: '14px', marginTop: '10px', fontSize: '13px', color: 'var(--fx-text)' }}>
                                             <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
                                                 <input type="radio" checked={formaPagamentoEscolhida === 'cartao'} onChange={() => setFormaPagamentoEscolhida('cartao')} />
                                                 Cartão (recorrente)
@@ -491,23 +491,23 @@ function AdminConta({ empresaId }) {
                                     )}
 
                                     {pixGerado && (
-                                        <div style={{ marginTop: '12px', padding: '14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', textAlign: 'center' }}>
+                                        <div style={{ marginTop: '12px', padding: '14px', background: 'var(--fx-surface-2)', border: '1px solid var(--fx-line)', borderRadius: '10px', textAlign: 'center' }}>
                                             {pixGerado.qr_code_base64 && (
                                                 <img src={`data:image/png;base64,${pixGerado.qr_code_base64}`} alt="QR Code Pix" style={{ width: '180px', height: '180px', margin: '0 auto 10px' }} />
                                             )}
                                             <button onClick={copiarPix} style={{ ...styles.btnTrocarPlano, width: '100%' }}>Copiar código Pix</button>
-                                            <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#6b7280' }}>O plano ativa automaticamente assim que o pagamento for confirmado.</p>
+                                            <p style={{ margin: '8px 0 0', fontSize: '12px', color: 'var(--fx-muted)' }}>O plano ativa automaticamente assim que o pagamento for confirmado.</p>
                                         </div>
                                     )}
 
                                     {planoEscolhidoEhEnterprise && planoEscolhidoId !== assinatura.plano?.id && (
                                         enterpriseEnviado ? (
-                                            <p style={{ marginTop: '10px', fontSize: '13px', color: '#059669' }}>
+                                            <p style={{ marginTop: '10px', fontSize: '13px', color: 'var(--fx-green)' }}>
                                                 Contato enviado! Nosso time entra em contato em breve pra combinar os detalhes.
                                             </p>
                                         ) : (
                                             <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>
+                                                <p style={{ margin: 0, fontSize: '13px', color: 'var(--fx-muted)' }}>
                                                     O plano Enterprise é sob consulta. Preencha os dados abaixo pra nosso time entrar em contato.
                                                 </p>
                                                 <input type="text" placeholder="CNPJ (só números)" value={formEnterprise.cnpj} onChange={e => setFormEnterprise({ ...formEnterprise, cnpj: e.target.value })} style={styles.selectPlano} />
@@ -571,7 +571,7 @@ function AdminConta({ empresaId }) {
                         <div style={styles.cardHeader}>
                             <h3 style={styles.cardTitle}>Horário de Funcionamento</h3>
                         </div>
-                        <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '20px' }}>
+                        <p style={{ fontSize: '13px', color: 'var(--fx-muted)', marginBottom: '20px' }}>
                             Defina os dias de folga e o horário de expediente. O sistema esconderá sua agenda nos dias inativos.
                         </p>
 
@@ -579,7 +579,7 @@ function AdminConta({ empresaId }) {
                             {Object.keys(horarios).map((key) => {
                                 const dia = horarios[key];
                                 return (
-                                    <div key={key} style={{...styles.linhaDia, backgroundColor: dia.aberto ? '#fff' : '#f9fafb', borderColor: dia.aberto ? '#e5e7eb' : '#f3f4f6'}}>
+                                    <div key={key} style={{...styles.linhaDia, backgroundColor: dia.aberto ? 'var(--fx-card)' : 'var(--fx-surface-2)', borderColor: dia.aberto ? 'var(--fx-line)' : 'var(--fx-line)'}}>
                                         <div style={styles.diaHeader}>
                                             
                                             {/* BOTÃO LIGA/DESLIGA (TOGGLE) COM ANIMAÇÃO */}
@@ -589,12 +589,12 @@ function AdminConta({ empresaId }) {
                                                     onChange={(e) => atualizarHorarioDia(key, 'aberto', e.target.checked)}
                                                     style={styles.checkboxOriginal}
                                                 />
-                                                <span style={{...styles.toggleVisivo, backgroundColor: dia.aberto ? '#10b981' : '#e5e7eb'}}>
+                                                <span style={{...styles.toggleVisivo, backgroundColor: dia.aberto ? '#10b981' : 'var(--fx-surface-2)'}}>
                                                     <span style={{...styles.toggleBolinha, transform: dia.aberto ? 'translateX(20px)' : 'translateX(0)'}}></span>
                                                 </span>
                                             </label>
                                             
-                                            <span style={{ fontWeight: '600', color: dia.aberto ? '#111827' : '#9ca3af', fontSize: '14px', width: '100px' }}>
+                                            <span style={{ fontWeight: '600', color: dia.aberto ? 'var(--fx-text)' : 'var(--fx-faint)', fontSize: '14px', width: '100px' }}>
                                                 {dia.label}
                                             </span>
                                         </div>
@@ -605,7 +605,7 @@ function AdminConta({ empresaId }) {
                                                 onChange={(e) => atualizarHorarioDia(key, 'abre', e.target.value)}
                                                 style={styles.inputHora}
                                             />
-                                            <span style={{ color: '#9ca3af', fontSize: '12px' }}>às</span>
+                                            <span style={{ color: 'var(--fx-faint)', fontSize: '12px' }}>às</span>
                                             <input 
                                                 type="time" value={dia.fecha}
                                                 onChange={(e) => atualizarHorarioDia(key, 'fecha', e.target.value)}
@@ -635,28 +635,28 @@ const Icons = {
 const styles = {
     container: { padding: '40px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px', paddingBottom: '20px', flexWrap: 'wrap', gap: '15px' },
-    title: { fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 5px 0', letterSpacing: '-0.5px' },
-    subtitle: { color: '#6b7280', fontSize: '15px', margin: 0 },
-    btnSalvarTopo: { backgroundColor: '#111827', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', transition: '0.2s', fontSize: '14px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' },
+    title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+    subtitle: { color: 'var(--fx-muted)', fontSize: '15px', margin: 0 },
+    btnSalvarTopo: { backgroundColor: 'var(--fx-strong)', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', transition: '0.2s', fontSize: '14px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' },
     
     grid: { display: 'flex', gap: '30px', flexWrap: 'wrap', alignItems: 'flex-start' },
     coluna: { flex: '1 1 400px', display: 'flex', flexDirection: 'column' },
     
-    card: { backgroundColor: '#fff', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6', flex: 1 },
-    cardHeader: { borderBottom: '1px solid #f3f4f6', paddingBottom: '15px', marginBottom: '20px' },
-    cardTitle: { margin: '0', fontSize: '16px', color: '#111827', fontWeight: '700' },
+    card: { backgroundColor: 'var(--fx-card)', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--fx-line)', flex: 1 },
+    cardHeader: { borderBottom: '1px solid var(--fx-line)', paddingBottom: '15px', marginBottom: '20px' },
+    cardTitle: { margin: '0', fontSize: '16px', color: 'var(--fx-text)', fontWeight: '700' },
     
-    uploadArea: { display: 'flex', alignItems: 'center', gap: '20px', padding: '20px', backgroundColor: '#f9fafb', borderRadius: '12px', border: '1px dashed #d1d5db' },
-    previewFoto: { width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#fff', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e5e7eb', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
+    uploadArea: { display: 'flex', alignItems: 'center', gap: '20px', padding: '20px', backgroundColor: 'var(--fx-surface-2)', borderRadius: '12px', border: '1px dashed var(--fx-line-2)' },
+    previewFoto: { width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'var(--fx-card)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--fx-line)', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
     img: { width: '100%', height: '100%', objectFit: 'cover' },
-    btnUpload: { display: 'inline-block', padding: '8px 16px', backgroundColor: '#fff', color: '#111827', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', border: '1px solid #d1d5db', transition: '0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },
+    btnUpload: { display: 'inline-block', padding: '8px 16px', backgroundColor: 'var(--fx-card)', color: 'var(--fx-text)', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', border: '1px solid var(--fx-line-2)', transition: '0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },
     
-    label: { display: 'block', marginBottom: '8px', fontWeight: '700', fontSize: '12px', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px' },
-    inputWrapper: { display: 'flex', alignItems: 'center', padding: '12px 15px', borderRadius: '8px', border: '1px solid #d1d5db', backgroundColor: '#fff' },
-    inputLimpo: { width: '100%', border: 'none', outline: 'none', fontSize: '15px', color: '#111827', backgroundColor: 'transparent' },
+    label: { display: 'block', marginBottom: '8px', fontWeight: '700', fontSize: '12px', color: 'var(--fx-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
+    inputWrapper: { display: 'flex', alignItems: 'center', padding: '12px 15px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', backgroundColor: 'var(--fx-card)' },
+    inputLimpo: { width: '100%', border: 'none', outline: 'none', fontSize: '15px', color: 'var(--fx-text)', backgroundColor: 'transparent' },
     
     listaHorarios: { display: 'flex', flexDirection: 'column', gap: '10px' },
-    linhaDia: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', borderRadius: '10px', border: '1px solid #e5e7eb', transition: 'all 0.2s', flexWrap: 'wrap', gap: '10px' },
+    linhaDia: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', borderRadius: '10px', border: '1px solid var(--fx-line)', transition: 'all 0.2s', flexWrap: 'wrap', gap: '10px' },
     diaHeader: { display: 'flex', alignItems: 'center', gap: '15px' },
     
     // TOGGLE SWITCH ANIMADO
@@ -665,26 +665,26 @@ const styles = {
     toggleVisivo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '34px', transition: 'background-color 0.3s' },
     toggleBolinha: { position: 'absolute', content: '""', height: '18px', width: '18px', left: '3px', bottom: '3px', backgroundColor: 'white', borderRadius: '50%', transition: 'transform 0.3s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' },
     
-    inputHora: { padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px', outline: 'none', color: '#111827', backgroundColor: '#fff', width: '100px', maxWidth: '38vw', fontWeight: '500', boxSizing: 'border-box' },
+    inputHora: { padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', fontSize: '13px', outline: 'none', color: 'var(--fx-text)', backgroundColor: 'var(--fx-card)', width: '100px', maxWidth: '38vw', fontWeight: '500', boxSizing: 'border-box' },
 
-    inputCor: { width: '60px', height: '40px', border: '1px solid #d1d5db', borderRadius: '8px', cursor: 'pointer', padding: '2px' },
-    inputLink: { flex: '1 1 220px', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '13px', color: '#111827', backgroundColor: '#f9fafb' },
-    btnCopiarLink: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', color: '#374151', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+    inputCor: { width: '60px', height: '40px', border: '1px solid var(--fx-line-2)', borderRadius: '8px', cursor: 'pointer', padding: '2px' },
+    inputLink: { flex: '1 1 220px', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '13px', color: 'var(--fx-text)', backgroundColor: 'var(--fx-surface-2)' },
+    btnCopiarLink: { padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', color: 'var(--fx-text)', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
     btnAbrirLink: { padding: '10px 16px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '600', fontSize: '13px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' },
-    upsellPaleta: { padding: '16px', backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px dashed #d1d5db' },
+    upsellPaleta: { padding: '16px', backgroundColor: 'var(--fx-surface-2)', borderRadius: '10px', border: '1px dashed var(--fx-line-2)' },
 
-    linhaAssinatura: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: '14px' },
-    labelAssinatura: { color: '#6b7280' },
+    linhaAssinatura: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--fx-line)', fontSize: '14px' },
+    labelAssinatura: { color: 'var(--fx-muted)' },
     badgeStatusAssinatura: { padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' },
-    badgeVerde: { backgroundColor: '#d1fae5', color: '#065f46' },
-    badgeCinza: { backgroundColor: '#f3f4f6', color: '#4b5563' },
-    avisoCancelamento: { marginTop: '12px', padding: '12px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '13px', color: '#92400e', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' },
-    btnLinkReativar: { background: 'none', border: 'none', color: '#2554eb', fontWeight: '700', cursor: 'pointer', padding: 0, fontSize: '13px', textDecoration: 'underline' },
-    selectPlano: { flex: '1 1 220px', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' },
+    badgeVerde: { backgroundColor: 'var(--fx-green-bg)', color: 'var(--fx-green)' },
+    badgeCinza: { backgroundColor: 'var(--fx-surface-2)', color: 'var(--fx-muted)' },
+    avisoCancelamento: { marginTop: '12px', padding: '12px', backgroundColor: 'var(--fx-amber-bg)', border: '1px solid var(--fx-amber-line)', borderRadius: '8px', fontSize: '13px', color: 'var(--fx-amber)', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' },
+    btnLinkReativar: { background: 'none', border: 'none', color: 'var(--fx-blue)', fontWeight: '700', cursor: 'pointer', padding: 0, fontSize: '13px', textDecoration: 'underline' },
+    selectPlano: { flex: '1 1 220px', padding: '10px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px' },
     btnTrocarPlano: { padding: '10px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '600', cursor: 'pointer' },
     acoesAssinatura: { display: 'flex', gap: '10px', marginTop: '18px', flexWrap: 'wrap' },
-    btnCancelarCobranca: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', color: '#374151', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
-    btnCancelarPlano: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }
+    btnCancelarCobranca: { padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', color: 'var(--fx-text)', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
+    btnCancelarPlano: { padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--fx-red-line)', background: 'var(--fx-red-bg)', color: 'var(--fx-red)', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }
 };
 
 export default AdminConta;

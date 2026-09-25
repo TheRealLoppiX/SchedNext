@@ -4,6 +4,7 @@ import { useToast } from './Toast';
 import { obterTerminologia } from '../utils/terminologia';
 import usePaletaTenant from '../hooks/usePaletaTenant';
 import MarcaPlataforma from './MarcaPlataforma';
+import BotaoTema from './BotaoTema';
 import { API_URL } from '../services/api';
 
 
@@ -281,62 +282,120 @@ function Layout({ setEmpresaId }) {
       item('Privacidade', Icons.Lock, `/${empresaSlug}/perfil?aba=privacidade`, isAtiva('privacidade'))
     ] }];
 
-  return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
-      {aberto && (
-        <div className="bb-sidebar-overlay" onClick={() => setAberto(false)} />
-      )}
-
-      <button
-        className="bb-mobile-menu-btn"
-        onClick={() => setAberto(prev => !prev)}
-        aria-label="Abrir menu"
-      >
-        <Icons.Menu />
-      </button>
-
-      <aside
-        className={`bb-sidebar sa-sidebar${aberto ? ' aberto' : ''}`}
-        style={{ ...s.sidebar, width: aberto ? '250px' : '70px', padding: aberto ? '14px 14px 20px' : '14px 10px 20px' }}
-        onMouseEnter={() => { if (podeUsarHover()) setAberto(true); }}
-        onMouseLeave={() => { if (podeUsarHover()) setAberto(false); }}
-      >
-        <button style={s.btnMenu} onClick={() => setAberto(prev => !prev)} aria-label={aberto ? 'Fechar menu' : 'Abrir menu'}>
-          <Icons.Menu />
-        </button>
-
-        {aberto && (
-          <div style={s.sidebarTopo}>
-            <div style={s.fotoCirculo}>
-              {dados?.foto_url ? <img src={dados.foto_url} alt="Perfil" style={s.imgPerfil} /> : <Icons.User color="#fff" />}
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <p style={s.nomeTexto}>{dados?.nome_completo || 'Carregando...'}</p>
-              {isAdminPath ? (
-                <p style={s.subtituloTopo}>{adminUnidadeId ? 'Painel da unidade' : 'Painel administrativo'}</p>
-              ) : dadosAssinante.assinante ? (
-                <p style={{ ...s.subtituloTopo, color: dadosAssinante.inadimplente ? '#f87171' : '#a78bfa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                  {dadosAssinante.inadimplente ? 'Mensalidade em atraso' : dadosAssinante.plano_nome}
-                </p>
-              ) : null}
-            </div>
+  // Área do cliente final: navegação própria (trilho de ícones no desktop, barra inferior no
+  // celular) e fundo escuro com grade. O admin continua com a sidebar de sempre.
+  if (!isAdminPath) {
+    const itensCliente = gruposMenu[0].itens;
+    const inicial = (dados?.nome_completo || '?').trim().charAt(0).toUpperCase();
+    return (
+      <div className="oc-cliente">
+        <div className="oc-fundo" aria-hidden="true" />
+        <aside className="oc-trilho">
+          <div className="oc-trilho-marca" title={empresaTenant?.nome || ''}>
+            {empresaTenant?.logo_url ? <img src={empresaTenant.logo_url} alt="" /> : <img src="/icon-schednext.png" alt="" />}
           </div>
-        )}
+          <nav className="oc-trilho-nav">
+            {itensCliente.map((it) => {
+              const Icone = it.icone;
+              return (
+                <button key={it.label} type="button" className={`oc-trilho-item ${it.ativo ? 'ativo' : ''}`} onClick={() => irPara(it.destino)} aria-label={it.label}>
+                  <Icone /><span className="oc-trilho-rotulo">{it.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+          <div className="oc-trilho-rodape">
+            <BotaoTema className="oc-trilho-item" comRotulo />
+            <div className="oc-avatar" title={dados?.nome_completo || ''}>
+              {dados?.foto_url ? <img src={dados.foto_url} alt="" /> : inicial}
+              {dadosAssinante.assinante && <span className="oc-avatar-selo" title={dadosAssinante.plano_nome} />}
+            </div>
+            <button type="button" className="oc-trilho-item oc-sair" onClick={handleSair} aria-label="Sair">
+              <Icons.Logout /><span className="oc-trilho-rotulo">Sair</span>
+            </button>
+          </div>
+        </aside>
 
-        <nav style={s.nav}>
+        <main className="oc-principal">
+          {isAtiva('privacidade') ? (
+            <div style={s.containerPrivacidade}>
+              <div style={s.cardPrivacidade}>
+                <span className="oc-kicker">Privacidade</span>
+                <h2 className="oc-titulo-sm">SEGURANÇA DA CONTA.</h2>
+                {etapaPrivacidade === 1 && (
+                  <div style={s.boxCinza}>
+                    <p style={s.textoInformativo}>Para alterar seu e-mail ou senha, confirme o código que enviaremos agora.</p>
+                    <button onClick={solicitarCodigo} style={s.btnPreto} disabled={carregando}>
+                      {carregando ? "Enviando..." : "Solicitar código de alteração"}
+                    </button>
+                  </div>
+                )}
+                {etapaPrivacidade === 2 && (
+                  <div style={s.formGroup}>
+                    <label style={s.label}>Código de 6 dígitos enviado ao e-mail</label>
+                    <input type="text" maxLength={6} value={codigo} onChange={(e) => setCodigo(e.target.value)} style={s.input} placeholder="000000" />
+                    <div style={s.flexBtns}>
+                      <button onClick={validarCodigo} style={s.btnVerde} disabled={carregando}>{carregando ? "Validando..." : "Validar código"}</button>
+                      <button onClick={() => setEtapaPrivacidade(1)} style={s.btnCinza}>Voltar</button>
+                    </div>
+                  </div>
+                )}
+                {etapaPrivacidade === 3 && (
+                  <div style={s.formGroup}>
+                    <div style={{ textAlign: 'left', marginBottom: '15px' }}>
+                      <label style={s.label}>Confirmar/alterar e-mail</label>
+                      <input type="email" value={novosDados.email} onChange={(e) => setNovosDados({ ...novosDados, email: e.target.value })} style={s.input} />
+                    </div>
+                    <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+                      <label style={s.label}>Nova senha</label>
+                      <input type="password" placeholder="Sua nova senha" style={s.input} value={novosDados.senha} onChange={(e) => setNovosDados({ ...novosDados, senha: e.target.value })} />
+                    </div>
+                    <div style={s.flexBtns}>
+                      <button onClick={finalizarAlteracao} style={s.btnVerde} disabled={carregando}>{carregando ? "Salvando..." : "Confirmar e salvar"}</button>
+                      <button onClick={() => setEtapaPrivacidade(1)} style={s.btnCinza}>Cancelar</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : empresaValidada ? (
+            <Outlet context={{ dados, setDados, userId, empresaId: dados?.empresa_id, empresa: empresaTenant }} />
+          ) : null}
+          <MarcaPlataforma empresa={empresaTenant} />
+        </main>
+      </div>
+    );
+  }
+
+  // Painel da empresa: casca própria no padrão "ofício" (menu lateral de vidro agrupado por
+  // seção, faixa do topo com a trilha da página, relógio e tema). No celular o menu vira gaveta.
+  const itemAtivo = gruposMenu.flatMap((g) => g.itens.map((it) => ({ ...it, grupo: g.titulo }))).find((it) => it.ativo);
+  const nomeEmpresa = dados?.nome_completo || '';
+  return (
+    <div className="oa-admin">
+      <div className="oc-fundo" aria-hidden="true" />
+      {aberto && <div className="oa-veu" onClick={() => setAberto(false)} />}
+
+      <aside className={`oa-menu${aberto ? ' aberto' : ''}`}>
+        <div className="oa-marca">
+          <div className="oa-marca-logo">
+            {dados?.foto_url ? <img src={dados.foto_url} alt="" /> : (nomeEmpresa.trim().charAt(0).toUpperCase() || 'S')}
+          </div>
+          <div className="oa-marca-texto">
+            <p className="oa-marca-nome" title={nomeEmpresa}>{nomeEmpresa || 'Carregando...'}</p>
+            <p className="oa-marca-sub">{adminUnidadeId ? 'Painel da unidade' : 'Painel da empresa'}</p>
+          </div>
+        </div>
+
+        <nav className="oa-nav">
           {gruposMenu.map((grupo, gi) => (
-            <div key={grupo.titulo || gi} style={aberto ? s.grupoMenu : s.grupoMenuRecolhido}>
-              {aberto && grupo.titulo && <p style={s.grupoTitulo}>{grupo.titulo}</p>}
-              {grupo.itens.map((item) => {
-                const Icone = item.icone;
+            <div key={grupo.titulo || gi} className="oa-grupo">
+              {grupo.titulo && <p className="oa-grupo-titulo"><i>{String(gi + 1).padStart(2, '0')}</i>{grupo.titulo}</p>}
+              {grupo.itens.map((it) => {
+                const Icone = it.icone;
                 return (
-                  <button
-                    key={item.label}
-                    onClick={() => irPara(item.destino)}
-                    title={item.label}
-                    style={{ ...s.navItem, ...(aberto ? {} : s.navItemRecolhido), ...(item.ativo ? s.navItemAtivo : {}) }}
-                  >
-                    <Icone /> {aberto && item.label}
+                  <button key={it.label} type="button" className={`oa-item${it.ativo ? ' ativo' : ''}`} onClick={() => irPara(it.destino)}>
+                    <Icone /> {it.label}
                   </button>
                 );
               })}
@@ -344,89 +403,49 @@ function Layout({ setEmpresaId }) {
           ))}
         </nav>
 
-        <button onClick={handleSair} title="Sair" style={{ ...s.navSair, ...(aberto ? {} : s.navItemRecolhido) }}>
-          <Icons.Logout /> {aberto && 'Sair'}
-        </button>
+        <div className="oa-rodape">
+          <BotaoTema className="oa-item" comRotulo />
+          <button type="button" className="oa-item oa-sair" onClick={handleSair}>
+            <Icons.Logout /> Sair
+          </button>
+        </div>
       </aside>
 
-      {/* A MÁGICA FOI DESFEITA AQUI: Agora a aba agendamentos do cliente é repassada para o Dashboard Original dele */}
-      <main className="bb-main" style={{ flex: 1, marginLeft: '70px', padding: '20px' }}>
-        {isAtiva('privacidade') ? (
-          <div style={s.containerPrivacidade}>
-            <div style={s.cardPrivacidade}>
-              <h2 style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                <Icons.Lock color="#333" /> Segurança da Conta
-              </h2>
-              <hr style={{ opacity: 0.1, marginBottom: '25px' }} />
-              
-              {etapaPrivacidade === 1 && (
-                <div style={s.boxCinza}>
-                  <p style={s.textoInformativo}>Para alterar seu e-mail ou senha, confirme o código que enviaremos agora.</p>
-                  <button onClick={solicitarCodigo} style={s.btnPreto} disabled={carregando}>
-                    {carregando ? "Enviando..." : "Solicitar Código de Alteração"}
-                  </button>
-                </div>
-              )}
-
-              {etapaPrivacidade === 2 && (
-                <div style={s.formGroup}>
-                  <label style={s.label}>Código de 6 dígitos enviado ao e-mail</label>
-                  <input 
-                    type="text" maxLength={6} value={codigo} 
-                    onChange={(e) => setCodigo(e.target.value)} 
-                    style={s.input} placeholder="000000"
-                  />
-                  <div style={s.flexBtns}>
-                    <button onClick={validarCodigo} style={s.btnVerde} disabled={carregando}>
-                      {carregando ? "Validando..." : "Validar Código"}
-                    </button>
-                    <button onClick={() => setEtapaPrivacidade(1)} style={s.btnCinza}>Voltar</button>
-                  </div>
-                </div>
-              )}
-
-              {etapaPrivacidade === 3 && (
-                <div style={s.formGroup}>
-                  <div style={{ textAlign: 'left', marginBottom: '15px' }}>
-                    <label style={s.label}>Confirmar/Alterar E-mail</label>
-                    <input 
-                      type="email" value={novosDados.email} 
-                      onChange={(e) => setNovosDados({...novosDados, email: e.target.value})}
-                      style={s.input} 
-                    />
-                  </div>
-                  <div style={{ textAlign: 'left', marginBottom: '20px' }}>
-                    <label style={s.label}>Nova Senha</label>
-                    <input 
-                      type="password" placeholder="Sua nova senha" 
-                      style={s.input} value={novosDados.senha}
-                      onChange={(e) => setNovosDados({...novosDados, senha: e.target.value})}
-                    />
-                  </div>
-                  <div style={s.flexBtns}>
-                    <button onClick={finalizarAlteracao} style={s.btnVerde} disabled={carregando}>
-                      {carregando ? "Salvando..." : "Confirmar e Salvar"}
-                    </button>
-                    <button onClick={() => setEtapaPrivacidade(1)} style={s.btnCinza}>Cancelar</button>
-                  </div>
-                </div>
-              )}
-            </div>
+      <main className="oa-principal">
+        <div className="oa-topo">
+          <div className="oa-trilha">
+            <button type="button" className="oa-botao-menu" onClick={() => setAberto((v) => !v)} aria-label="Abrir menu">
+              <Icons.Menu />
+            </button>
+            <span>Painel</span>
+            {itemAtivo && <><span>/</span><b>{itemAtivo.label}</b></>}
           </div>
-        ) : isAdminPath || empresaValidada ? (
-          /* PASSA O CONTEXTO PARA OS FILHOS (ISSO DEVOLVE A VISÃO ORIGINAL DO CLIENTE) */
-          <Outlet context={{ dados, setDados, userId, empresaId: dados?.empresa_id }} />
-        ) : null}
-        {!isAdminPath && <MarcaPlataforma empresa={empresaTenant} />}
+          <div className="oa-topo-dir">
+            <Relogio />
+          </div>
+        </div>
+        <Outlet context={{ dados, setDados, userId, empresaId: dados?.empresa_id }} />
       </main>
     </div>
   );
 }
 
+// Data e hora na faixa do topo do painel (atualiza a cada 30s).
+function Relogio() {
+  const [agora, setAgora] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setAgora(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  const data = agora.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }).replace(/\./g, '');
+  const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return <span className="oa-ao-vivo"><span className="oa-relogio">{data} · </span>{hora}</span>;
+}
+
 // ÍCONES SVG CORRIGIDOS COM viewBox="0 0 24 24" PARA NÃO CORTAR
 const Icons = {
   Star: ({color}) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>,
-  Menu: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
+  Menu: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
   Stats: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>,
   Calendar: ({color="currentColor"}) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
   Users: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
@@ -450,32 +469,32 @@ const Icons = {
 const s = {
   // Mesma estrutura visual da sidebar do admin absoluto (SuperAdminDashboard.js): fixa,
   // recolhida em 70px e expandida pra 250px por cima do conteúdo (largura vem do estado `aberto`).
-  sidebar: { background: '#16161a', color: '#fff', position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 1000, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflowY: 'auto', overflowX: 'hidden', transition: 'width 0.3s', borderRight: '1px solid rgba(37, 84, 235,0.25)' },
+  sidebar: { background: 'var(--fx-surface-3)', color: '#fff', position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 1000, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflowY: 'auto', overflowX: 'hidden', transition: 'width 0.3s', borderRight: '1px solid rgba(37, 84, 235,0.25)' },
   btnMenu: { background: 'none', border: 'none', padding: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', marginBottom: '8px', flexShrink: 0 },
   sidebarTopo: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
-  fotoCirculo: { width: '40px', height: '40px', borderRadius: '50%', background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #2554eb', flexShrink: 0 },
+  fotoCirculo: { width: '40px', height: '40px', borderRadius: '50%', background: 'var(--fx-surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #2554eb', flexShrink: 0 },
   imgPerfil: { width: '100%', height: '100%', objectFit: 'cover' },
   nomeTexto: { margin: 0, fontSize: '14px', color: '#fff', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  subtituloTopo: { margin: 0, fontSize: '11px', color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  subtituloTopo: { margin: 0, fontSize: '11px', color: 'var(--fx-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   nav: { display: 'flex', flexDirection: 'column', flex: 1 },
   grupoMenu: { marginBottom: '14px' },
   grupoMenuRecolhido: { marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)' },
-  grupoTitulo: { fontSize: '10px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 6px 10px', whiteSpace: 'nowrap' },
-  navItem: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', boxSizing: 'border-box', background: 'transparent', color: '#d1d5db', border: 'none', borderRadius: '8px', padding: '9px 10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left', marginBottom: '2px', transition: '0.15s', whiteSpace: 'nowrap' },
+  grupoTitulo: { fontSize: '10px', fontWeight: 700, color: 'var(--fx-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 6px 10px', whiteSpace: 'nowrap' },
+  navItem: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', boxSizing: 'border-box', background: 'transparent', color: 'var(--fx-muted)', border: 'none', borderRadius: '8px', padding: '9px 10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left', marginBottom: '2px', transition: '0.15s', whiteSpace: 'nowrap' },
   navItemAtivo: { background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff' },
   navItemRecolhido: { justifyContent: 'center', padding: '10px 0', gap: 0 },
   navSair: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', boxSizing: 'border-box', background: 'transparent', color: '#f87171', border: 'none', borderRadius: '8px', padding: '9px 10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', whiteSpace: 'nowrap' },
   containerPrivacidade: { display: 'flex', justifyContent: 'center', paddingTop: '50px' },
-  cardPrivacidade: { background: '#fff', padding: '30px', borderRadius: '15px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', width: '100%', maxWidth: '450px', textAlign: 'center' },
-  boxCinza: { background: '#f9f9f9', padding: '20px', borderRadius: '10px' },
-  textoInformativo: { fontSize: '14px', color: '#666', lineHeight: '1.6', marginBottom: '20px' },
-  label: { display: 'block', fontSize: '13px', fontWeight: 'bold', color: '#444', marginBottom: '8px' },
-  input: { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '15px', boxSizing: 'border-box' },
+  cardPrivacidade: { background: 'var(--fx-surface)', padding: '30px', borderRadius: '20px', border: '1px solid var(--fx-line)', width: '100%', maxWidth: '480px', textAlign: 'left' },
+  boxCinza: { background: 'var(--fx-surface-2)', padding: '20px', borderRadius: '10px' },
+  textoInformativo: { fontSize: '14px', color: 'var(--fx-muted)', lineHeight: '1.6', marginBottom: '20px' },
+  label: { display: 'block', fontSize: '13px', fontWeight: 'bold', color: 'var(--fx-muted)', marginBottom: '8px' },
+  input: { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--fx-line)', fontSize: '15px', boxSizing: 'border-box', background: 'var(--fx-surface-2)', color: 'var(--fx-text)' },
   formGroup: { display: 'flex', flexDirection: 'column' },
   flexBtns: { display: 'flex', gap: '10px', marginTop: '10px' },
   btnPreto: { width: '100%', padding: '14px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', fontWeight: 'bold', cursor: 'pointer' },
   btnVerde: { flex: 2, padding: '14px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', fontWeight: 'bold', cursor: 'pointer' },
-  btnCinza: { flex: 1, padding: '14px', borderRadius: '8px', border: 'none', background: '#666', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }
+  btnCinza: { flex: 1, padding: '14px', borderRadius: '8px', border: 'none', background: 'var(--fx-surface-3)', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }
 };
 
 export default Layout;

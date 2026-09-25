@@ -196,14 +196,14 @@ function AdminUnidades({ empresaId }) {
     }
   };
 
-  if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Carregando unidades...</p>;
+  if (carregando) return <p style={{ padding: '40px', textAlign: 'center', color: 'var(--fx-muted)' }}>Carregando unidades...</p>;
 
   if (!permitido) {
     return (
       <div className="admin-page-container" style={styles.container}>
-        <h2 style={styles.title}><Icons.Building color="#111827" /> Unidades</h2>
+        <h2 style={styles.title}>Unidades</h2>
         <div style={styles.upsell}>
-          <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+          <p style={{ margin: 0, fontSize: '14px', color: 'var(--fx-muted)' }}>
             Gerenciar múltiplas unidades (filiais) é um recurso exclusivo do <strong>plano Enterprise</strong>.
             Fale com o suporte para fazer upgrade e cadastrar mais de uma localização.
           </p>
@@ -214,7 +214,7 @@ function AdminUnidades({ empresaId }) {
 
   return (
     <div className="admin-page-container" style={styles.container}>
-      <h2 style={styles.title}><Icons.Building color="#111827" /> Unidades</h2>
+      <h2 style={styles.title}>Unidades</h2>
       <p style={styles.subtitle}>Gerencie as filiais do seu negócio, cada uma com sua própria equipe.</p>
 
       <form onSubmit={cadastrarUnidade} style={styles.cardForm}>
@@ -243,7 +243,7 @@ function AdminUnidades({ empresaId }) {
             <div key={u.id} style={{ ...styles.card, borderTop: u.ativo ? '4px solid #059669' : '4px solid #dc2626' }}>
               <h3 style={styles.nomeCard}>{u.nome}</h3>
               {u.endereco && <p style={styles.endereco}>{u.endereco}</p>}
-              <span style={{ ...styles.badge, backgroundColor: u.ativo ? '#d1fae5' : '#fee2e2', color: u.ativo ? '#065f46' : '#991b1b' }}>
+              <span style={{ ...styles.badge, backgroundColor: u.ativo ? 'var(--fx-green-bg)' : 'var(--fx-red-bg)', color: u.ativo ? 'var(--fx-green)' : 'var(--fx-red)' }}>
                 {u.ativo ? 'Ativa' : 'Inativa'}
               </span>
               <div style={styles.acoes}>
@@ -260,10 +260,10 @@ function AdminUnidades({ empresaId }) {
                     <div key={admin.id} style={styles.linhaAdmin}>
                       <div>
                         <strong style={{ fontSize: '13px' }}>{admin.nome}</strong>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{admin.email}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--fx-muted)' }}>{admin.email}</div>
                       </div>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                        <span style={{ ...styles.badge, backgroundColor: admin.ativo ? '#d1fae5' : '#fee2e2', color: admin.ativo ? '#065f46' : '#991b1b' }}>
+                        <span style={{ ...styles.badge, backgroundColor: admin.ativo ? 'var(--fx-green-bg)' : 'var(--fx-red-bg)', color: admin.ativo ? 'var(--fx-green)' : 'var(--fx-red)' }}>
                           {admin.ativo ? 'Ativo' : 'Inativo'}
                         </span>
                         <button onClick={() => alternarStatusAdmin(u.id, admin)} style={styles.btnMini}>{admin.ativo ? 'Desativar' : 'Reativar'}</button>
@@ -272,7 +272,7 @@ function AdminUnidades({ empresaId }) {
                     </div>
                   ))}
                   {(adminsPorUnidade[u.id] || []).length === 0 && (
-                    <p style={{ fontSize: '12px', color: '#9ca3af', margin: '4px 0 10px' }}>Nenhum administrador nesta unidade ainda.</p>
+                    <p style={{ fontSize: '12px', color: 'var(--fx-faint)', margin: '4px 0 10px' }}>Nenhum administrador nesta unidade ainda.</p>
                   )}
 
                   <div style={styles.formAdminRow}>
@@ -291,35 +291,32 @@ function AdminUnidades({ empresaId }) {
   );
 }
 
-const Icons = {
-  Building: ({ color }) => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'bottom' }}><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>,
-};
 
 const styles = {
   container: { padding: '40px', maxWidth: '1000px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },
-  title: { fontSize: '28px', color: '#111827', fontWeight: '800', margin: '0 0 5px 0' },
-  subtitle: { color: '#6b7280', fontSize: '15px', marginBottom: '25px' },
-  upsell: { padding: '20px', backgroundColor: '#f9fafb', borderRadius: '10px', border: '1px dashed #d1d5db' },
-  cardForm: { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6', marginBottom: '24px' },
+  title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  subtitle: { color: 'var(--fx-muted)', fontSize: '15px', marginBottom: '25px' },
+  upsell: { padding: '20px', backgroundColor: 'var(--fx-surface-2)', borderRadius: '10px', border: '1px dashed var(--fx-line-2)' },
+  cardForm: { backgroundColor: 'var(--fx-card)', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--fx-line)', marginBottom: '24px' },
   formRow: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
-  input: { flex: '1 1 200px', padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' },
+  input: { flex: '1 1 200px', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px' },
   btnCadastrar: { padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '600', cursor: 'pointer' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' },
-  card: { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f3f4f6' },
-  nomeCard: { margin: '0 0 6px', fontSize: '16px', color: '#111827' },
-  endereco: { fontSize: '13px', color: '#6b7280', margin: '0 0 10px' },
+  card: { backgroundColor: 'var(--fx-card)', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid var(--fx-line)' },
+  nomeCard: { margin: '0 0 6px', fontSize: '16px', color: 'var(--fx-text)' },
+  endereco: { fontSize: '13px', color: 'var(--fx-muted)', margin: '0 0 10px' },
   badge: { display: 'inline-block', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' },
   acoes: { display: 'flex', gap: '8px', marginTop: '14px' },
-  btnSecundario: { flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '13px' },
-  btnExcluir: { flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontSize: '13px' },
-  btnAdmins: { width: '100%', marginTop: '10px', padding: '8px', borderRadius: '6px', border: '1px solid #c7d2fe', background: '#eef2ff', color: '#4f46e5', cursor: 'pointer', fontSize: '12px', fontWeight: '600' },
-  painelAdmins: { marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f3f4f6' },
-  linhaAdmin: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f9fafb', gap: '8px', flexWrap: 'wrap' },
-  btnMini: { padding: '4px 8px', borderRadius: '5px', border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '11px' },
-  btnMiniExcluir: { padding: '4px 8px', borderRadius: '5px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontSize: '11px' },
+  btnSecundario: { flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', cursor: 'pointer', fontSize: '13px' },
+  btnExcluir: { flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--fx-red-line)', background: 'var(--fx-red-bg)', color: 'var(--fx-red)', cursor: 'pointer', fontSize: '13px' },
+  btnAdmins: { width: '100%', marginTop: '10px', padding: '8px', borderRadius: '6px', border: '1px solid var(--fx-violet-line)', background: 'var(--fx-violet-bg)', color: 'var(--fx-violet)', cursor: 'pointer', fontSize: '12px', fontWeight: '600' },
+  painelAdmins: { marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--fx-line)' },
+  linhaAdmin: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--fx-line)', gap: '8px', flexWrap: 'wrap' },
+  btnMini: { padding: '4px 8px', borderRadius: '5px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', cursor: 'pointer', fontSize: '11px' },
+  btnMiniExcluir: { padding: '4px 8px', borderRadius: '5px', border: '1px solid var(--fx-red-line)', background: 'var(--fx-red-bg)', color: 'var(--fx-red)', cursor: 'pointer', fontSize: '11px' },
   formAdminRow: { display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '10px' },
-  inputPequeno: { flex: '1 1 100px', padding: '7px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '12px' },
-  btnCadastrarPequeno: { padding: '7px 14px', borderRadius: '6px', border: 'none', background: '#111827', color: '#fff', fontWeight: '600', cursor: 'pointer', fontSize: '12px' }
+  inputPequeno: { flex: '1 1 100px', padding: '7px 10px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', fontSize: '12px' },
+  btnCadastrarPequeno: { padding: '7px 14px', borderRadius: '6px', border: 'none', background: 'var(--fx-strong)', color: '#fff', fontWeight: '600', cursor: 'pointer', fontSize: '12px' }
 };
 
 export default AdminUnidades;
