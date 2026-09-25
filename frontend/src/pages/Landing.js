@@ -203,11 +203,28 @@ function Landing() {
   }, []);
 
   useEffect(() => {
+    // Autoplay declarativo (autoPlay+muted+playsInline) às vezes não "pega" no Safari iOS: com o
+    // vídeo ainda bufferizando em dados móveis, ou com o Modo de Baixo Consumo ligado (aí o Safari
+    // só libera depois de um gesto real na página). Tenta de novo quando o navegador já tem dados
+    // (canplay) e no primeiro toque/rolagem/clique (once, pra não ficar escutando pra sempre).
     const v = refVideo.current;
-    if (!v) return;
-    v.muted = true;
-    v.play()?.catch(() => {});
-  }, []);
+    if (!v) return undefined;
+    const tentarTocar = () => {
+      // React nem sempre reflete a prop `muted` no elemento a tempo do Safari avaliar o autoplay.
+      v.muted = true;
+      v.defaultMuted = true;
+      // Encadeamento opcional: no JSDOM (testes) play() devolve undefined em vez de Promise.
+      v.play()?.catch(() => {});
+    };
+    tentarTocar();
+    v.addEventListener('canplay', tentarTocar);
+    const eventosGesto = ['touchstart', 'touchend', 'scroll', 'click'];
+    eventosGesto.forEach((ev) => window.addEventListener(ev, tentarTocar, { once: true, passive: true }));
+    return () => {
+      v.removeEventListener('canplay', tentarTocar);
+      eventosGesto.forEach((ev) => window.removeEventListener(ev, tentarTocar));
+    };
+  }, [reduzirMovimento]);
 
   useEffect(() => {
     document.body.style.overflow = menuAberto ? 'hidden' : '';
