@@ -210,25 +210,55 @@ function AppRoutes({ empresaId, setEmpresaId, deslogarAdmin }) {
   );
 }
 
-function App() {
-  // Inicializa o estado diretamente do localStorage para evitar redirecionamentos indevidos no refresh
-  const [empresaId, setEmpresaId] = useState(() => localStorage.getItem('empresaId'));
-  const [carregando, setCarregando] = useState(true);
-  const [carregandoDominio, setCarregandoDominio] = useState(true);
+const DOMINIO_RAIZ = 'schednext.com.br';
 
-  // Resolve domínio próprio de tenant (plano Enterprise) antes do primeiro render das rotas.
-  // Hostnames conhecidos (domínio raiz, subdomínios *.schednext.com.br, localhost) não
-  // precisam disso — só entra aqui quando o app é acessado por um domínio de terceiro (ver
-  // utils/tenantSubdominio.js e a rota pública GET /dominio/resolver no backend).
+// Domínio principal, subdomínios *.schednext.com.br e localhost já são resolvidos na hora (ver
+// utils/tenantSubdominio.js); só domínio próprio de tenant (plano Enterprise) precisa perguntar
+// pra API antes de montar as rotas.
+function hostConhecido() {
+  const host = window.location.hostname;
+  return host === DOMINIO_RAIZ || host.endsWith(`.${DOMINIO_RAIZ}`) || host === 'localhost' || host === '127.0.0.1';
+}
+
+// Lê a sessão do admin já no primeiro render. Antes isso rodava num useEffect com um estado
+// "carregando" que começava em true, então todo carregamento piscava uma tela
+// "Carregando sistema..." por um quadro, mesmo sem nada pra esperar.
+function lerEmpresaIdInicial() {
+  const adminSalvo = localStorage.getItem('adminToken');
+  if (!adminSalvo) return localStorage.getItem('empresaId');
+  try {
+    const data = JSON.parse(adminSalvo);
+    localStorage.setItem('empresaId', data.empresa_id);
+    return data.empresa_id;
+  } catch (e) {
+    console.error("Erro ao processar token do admin:", e);
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('empresaId');
+    return null;
+  }
+}
+
+// Mesmo visual da tela de abertura do public/index.html (classes sn-preload*), pra transição
+// entre "baixando o JS" e "resolvendo domínio próprio" não trocar de cara.
+function TelaCarregando() {
+  return (
+    <div className="sn-preload" role="status" aria-label="Carregando">
+      <div className="sn-preload-marca">SCHEDNEXT</div>
+      <div className="sn-preload-linha"><span /></div>
+    </div>
+  );
+}
+
+function App() {
+  const [empresaId, setEmpresaId] = useState(lerEmpresaIdInicial);
+  const [carregandoDominio, setCarregandoDominio] = useState(() => !hostConhecido());
+
+  // Resolve domínio próprio de tenant (plano Enterprise) antes do primeiro render das rotas
+  // (ver utils/tenantSubdominio.js e a rota pública GET /dominio/resolver no backend).
   useEffect(() => {
-    const DOMINIO_RAIZ = 'schednext.com.br';
+    if (hostConhecido()) return;
     const resolverDominioCustomizado = async () => {
       const host = window.location.hostname;
-      const conhecido = host === DOMINIO_RAIZ || host.endsWith(`.${DOMINIO_RAIZ}`) || host === 'localhost' || host === '127.0.0.1';
-      if (conhecido) {
-        setCarregandoDominio(false);
-        return;
-      }
       try {
         const res = await fetch(`${API_URL}/dominio/resolver?host=${encodeURIComponent(host)}`);
         if (res.ok) {
@@ -244,45 +274,13 @@ function App() {
     resolverDominioCustomizado();
   }, []);
 
-  useEffect(() => {
-    const verificarLogin = () => {
-      const adminSalvo = localStorage.getItem('adminToken');
-      if (adminSalvo) {
-        try {
-          const data = JSON.parse(adminSalvo);
-          // Atualiza o estado e o storage para garantir sincronia
-          setEmpresaId(data.empresa_id);
-          localStorage.setItem('empresaId', data.empresa_id);
-        } catch (e) {
-          console.error("Erro ao processar token do admin:", e);
-          deslogarAdmin();
-        }
-      }
-      setCarregando(false);
-    };
-
-    verificarLogin();
-  }, []);
-
   const deslogarAdmin = () => {
     localStorage.removeItem('adminToken');
     localStorage.removeItem('empresaId');
     setEmpresaId(null);
   };
 
-  if (carregando || carregandoDominio) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontFamily: 'sans-serif' 
-      }}>
-        <h3>Carregando sistema...</h3>
-      </div>
-    );
-  }
+  if (carregandoDominio) return <TelaCarregando />;
 
   return (
     <ToastProvider>
