@@ -858,7 +858,7 @@ function AgendamentosAdminView({ empresaId }) {
                 <td style={{ padding: '15px' }}>{a.cliente_nome}</td>
                 <td style={{ padding: '15px' }}>{a.barbeiro_nome}</td>
                 <td style={{ padding: '15px' }}>
-                  <button onClick={() => abrirWhatsapp(a.cliente_telefone, a.cliente_nome, a.data, a.hora)} style={{ border: 'none', background: '#25D366', color: '#fff', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <button onClick={() => abrirWhatsapp(a.cliente_telefone, a.cliente_nome, a.data, a.hora)} style={{ border: 'none', background: '#15803D', color: '#fff', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <span>Zap</span>
                   </button>
                 </td>

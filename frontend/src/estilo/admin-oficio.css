@@ -6,7 +6,7 @@
 :root {
   --fx-card: #0c1530;
   --fx-strong: #2554eb;
-  --fx-faint: rgba(214, 228, 255, 0.42);
+  --fx-faint: rgba(214, 228, 255, 0.52);
   --fx-line-2: rgba(160, 200, 255, 0.26);
   --fx-acento: #22d3ee;
 
@@ -32,7 +32,7 @@
 :root[data-tema='claro'] {
   --fx-card: #ffffff;
   --fx-strong: #0b1430;
-  --fx-faint: rgba(11, 20, 48, 0.42);
+  --fx-faint: rgba(11, 20, 48, 0.58);
   --fx-line-2: rgba(20, 45, 110, 0.24);
   --fx-acento: #0891b2;
 

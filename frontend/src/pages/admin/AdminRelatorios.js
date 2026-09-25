@@ -952,11 +952,11 @@ const styles = {
   secaoTitulo: { margin: '0 0 16px', fontSize: '16px', color: 'var(--fx-text)' },
   // Visualmente à parte do resto da página (fundo escuro em vez do branco usado em `secao`) —
   // de propósito, pra marcar que é uma configuração financeira, não um cartão de relatório comum.
-  secaoSensivel: { backgroundColor: 'var(--fx-strong)', borderRadius: '12px', marginTop: '36px', overflow: 'hidden', border: '1px solid #1f2937' },
+  secaoSensivel: { backgroundColor: 'var(--fx-card)', borderRadius: '12px', marginTop: '36px', overflow: 'hidden', border: '1px solid var(--fx-line)' },
   secaoSensivelHeader: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' },
   secaoSensivelTitulo: { color: 'var(--fx-text)', fontSize: '14px', fontWeight: '700', marginRight: '10px' },
   secaoSensivelBadge: { display: 'inline-block', padding: '2px 8px', borderRadius: '999px', background: 'rgba(245,158,11,0.15)', color: 'var(--fx-amber)', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px' },
-  secaoSensivelCorpo: { padding: '0 20px 20px', borderTop: '1px solid #1f2937' },
+  secaoSensivelCorpo: { padding: '0 20px 20px', borderTop: '1px solid var(--fx-line)' },
   avisoSensivel: { display: 'flex', alignItems: 'flex-start', color: '#d1d5db', fontSize: '12.5px', lineHeight: '1.6', margin: '16px 0', padding: '10px 12px', background: 'rgba(245,158,11,0.08)', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.25)' },
   vazio: { color: 'var(--fx-faint)', fontSize: '13px', margin: 0 },
   grafico: { display: 'flex', alignItems: 'flex-end', gap: '6px', height: '150px', overflowX: 'auto', paddingTop: '10px' },

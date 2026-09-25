@@ -257,7 +257,7 @@ const styles = {
   tr: { borderBottom: '1px solid var(--fx-line)', transition: 'background-color 0.2s' },
   td: { padding: '18px 20px', fontSize: '14px', verticalAlign: 'middle', color: 'var(--fx-text)' },
   
-  btnZap: { backgroundColor: '#25D366', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13px', transition: '0.2s', margin: '0 auto' }
+  btnZap: { backgroundColor: '#15803D', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13px', transition: '0.2s', margin: '0 auto' }
 };
 
 export default AdminAgendamentos;
