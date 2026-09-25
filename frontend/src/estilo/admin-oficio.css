@@ -409,3 +409,8 @@
 .oa-cortesia.aplicada .oa-cortesia-botao { color: var(--fx-muted); border-color: var(--fx-line-2); }
 .oa-cortesia-botao:disabled { opacity: 0.45; cursor: not-allowed; }
 .oa-livre { line-height: 16px; min-height: 20px; padding-top: 1px; padding-bottom: 1px; }
+
+/* botão pra ligar a notificação nativa do Windows (admin absoluto) */
+.oa-ativar-avisos { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(34, 211, 238, 0.45); background: rgba(34, 211, 238, 0.08); color: var(--oc-acento); font-family: var(--oc-mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; }
+.oa-ativar-avisos::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--oc-acento); box-shadow: 0 0 10px var(--oc-acento); }
+@media (max-width: 900px) { .oa-ativar-avisos { display: none; } }

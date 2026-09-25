@@ -222,6 +222,42 @@ function SuperAdminDashboard() {
   // quando alguém aceita/responde; volta se o caso for liberado ou repassado de novo.
   const [pendenciasSuporte, setPendenciasSuporte] = useState([]);
   const pendenciasConhecidas = useRef(null);
+
+  // Notificação nativa da área de trabalho (API Notification do navegador): com o painel aberto
+  // em alguma aba, cada pendência nova aparece no Windows mesmo com o navegador minimizado ou com
+  // outro programa em foco. Não chega com a aba fechada. O pedido de permissão precisa partir de
+  // um clique (regra do navegador), por isso o botão "Ativar avisos no Windows" no topo.
+  const suportaNotificacao = typeof window !== 'undefined' && 'Notification' in window;
+  const [permissaoNotificacao, setPermissaoNotificacao] = useState(() => (suportaNotificacao ? Notification.permission : 'indisponivel'));
+  const abrirSuporteRef = useRef(null);
+  abrirSuporteRef.current = () => escolherAba('suporte');
+
+  const notificarNaAreaDeTrabalho = (texto, tag) => {
+    if (!suportaNotificacao || Notification.permission !== 'granted') return;
+    // Olhando o painel agora: o aviso na própria tela já basta.
+    if (!document.hidden && document.hasFocus()) return;
+    try {
+      const aviso = new Notification('SchedNext · Suporte', { body: texto, tag, icon: '/icon-schednext.png' });
+      aviso.onclick = () => {
+        window.focus();
+        if (abrirSuporteRef.current) abrirSuporteRef.current();
+        aviso.close();
+      };
+    } catch (err) {
+      // Alguns navegadores (ex: Chrome no Android) só aceitam notificação via service worker.
+    }
+  };
+
+  const ativarNotificacoes = async () => {
+    if (!suportaNotificacao) return;
+    const resultado = await Notification.requestPermission();
+    setPermissaoNotificacao(resultado);
+    if (resultado === 'granted') {
+      toast.success('Pronto! Os avisos do suporte vão aparecer no Windows enquanto o painel estiver aberto.');
+    } else if (resultado === 'denied') {
+      toast.error('O navegador bloqueou os avisos. Libere em Configurações do site (cadeado ao lado do endereço).');
+    }
+  };
   const carregarPendenciasSuporte = useCallback(async () => {
     try {
       const res = await fetch(`${API_URL}/super-admin/suporte/pendencias`);
@@ -235,12 +271,11 @@ function SuperAdminDashboard() {
         }
       } else {
         lista.filter((p) => !pendenciasConhecidas.current.has(chave(p))).forEach((p) => {
-          toast.info(
-            p.motivo === 'repassada_para_voce'
-              ? `Suporte: o caso de ${p.nome_empresa} foi repassado para você.`
-              : `Suporte: ${p.nome_empresa} está aguardando atendimento.`,
-            { duration: 10000 }
-          );
+          const texto = p.motivo === 'repassada_para_voce'
+            ? `O caso de ${p.nome_empresa} foi repassado para você.`
+            : `${p.nome_empresa} está aguardando atendimento.`;
+          toast.info(`Suporte: ${texto}`, { duration: 10000 });
+          notificarNaAreaDeTrabalho(texto, `suporte-${chave(p)}`);
         });
       }
       pendenciasConhecidas.current = new Set(lista.map(chave));
@@ -253,9 +288,9 @@ function SuperAdminDashboard() {
 
   useEffect(() => {
     carregarPendenciasSuporte();
-    const intervalo = setInterval(() => {
-      if (document.visibilityState === 'visible') carregarPendenciasSuporte();
-    }, 20000);
+    // Continua checando com a aba escondida (o navegador limita a no máximo ~1x por minuto em
+    // aba de fundo), senão a notificação da área de trabalho nunca chegaria.
+    const intervalo = setInterval(carregarPendenciasSuporte, 20000);
     const aoVoltarPraAba = () => { if (document.visibilityState === 'visible') carregarPendenciasSuporte(); };
     document.addEventListener('visibilitychange', aoVoltarPraAba);
     return () => {
@@ -337,6 +372,11 @@ function SuperAdminDashboard() {
             <span>Plataforma</span><span>/</span><b>{itemAtivo?.label || 'Admin absoluto'}</b>
           </div>
           <div className="oa-topo-dir">
+            {permissaoNotificacao === 'default' && (
+              <button type="button" className="oa-ativar-avisos" onClick={ativarNotificacoes}>
+                Ativar avisos no Windows
+              </button>
+            )}
             {totalPendencias > 0 && (
               <button type="button" className="oa-alerta-topo" onClick={() => escolherAba('suporte')}>
                 {totalPendencias} no suporte
