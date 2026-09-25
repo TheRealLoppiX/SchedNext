@@ -957,7 +957,7 @@ const styles = {
   secaoSensivelTitulo: { color: 'var(--fx-text)', fontSize: '14px', fontWeight: '700', marginRight: '10px' },
   secaoSensivelBadge: { display: 'inline-block', padding: '2px 8px', borderRadius: '999px', background: 'rgba(245,158,11,0.15)', color: 'var(--fx-amber)', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px' },
   secaoSensivelCorpo: { padding: '0 20px 20px', borderTop: '1px solid var(--fx-line)' },
-  avisoSensivel: { display: 'flex', alignItems: 'flex-start', color: '#d1d5db', fontSize: '12.5px', lineHeight: '1.6', margin: '16px 0', padding: '10px 12px', background: 'rgba(245,158,11,0.08)', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.25)' },
+  avisoSensivel: { display: 'flex', alignItems: 'flex-start', color: 'var(--fx-text)', fontSize: '12.5px', lineHeight: '1.6', margin: '16px 0', padding: '10px 12px', background: 'rgba(245,158,11,0.08)', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.25)' },
   vazio: { color: 'var(--fx-faint)', fontSize: '13px', margin: 0 },
   grafico: { display: 'flex', alignItems: 'flex-end', gap: '6px', height: '150px', overflowX: 'auto', paddingTop: '10px' },
   barraColuna: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', minWidth: '26px' },

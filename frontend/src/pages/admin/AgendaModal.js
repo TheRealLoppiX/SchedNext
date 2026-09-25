@@ -604,7 +604,7 @@ const toggleServico = (servico) => {
                                     return (
                                         <div key={hora} style={styles.slotLivre} onClick={() => { setHoraAtiva(hora); setModo('adicionar'); }}>
                                             <strong style={{ fontSize: '16px', color: 'var(--fx-faint)' }}>{hora}</strong>
-                                            <span style={{ fontSize: '12px', color: '#ccc' }}>Livre (Clique para encaixar)</span>
+                                            <span style={{ fontSize: '12px', color: 'var(--fx-faint)' }}>Livre (Clique para encaixar)</span>
                                         </div>
                                     );
                                 }

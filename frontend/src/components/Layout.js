@@ -494,7 +494,7 @@ const s = {
   flexBtns: { display: 'flex', gap: '10px', marginTop: '10px' },
   btnPreto: { width: '100%', padding: '14px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', fontWeight: 'bold', cursor: 'pointer' },
   btnVerde: { flex: 2, padding: '14px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#ffffff', fontWeight: 'bold', cursor: 'pointer' },
-  btnCinza: { flex: 1, padding: '14px', borderRadius: '8px', border: 'none', background: 'var(--fx-surface-3)', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }
+  btnCinza: { flex: 1, padding: '14px', borderRadius: '8px', border: 'none', background: 'var(--fx-surface-3)', color: 'var(--fx-text)', fontWeight: 'bold', cursor: 'pointer' }
 };
 
 export default Layout;

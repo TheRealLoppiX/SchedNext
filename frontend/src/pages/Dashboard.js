@@ -151,12 +151,12 @@ function AgendamentosView({ userId, extra = null }) {
   const getStatusDisplay = (status, ehPassado) => {
     if (ehPassado && status === 'pendente') return { texto: 'EXPIRADO', cor: 'var(--fx-muted)' };
     const estilos = {
-      confirmado: { texto: 'CONFIRMADO', cor: '#28a745' },
-      cancelado: { texto: 'CANCELADO', cor: '#dc3545' },
-      concluido: { texto: 'CONCLUÍDO', cor: '#007bff' },
-      pendente: { texto: 'PENDENTE', cor: '#f39c12' },
+      confirmado: { texto: 'CONFIRMADO', cor: 'var(--fx-green)' },
+      cancelado: { texto: 'CANCELADO', cor: 'var(--fx-red)' },
+      concluido: { texto: 'CONCLUÍDO', cor: 'var(--fx-blue)' },
+      pendente: { texto: 'PENDENTE', cor: 'var(--fx-amber)' },
     };
-    return estilos[status] || { texto: 'PENDENTE', cor: '#f39c12' };
+    return estilos[status] || { texto: 'PENDENTE', cor: 'var(--fx-amber)' };
   };
 
   return (
@@ -583,7 +583,7 @@ const styles = {
   imgFull: { width: '100%', height: '100%', objectFit: 'cover' },
   btnEscolher: { 
     backgroundColor: 'var(--fx-surface-3)', 
-    color: '#fff', 
+    color: 'var(--fx-text)', 
     padding: '8px 18px', 
     borderRadius: '20px', 
     cursor: 'pointer', 
@@ -645,7 +645,7 @@ const styles = {
   btnPreto: { 
     padding: '12px 20px', 
     backgroundColor: 'var(--fx-surface-3)', 
-    color: '#fff', 
+    color: 'var(--fx-text)', 
     border: 'none', 
     borderRadius: '10px', 
     cursor: 'pointer',
@@ -694,7 +694,7 @@ const styles = {
   },
   cardFidelidade: {
     backgroundColor: 'var(--fx-surface-3)',
-    color: '#fff',
+    color: 'var(--fx-text)',
     padding: '25px',
     borderRadius: '16px',
     marginBottom: '25px',
@@ -844,7 +844,7 @@ function AgendamentosAdminView({ empresaId }) {
       <div style={{ background: 'var(--fx-surface)', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: 'var(--fx-surface-3)', color: '#fff', textAlign: 'left' }}>
+            <tr style={{ background: 'var(--fx-surface-3)', color: 'var(--fx-text)', textAlign: 'left' }}>
               <th style={{ padding: '15px' }}>Hora</th>
               <th style={{ padding: '15px' }}>Cliente</th>
               <th style={{ padding: '15px' }}>{termos.profissional}</th>
