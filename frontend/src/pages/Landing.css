@@ -81,8 +81,10 @@
 .of-logo img { height: 26px; display: block; }
 .of-topo-dir { margin-left: auto; display: flex; align-items: center; gap: 22px; }
 .of-letreiro { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--creme-fraco); }
-.of-ponto { width: 7px; height: 7px; border-radius: 50%; background: #19e6d4; box-shadow: 0 0 0 0 rgba(25, 230, 212, 0.6); animation: of-pulso 1.8s infinite; }
-@keyframes of-pulso { 100% { box-shadow: 0 0 0 9px rgba(25, 230, 212, 0); } }
+.of-ponto { position: relative; width: 7px; height: 7px; border-radius: 50%; background: #19e6d4; }
+/* pulso por transform/opacity (roda no compositor; box-shadow animado repintava a cada quadro) */
+.of-ponto::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: rgba(25, 230, 212, 0.6); animation: of-pulso 1.8s infinite; }
+@keyframes of-pulso { 100% { transform: scale(3.6); opacity: 0; } }
 .of-topo-link { text-decoration: none; font-size: 14px; font-weight: 500; opacity: 0.85; }
 .of-topo-link:hover { opacity: 1; }
 
@@ -176,6 +178,8 @@
 }
 .of-foto { background-size: cover; background-position: center; filter: grayscale(1) contrast(1.15) brightness(0.5) blur(2px); }
 video.of-midia, img.of-midia { filter: grayscale(0.85) contrast(1.15) brightness(1.05); }
+/* palco: arquivos *-palco já vêm com o filtro aplicado */
+.of-landing .of-assada { filter: none; }
 .of-tinta { position: absolute; inset: 0; background: linear-gradient(120deg, #2554eb, var(--tom-cap)); mix-blend-mode: multiply; opacity: 0.7; }
 .of-fundo-abertura .of-tinta { opacity: 0.5; }
 .of-fundo-abertura .of-sombra { background: linear-gradient(90deg, rgba(6, 11, 24, 0.85) 0%, rgba(6, 11, 24, 0.35) 50%, rgba(6, 11, 24, 0.05) 100%), linear-gradient(0deg, rgba(6, 11, 24, 0.75) 0%, transparent 35%); }
@@ -459,9 +463,14 @@ video.of-midia, img.of-midia { filter: grayscale(0.85) contrast(1.15) brightness
   .of-hamburguer { backdrop-filter: none; background: rgba(6, 11, 24, 0.7); }
 }
 
+/* modo leve (máquina fraca ou FPS caindo, decidido em oficio/particulasOficio.js) */
+.of-leve .of-tags li { backdrop-filter: none; background: rgba(6, 11, 24, 0.6); }
+.of-leve .of-hamburguer { backdrop-filter: none; background: rgba(6, 11, 24, 0.7); }
+.of-leve .of-grao { inset: 0; animation: none; }
+
 @media (prefers-reduced-motion: reduce) {
   .of-quadro .of-midia, .of-quadro .of-texto > *, .of-quadro .of-passos li { animation: none !important; opacity: 1; }
-  .of-grao, .of-ponto, .of-intro-marca { animation: none !important; }
+  .of-grao, .of-ponto::after, .of-intro-marca { animation: none !important; }
   .of-titulo { color: var(--creme); }
   .of-revelar { opacity: 1; transform: none; transition: none; }
 }

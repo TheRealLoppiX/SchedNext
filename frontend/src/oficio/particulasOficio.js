@@ -249,15 +249,55 @@ function paleta(n, cores, pesos) {
   return out;
 }
 
+// Toda a animação por partícula (transformação entre formas, redemoinho, respiração, giro do poste
+// e repulsão do mouse) roda no shader: a CPU só troca uniforms a cada quadro, sem laço de 8 mil
+// partículas nem reenvio de buffers pra GPU. Os buffers de cada forma sobem uma vez só.
 const VERT = `
-  attribute vec3 cor;
+  attribute vec3 posA;
+  attribute vec3 posB;
+  attribute vec3 corA;
+  attribute vec3 corB;
   attribute float tam;
+  attribute float atraso;
+  attribute float fase;
+  uniform float uPx;
+  uniform float uFrac;
+  uniform float uTempo;
+  uniform float uPosteA;
+  uniform float uPosteB;
+  uniform float uAbertura;
+  uniform vec2 uMouse;
   varying vec3 vCor;
   varying float vAlfa;
-  uniform float uPx;
+
+  vec3 forma(vec3 p, float poste) {
+    // poste guarda (ângulo, altura, raio) e gira com o tempo
+    if (poste > 0.5) {
+      float ang = p.x + uTempo * 0.9;
+      return vec3(cos(ang) * p.z, p.y, sin(ang) * p.z);
+    }
+    return p;
+  }
+
   void main() {
-    vCor = cor;
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    // cada partícula tem seu próprio atraso: a transformação "varre" o objeto
+    float t = clamp((uFrac - atraso * 0.45) / 0.55, 0.0, 1.0);
+    float e = t * t * (3.0 - 2.0 * t);
+    vec3 p = mix(forma(posA, uPosteA), forma(posB, uPosteB), e);
+    float redemoinho = sin(3.14159265 * e) * 1.3;
+    float ang = fase + uTempo * 0.4;
+    p += vec3(cos(ang) * redemoinho, sin(ang * 1.3) * redemoinho * 0.7, sin(ang) * redemoinho);
+    // respiração
+    float resp = (uAbertura > 0.5 && e < 0.5) ? 0.12 : 0.025;
+    p.x += sin(uTempo * 1.1 + fase) * resp;
+    p.y += cos(uTempo * 0.9 + fase * 1.7) * resp;
+    // repulsão do mouse
+    vec2 d = p.xy - uMouse;
+    float d2 = dot(d, d);
+    if (d2 < 0.8) p.xy += d * (0.8 - d2) * 3.0;
+
+    vCor = mix(corA, corB, e);
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_PointSize = tam * uPx * (6.0 / -mv.z);
     vAlfa = smoothstep(18.0, 4.0, -mv.z);
     gl_Position = projectionMatrix * mv;
@@ -275,11 +315,35 @@ const FRAG = `
   }
 `;
 
-export function criarParticulas(canvas, { mobile = false, reduzirMovimento = false } = {}) {
+// Níveis de qualidade: 0 = cheio, 1 = médio, 2 = leve (notebook fraco, GPU integrada antiga,
+// renderização por software). Começa por um palpite do hardware e desce sozinho se o FPS cair.
+const NIVEIS = [
+  { dpr: 1.75, fracao: 1, intervalo: 0 },
+  { dpr: 1.25, fracao: 0.72, intervalo: 0 },
+  { dpr: 1, fracao: 0.5, intervalo: 1 / 32 }
+];
+
+function nivelInicial(renderer) {
+  let nivel = 0;
+  const nucleos = navigator.hardwareConcurrency || 4;
+  const memoria = navigator.deviceMemory || 8;
+  if (nucleos <= 2 || memoria <= 2) nivel = 2;
+  else if (nucleos <= 4 || memoria <= 4) nivel = 1;
+  try {
+    const gl = renderer.getContext();
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const gpu = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || '');
+    if (/swiftshader|llvmpipe|software|basic render/i.test(gpu)) nivel = 2;
+    else if (/intel.*\b(hd|uhd)\b|mali-[gt]?\d{1,3}\b|adreno.*\b[1-5]\d\d\b|powervr/i.test(gpu)) nivel = Math.max(nivel, 1);
+  } catch (e) { /* sem info da GPU: fica o palpite pelos núcleos */ }
+  return nivel;
+}
+
+export function criarParticulas(canvas, { mobile = false, reduzirMovimento = false, aoMudarNivel } = {}) {
   const N = mobile ? 3800 : 8000;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 1.75));
   renderer.setClearColor(0x000000, 0);
+  let nivel = nivelInicial(renderer);
 
   const cena = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 50);
@@ -288,14 +352,14 @@ export function criarParticulas(canvas, { mobile = false, reduzirMovimento = fal
   const poste = formaPoste(N);
   const grade = formaGrade(N);
 
-  // formas na ordem dos capítulos
+  // formas na ordem dos capítulos (poste guarda ângulo/altura/raio, girado no shader)
   const formas = [
-    { pos: formaPoeira(N), cor: paleta(N, ['#22d3ee', '#e6fbff', '#2554eb'], [0.5, 0.25, 0.25]), tam: 1.1 },
-    { pos: amostrarDesenho(DESENHOS.tesoura, N, 4.4), cor: paleta(N, ['#4c7dff', '#eaf1ff', '#22d3ee'], [0.5, 0.25, 0.25]), tam: 1.25 },
-    { pos: amostrarDesenho(DESENHOS.secador, N, 4.3), cor: paleta(N, ['#22d3ee', '#effdff', '#0ea5e9'], [0.5, 0.25, 0.25]), tam: 1.25 },
-    { pos: amostrarDesenho(DESENHOS.esmalte, N, 4.1), cor: paleta(N, ['#38bdf8', '#eef8ff', '#2554eb'], [0.5, 0.25, 0.25]), tam: 1.25 },
-    { pos: amostrarDesenho(DESENHOS.gota, N, 4.0), cor: paleta(N, ['#2ee6d0', '#effffc', '#22d3ee'], [0.5, 0.25, 0.25]), tam: 1.25 },
-    { pos: new Float32Array(N * 3), cor: poste.cores, tam: 1.35, poste: true },
+    { pos: formaPoeira(N), cor: paleta(N, ['#22d3ee', '#e6fbff', '#2554eb'], [0.5, 0.25, 0.25]) },
+    { pos: amostrarDesenho(DESENHOS.tesoura, N, 4.4), cor: paleta(N, ['#4c7dff', '#eaf1ff', '#22d3ee'], [0.5, 0.25, 0.25]) },
+    { pos: amostrarDesenho(DESENHOS.secador, N, 4.3), cor: paleta(N, ['#22d3ee', '#effdff', '#0ea5e9'], [0.5, 0.25, 0.25]) },
+    { pos: amostrarDesenho(DESENHOS.esmalte, N, 4.1), cor: paleta(N, ['#38bdf8', '#eef8ff', '#2554eb'], [0.5, 0.25, 0.25]) },
+    { pos: amostrarDesenho(DESENHOS.gota, N, 4.0), cor: paleta(N, ['#2ee6d0', '#effffc', '#22d3ee'], [0.5, 0.25, 0.25]) },
+    { pos: poste.base, cor: poste.cores, poste: true },
     { pos: grade.pos, cor: (() => {
       const c = new Float32Array(N * 3);
       const livre = new THREE.Color('#3b6cf0');
@@ -305,141 +369,148 @@ export function criarParticulas(canvas, { mobile = false, reduzirMovimento = fal
         c[i * 3] = k.r; c[i * 3 + 1] = k.g; c[i * 3 + 2] = k.b;
       }
       return c;
-    })(), tam: 1.0 }
-  ];
+    })() }
+  ].map((f) => ({ ...f, attrPos: new THREE.BufferAttribute(f.pos, 3), attrCor: new THREE.BufferAttribute(f.cor, 3) }));
 
-  const pos = new Float32Array(N * 3);
-  const cor = new Float32Array(N * 3);
   const tam = new Float32Array(N);
   const atraso = new Float32Array(N);
   const fase = new Float32Array(N);
-  const velocidadeMouse = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
     atraso[i] = Math.random();
     fase[i] = Math.random() * Math.PI * 2;
     tam[i] = 0.6 + Math.random() * 1.1;
   }
-  pos.set(formas[0].pos);
-  cor.set(formas[0].cor);
 
   const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute('cor', new THREE.BufferAttribute(cor, 3));
+  // "position" só pro three.js saber quantos vértices desenhar; a posição real vem de posA/posB
+  geo.setAttribute('position', formas[0].attrPos);
   geo.setAttribute('tam', new THREE.BufferAttribute(tam, 1));
+  geo.setAttribute('atraso', new THREE.BufferAttribute(atraso, 1));
+  geo.setAttribute('fase', new THREE.BufferAttribute(fase, 1));
+  const uniforms = {
+    uPx: { value: 1 },
+    uFrac: { value: 0 },
+    uTempo: { value: 0 },
+    uPosteA: { value: 0 },
+    uPosteB: { value: 0 },
+    uAbertura: { value: 1 },
+    uMouse: { value: new THREE.Vector2(99, 99) }
+  };
   const mat = new THREE.ShaderMaterial({
     vertexShader: VERT,
     fragmentShader: FRAG,
-    uniforms: { uPx: { value: renderer.getPixelRatio() * (mobile ? 3.0 : 3.8) } },
+    uniforms,
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending
   });
   const pontos = new THREE.Points(geo, mat);
+  pontos.frustumCulled = false;
   const grupo = new THREE.Group();
   grupo.add(pontos);
   cena.add(grupo);
 
-  let largura = 1;
-  let altura = 1;
+  let parA = -1;
+  let parB = -1;
+  function usarPar(a, b) {
+    if (a === parA && b === parB) return;
+    parA = a;
+    parB = b;
+    geo.setAttribute('posA', formas[a].attrPos);
+    geo.setAttribute('posB', formas[b].attrPos);
+    geo.setAttribute('corA', formas[a].attrCor);
+    geo.setAttribute('corB', formas[b].attrCor);
+    uniforms.uPosteA.value = formas[a].poste ? 1 : 0;
+    uniforms.uPosteB.value = formas[b].poste ? 1 : 0;
+  }
+  usarPar(0, 1);
+
   function redimensionar() {
-    largura = window.innerWidth;
-    altura = window.innerHeight;
-    renderer.setSize(largura, altura, false);
-    camera.aspect = largura / altura;
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
   }
-  redimensionar();
+  function aplicarNivel() {
+    const q = NIVEIS[nivel];
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? Math.min(1.5, q.dpr) : q.dpr));
+    redimensionar();
+    geo.setDrawRange(0, Math.round(N * q.fracao));
+    // menos partículas, cada uma um pouco maior: a forma continua cheia
+    uniforms.uPx.value = renderer.getPixelRatio() * (mobile ? 3.0 : 3.8) * Math.pow(1 / q.fracao, 0.35);
+    if (aoMudarNivel) aoMudarNivel(nivel);
+  }
+  aplicarNivel();
   window.addEventListener('resize', redimensionar);
 
   const estado = { alvo: 0, atual: 0, mx: 9, my: 9, mxS: 9, myS: 9 };
-  const tmpA = new Float32Array(3);
-  const tmpB = new Float32Array(3);
   let tempo = 0;
   let quadro = null;
-  const relogio = new THREE.Clock();
+  let ativo = true;
+  let ultimo = 0;
+  let acumulado = 0;
+  // medidor de FPS: janela de quadros depois de um aquecimento (decodificação das imagens e
+  // compilação do shader no começo não contam)
+  const medidor = { desde: performance.now() + 2500, soma: 0, n: 0 };
 
-  function posForma(k, i, out, t) {
-    const f = formas[k];
-    if (f.poste) {
-      const ang = poste.base[i * 3] + t * 0.9;
-      const r = poste.base[i * 3 + 2];
-      out[0] = Math.cos(ang) * r;
-      out[1] = poste.base[i * 3 + 1];
-      out[2] = Math.sin(ang) * r;
-      return;
+  function medir(agora, dtReal) {
+    if (nivel >= NIVEIS.length - 1 || agora < medidor.desde || document.hidden) return;
+    medidor.soma += dtReal;
+    medidor.n++;
+    if (medidor.n < 90) return;
+    const media = medidor.soma / medidor.n;
+    medidor.soma = 0;
+    medidor.n = 0;
+    if (media > 1 / 42) {
+      nivel++;
+      aplicarNivel();
+      medidor.desde = agora + 2000;
     }
-    out[0] = f.pos[i * 3];
-    out[1] = f.pos[i * 3 + 1];
-    out[2] = f.pos[i * 3 + 2];
   }
 
-  function atualizar() {
-    const dt = Math.min(relogio.getDelta(), 0.05);
+  function atualizar(agora) {
+    quadro = requestAnimationFrame(atualizar);
+    const dtReal = ultimo ? Math.min((agora - ultimo) / 1000, 0.25) : 1 / 60;
+    ultimo = agora;
+    medir(agora, dtReal);
+    // nível leve: desenha a ~30 fps (o resto da página continua no ritmo da tela)
+    acumulado += dtReal;
+    const intervalo = NIVEIS[nivel].intervalo;
+    if (acumulado < intervalo) return;
+    const dt = Math.min(acumulado, 0.05);
+    acumulado = intervalo ? acumulado % intervalo : 0;
+
+    const k60 = (f) => 1 - Math.pow(1 - f, dt * 60);
     tempo += dt * (reduzirMovimento ? 0.3 : 1);
     estado.atual += (estado.alvo - estado.atual) * (1 - Math.pow(0.002, dt));
-    estado.mxS += (estado.mx - estado.mxS) * 0.15;
-    estado.myS += (estado.my - estado.myS) * 0.15;
+    estado.mxS += (estado.mx - estado.mxS) * k60(0.15);
+    estado.myS += (estado.my - estado.myS) * k60(0.15);
 
     const s = Math.min(formas.length - 1, Math.max(0, estado.atual));
     const a = Math.floor(s);
     const b = Math.min(formas.length - 1, a + 1);
     const frac = s - a;
+    usarPar(a, b);
 
     // posição do objeto: à direita no desktop, em cima no celular
     const alvoX = mobile ? 0 : (a === 0 && frac < 0.5 ? 0.6 : 2.15);
     const alvoY = mobile ? 1.15 : 0;
-    grupo.position.x += (alvoX - grupo.position.x) * 0.06;
-    grupo.position.y += (alvoY - grupo.position.y) * 0.06;
+    grupo.position.x += (alvoX - grupo.position.x) * k60(0.06);
+    grupo.position.y += (alvoY - grupo.position.y) * k60(0.06);
     const escalaMobile = mobile ? 0.54 : 1;
     grupo.scale.setScalar(escalaMobile);
     const emGrade = (a === 6 || (a === 5 && frac > 0.5));
-    grupo.rotation.y = emGrade ? grupo.rotation.y * 0.9 : Math.sin(tempo * 0.35) * 0.28;
+    grupo.rotation.y = emGrade ? grupo.rotation.y * Math.pow(0.9, dt * 60) : Math.sin(tempo * 0.35) * 0.28;
     grupo.rotation.x = Math.sin(tempo * 0.27) * 0.08;
 
     // mouse no plano do objeto (coordenadas de mundo aproximadas)
     const mundoMX = (estado.mxS * 0.5) * 8 * camera.aspect * 0.36 - grupo.position.x;
     const mundoMY = (-estado.myS * 0.5) * 8 * 0.36 - grupo.position.y;
-
-    const fa = formas[a];
-    const fb = formas[b];
-    for (let i = 0; i < N; i++) {
-      // cada partícula tem seu próprio atraso: a transformação "varre" o objeto
-      const t = Math.min(1, Math.max(0, (frac - atraso[i] * 0.45) / 0.55));
-      const e = t * t * (3 - 2 * t);
-      posForma(a, i, tmpA, tempo);
-      posForma(b, i, tmpB, tempo);
-      const redemoinho = Math.sin(Math.PI * e) * 1.3;
-      const ang = fase[i] + tempo * 0.4;
-      let x = tmpA[0] + (tmpB[0] - tmpA[0]) * e + Math.cos(ang) * redemoinho;
-      let y = tmpA[1] + (tmpB[1] - tmpA[1]) * e + Math.sin(ang * 1.3) * redemoinho * 0.7;
-      let z = tmpA[2] + (tmpB[2] - tmpA[2]) * e + Math.sin(ang) * redemoinho;
-      // respiração
-      const resp = a === 0 && e < 0.5 ? 0.12 : 0.025;
-      x += Math.sin(tempo * 1.1 + fase[i]) * resp;
-      y += Math.cos(tempo * 0.9 + fase[i] * 1.7) * resp;
-      // repulsão do mouse
-      const dx = x - mundoMX / escalaMobile;
-      const dy = y - mundoMY / escalaMobile;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < 0.8) {
-        const f = (0.8 - d2) * 0.06;
-        velocidadeMouse[i * 3] += dx * f;
-        velocidadeMouse[i * 3 + 1] += dy * f;
-      }
-      velocidadeMouse[i * 3] *= 0.9;
-      velocidadeMouse[i * 3 + 1] *= 0.9;
-      pos[i * 3] = x + velocidadeMouse[i * 3] * 6;
-      pos[i * 3 + 1] = y + velocidadeMouse[i * 3 + 1] * 6;
-      pos[i * 3 + 2] = z;
-      cor[i * 3] = fa.cor[i * 3] + (fb.cor[i * 3] - fa.cor[i * 3]) * e;
-      cor[i * 3 + 1] = fa.cor[i * 3 + 1] + (fb.cor[i * 3 + 1] - fa.cor[i * 3 + 1]) * e;
-      cor[i * 3 + 2] = fa.cor[i * 3 + 2] + (fb.cor[i * 3 + 2] - fa.cor[i * 3 + 2]) * e;
-    }
-    geo.attributes.position.needsUpdate = true;
-    geo.attributes.cor.needsUpdate = true;
+    uniforms.uMouse.value.set(mundoMX / escalaMobile, mundoMY / escalaMobile);
+    uniforms.uFrac.value = frac;
+    uniforms.uTempo.value = tempo;
+    uniforms.uAbertura.value = a === 0 ? 1 : 0;
 
     renderer.render(cena, camera);
-    quadro = requestAnimationFrame(atualizar);
   }
   quadro = requestAnimationFrame(atualizar);
 
@@ -447,6 +518,16 @@ export function criarParticulas(canvas, { mobile = false, reduzirMovimento = fal
     // s: índice contínuo da forma (0 = poeira ... 6 = grade)
     setForma(s) { estado.alvo = s; },
     setMouse(x, y) { estado.mx = x; estado.my = y; },
+    // palco fora da tela: para de desenhar (e de gastar GPU) até voltar
+    setAtivo(v) {
+      if (v === ativo) return;
+      ativo = v;
+      if (v) {
+        ultimo = 0;
+        medidor.desde = performance.now() + 1500;
+        quadro = requestAnimationFrame(atualizar);
+      } else cancelAnimationFrame(quadro);
+    },
     destruir() {
       cancelAnimationFrame(quadro);
       window.removeEventListener('resize', redimensionar);

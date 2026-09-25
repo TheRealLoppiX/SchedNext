@@ -80,6 +80,9 @@ const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&*';
 // Android mais fraco), os capítulos viram "quadros" empilhados, com foto estática e entrada por
 // keyframes de CSS (Landing.css, bloco "quadros").
 const QUERY_QUADROS = '(max-width: 760px), (pointer: coarse) and (max-width: 1100px)';
+// Palco (desktop): versões das fotos e do vídeo com os filtros de CSS (cinza, contraste, brilho,
+// blur) já aplicados no arquivo. Filtro em camada que escala a cada quadro pesa em GPU integrada.
+const fotoPalco = (src) => src.replace(/\.jpg$/, '-palco.jpg');
 const MARCOS_QUADROS = { 0: '1_topo', 1: '4_casos_de_uso', 5: '2_como_funciona' };
 
 // Título que "decodifica": letras embaralhadas que vão assentando, contorno virando sólido.
@@ -190,6 +193,10 @@ function Landing() {
   const [reduzirMovimento] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [modoQuadros, setModoQuadros] = useState(() => typeof window !== 'undefined' && window.matchMedia(QUERY_QUADROS).matches);
   const [vistos, setVistos] = useState(() => new Set([0]));
+  // modo leve: o renderizador das partículas detectou máquina fraca (ou FPS caindo) e a página
+  // corta os efeitos de CSS mais caros (backdrop-filter, grão animado)
+  const [leve, setLeve] = useState(false);
+  const [palcoVisivel, setPalcoVisivel] = useState(true);
   const refQuadros = useRef([]);
 
   const refCanvas = useRef(null);
@@ -199,6 +206,9 @@ function Landing() {
   const refAnel = useRef(null);
   const refVideo = useRef(null);
   const capRef = useRef(0);
+  const refPart = useRef(null);
+  const refDeveTocar = useRef(true);
+  const refPalcoVisivel = useRef(true);
 
   const diasTesteGratis = planos.find((pl) => pl.nome === 'Grátis')?.dias_teste || 0;
 
@@ -219,6 +229,7 @@ function Landing() {
     const v = refVideo.current;
     if (!v) return undefined;
     const tentarTocar = () => {
+      if (!refDeveTocar.current) return;
       // React nem sempre reflete a prop `muted` no elemento a tempo do Safari avaliar o autoplay.
       v.muted = true;
       v.defaultMuted = true;
@@ -234,6 +245,29 @@ function Landing() {
       eventosGesto.forEach((ev) => window.removeEventListener(ev, tentarTocar));
     };
   }, [reduzirMovimento, modoQuadros]);
+
+  useEffect(() => {
+    // Vídeo só decodifica enquanto aparece: da abertura até o corte do capítulo 2 (depois fica
+    // coberto pelos outros fundos) e com o palco na tela.
+    const v = refVideo.current;
+    const deve = palcoVisivel && capAtivo <= 1;
+    refDeveTocar.current = deve;
+    if (!v) return;
+    if (deve) { v.muted = true; v.play()?.catch(() => {}); } else v.pause();
+  }, [capAtivo, palcoVisivel, modoQuadros]);
+
+  useEffect(() => {
+    // Palco fora da tela (lendo recursos/planos): partículas param de desenhar e o vídeo pausa.
+    const el = refExp.current;
+    if (modoQuadros || !el || typeof IntersectionObserver === 'undefined') return undefined;
+    const obs = new IntersectionObserver(([e]) => {
+      refPalcoVisivel.current = e.isIntersecting;
+      setPalcoVisivel(e.isIntersecting);
+      if (refPart.current) refPart.current.setAtivo(e.isIntersecting);
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [modoQuadros]);
 
   useEffect(() => {
     const mq = window.matchMedia(QUERY_QUADROS);
@@ -278,20 +312,36 @@ function Landing() {
     import('../oficio/particulasOficio')
       .then(({ criarParticulas }) => {
         if (desmontado) return;
-        part = criarParticulas(canvas, { mobile, reduzirMovimento });
+        part = criarParticulas(canvas, { mobile, reduzirMovimento, aoMudarNivel: (nv) => setLeve(nv >= 1) });
+        refPart.current = part;
+        part.setAtivo(refPalcoVisivel.current);
       })
       .catch((err) => console.warn('Partículas indisponíveis:', err));
 
     const n = CAPITULOS.length;
     let raf = null;
     let suave = 0;
-    const loop = () => {
+    let ultimo = 0;
+    // Só escreve no estilo quando o valor muda: com a página parada nada é repintado.
+    const definir = (el, prop, valor) => {
+      const cache = el.__of || (el.__of = {});
+      if (cache[prop] === valor) return;
+      cache[prop] = valor;
+      el.style[prop] = valor;
+    };
+    const agendar = () => { if (raf == null) raf = requestAnimationFrame(loop); };
+    const loop = (agora) => {
+      raf = null;
       const el = refExp.current;
       if (el) {
         const r = el.getBoundingClientRect();
         const total = r.height - window.innerHeight;
         const p = Math.min(1, Math.max(0, -r.top / (total || 1)));
-        suave += (p - suave) * 0.14;
+        // mesma suavização (0.14 por quadro a 60 fps) em qualquer taxa de atualização da tela
+        const dt = ultimo ? Math.min(agora - ultimo, 100) : 16.7;
+        ultimo = agora;
+        suave += (p - suave) * (1 - Math.pow(0.86, dt / 16.7));
+        if (Math.abs(p - suave) < 0.0002) suave = p;
         const g = Math.min(n - 0.0001, suave * n);
         const i = Math.floor(g);
         const local = g - i; // 0..1 dentro do capítulo
@@ -310,10 +360,12 @@ function Landing() {
           else rev = 0;
           const e = 1 - Math.pow(1 - rev, 3);
           const topo = 100 - e * 150;
-          f.style.clipPath = `polygon(0% ${topo + 50}%, 100% ${topo}%, 100% 100%, 0% 100%)`;
-          f.style.visibility = rev > 0 && k >= i - 1 ? 'visible' : 'hidden';
+          const visivel = rev > 0 && k >= i - 1;
+          definir(f, 'visibility', visivel ? 'visible' : 'hidden');
+          if (!visivel) return;
+          definir(f, 'clipPath', `polygon(0% ${(topo + 50).toFixed(2)}%, 100% ${topo.toFixed(2)}%, 100% 100%, 0% 100%)`);
           const midia = f.firstChild;
-          if (midia) midia.style.transform = `scale(${1.18 - (k === i ? local : k < i ? 1 : 0) * 0.12})`;
+          if (midia) definir(midia, 'transform', `scale(${(1.18 - (k === i ? local : k < i ? 1 : 0) * 0.12).toFixed(4)})`);
         });
 
         // textos
@@ -326,27 +378,35 @@ function Landing() {
             const sai = k === n - 1 ? 1 : Math.min(1, Math.max(0, (0.97 - local) / 0.1));
             v = Math.min(entra, sai);
           }
-          t.style.opacity = v;
-          t.style.transform = `translate3d(0, ${(1 - v) * 30}px, 0)`;
-          t.style.visibility = v < 0.01 ? 'hidden' : 'visible';
-          t.style.pointerEvents = v > 0.5 ? 'auto' : 'none';
+          definir(t, 'visibility', v < 0.01 ? 'hidden' : 'visible');
+          definir(t, 'pointerEvents', v > 0.5 ? 'auto' : 'none');
+          if (v < 0.01) return;
+          definir(t, 'opacity', v.toFixed(3));
+          definir(t, 'transform', `translate3d(0, ${((1 - v) * 30).toFixed(2)}px, 0)`);
         });
 
         const ativo = local > 0.28 || i === 0 ? i : Math.max(0, i - 1);
         if (ativo !== capRef.current) { capRef.current = ativo; setCapAtivo(ativo); }
-        if (refAnel.current) refAnel.current.style.strokeDashoffset = String(125.6 * (1 - suave));
+        if (refAnel.current) definir(refAnel.current, 'strokeDashoffset', (125.6 * (1 - suave)).toFixed(2));
+        // ainda assentando: segue no próximo quadro; parado, dorme até a próxima rolagem
+        if (suave !== p) agendar();
+        else ultimo = 0;
       }
-      raf = requestAnimationFrame(loop);
     };
-    raf = requestAnimationFrame(loop);
+    agendar();
+    window.addEventListener('scroll', agendar, { passive: true });
+    window.addEventListener('resize', agendar);
 
     const aoMover = (e) => { if (part) part.setMouse((e.clientX / window.innerWidth) * 2 - 1, (e.clientY / window.innerHeight) * 2 - 1); };
     window.addEventListener('mousemove', aoMover, { passive: true });
     return () => {
       desmontado = true;
-      cancelAnimationFrame(raf);
+      if (raf != null) cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', agendar);
+      window.removeEventListener('resize', agendar);
       window.removeEventListener('mousemove', aoMover);
       if (part) part.destruir();
+      refPart.current = null;
     };
   }, [reduzirMovimento, modoQuadros]);
 
@@ -389,17 +449,19 @@ function Landing() {
   const midiaCapitulo = (c, comVideo) => (
     c.midia === 'video' ? (
       comVideo ? (
-        <video ref={refVideo} className="of-midia" src="/videos/hero-barbearia.mp4" poster="/videos/hero-barbearia-poster.jpg" autoPlay loop muted playsInline preload="auto" aria-hidden="true" />
-      ) : <img className="of-midia" src={modoQuadros ? '/images/hero-barbearia-mobile.jpg' : '/videos/hero-barbearia-poster.jpg'} alt="" />
+        <video ref={refVideo} className="of-midia of-assada" src="/videos/hero-barbearia-palco.mp4" poster="/videos/hero-barbearia-palco.jpg" autoPlay loop muted playsInline preload="auto" aria-hidden="true" />
+      ) : modoQuadros ? <img className="of-midia" src="/images/hero-barbearia-mobile.jpg" alt="" />
+        : <img className="of-midia of-assada" src="/videos/hero-barbearia-palco.jpg" alt="" />
     ) : c.midia.startsWith('/') ? (
-      <div className="of-midia of-foto" style={{ backgroundImage: `url(${modoQuadros && c.midiaMobile ? c.midiaMobile : c.midia})` }} />
+      modoQuadros ? <div className="of-midia of-foto" style={{ backgroundImage: `url(${c.midiaMobile || c.midia})` }} />
+        : <div className="of-midia of-foto of-assada" style={{ backgroundImage: `url(${fotoPalco(c.midia)})` }} />
     ) : (
       <div className={`of-midia of-abstrato of-abstrato-${c.midia}`} />
     )
   );
 
   return (
-    <div className={`of-landing ${introFeita ? 'pronta' : ''}`} style={{ '--tom': cap.tom }}>
+    <div className={`of-landing ${introFeita ? 'pronta' : ''} ${leve ? 'of-leve' : ''}`} style={{ '--tom': cap.tom }}>
       {!introFeita && <Intro aoTerminar={() => setIntroFeita(true)} />}
       <Menu aberto={menuAberto} fechar={() => setMenuAberto(false)} />
 
