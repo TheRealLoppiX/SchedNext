@@ -385,6 +385,14 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
         </span>
       </div>
 
+      {/* Os cartões mostram só hora e cliente; o status vem pela cor (legenda) e o resto no balão
+          ao passar o mouse. */}
+      <div className="oa-legenda" aria-hidden="true">
+        {[['pendente', 'var(--st-pendente)'], ['confirmado', 'var(--st-confirmado)'], ['concluído', 'var(--st-concluido)'], ['cancelado', 'var(--st-cancelado)'], ['não compareceu', 'var(--st-falta)']].map(([rotulo, cor]) => (
+          <span key={rotulo} style={{ '--cor': cor }}>{rotulo}</span>
+        ))}
+      </div>
+
       <div className="oa-regua-linha">
         <button
           type="button"
@@ -490,6 +498,9 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
                           key={ag.id}
                           className={`oa-cartao${agendamentoArrastando?.id === ag.id ? ' arrastando' : ''}${inativo ? ' inativo' : ''}`}
                           style={{ '--cor': cor, cursor: podeArrastar ? 'grab' : 'pointer' }}
+                          title={`${ag.hora} · ${ag.cliente_nome}
+${ag.servico_nome} · ${duracao} min
+${statusLabel}`}
                           draggable={podeArrastar}
                           onDragStart={(e) => {
                             if (!podeArrastar) return;
@@ -507,12 +518,8 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
                             setHoraEncaixe(null);
                           }}
                         >
-                          <div className="oa-cartao-topo">
-                            <span className="oa-cartao-hora">{ag.hora}<small>{duracao} min</small></span>
-                            <span className="oa-status">{statusLabel}</span>
-                          </div>
+                          <span className="oa-cartao-hora">{ag.hora}</span>
                           <strong>{ag.cliente_nome}</strong>
-                          <p>{ag.servico_nome}</p>
                         </div>
                       );
                     } else {

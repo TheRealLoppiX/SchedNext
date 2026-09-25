@@ -24,7 +24,7 @@ function AdminWhatsapp() {
   const [telefoneTeste, setTelefoneTeste] = useState('');
   const [testando, setTestando] = useState(false);
 
-  const [botConfig, setBotConfig] = useState({ permiteIa: false, modo: 'guiado', nome: '', personalidade: '', boasVindas: '', temperatura: 0.6, resumoProfissionaisAtivo: false, resumoProfissionaisHorario: '08:00' });
+  const [botConfig, setBotConfig] = useState({ permiteIa: false, modo: 'guiado', nome: '', personalidade: '', boasVindas: '', temperatura: 0.6, resumoProfissionaisAtivo: false, resumoProfissionaisHorario: '08:00', horarioAtivo: false, horarioInicio: '09:00', horarioFim: '18:00', horarioDias: [1, 2, 3, 4, 5, 6], mensagemFora: '', mensagemForaPadrao: '' });
   const [salvandoBot, setSalvandoBot] = useState(false);
 
   const pollRef = useRef(null);
@@ -174,7 +174,12 @@ function AdminWhatsapp() {
           boas_vindas: botConfig.boasVindas,
           temperatura: botConfig.temperatura,
           resumo_profissionais_ativo: botConfig.resumoProfissionaisAtivo,
-          resumo_profissionais_horario: botConfig.resumoProfissionaisHorario
+          resumo_profissionais_horario: botConfig.resumoProfissionaisHorario,
+          horario_ativo: !!botConfig.horarioAtivo,
+          horario_inicio: botConfig.horarioInicio || '09:00',
+          horario_fim: botConfig.horarioFim || '18:00',
+          horario_dias: botConfig.horarioDias && botConfig.horarioDias.length ? botConfig.horarioDias : [0, 1, 2, 3, 4, 5, 6],
+          mensagem_fora: botConfig.mensagemFora
         })
       });
       const dados = await res.json();
@@ -340,6 +345,98 @@ function AdminWhatsapp() {
             />
             <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>
               Mais baixo = respostas mais previsíveis e diretas. Mais alto = respostas mais variadas e criativas.
+            </p>
+          </>
+        )}
+
+        <div style={{ marginTop: '20px' }}>
+          <LoadingButton loading={salvandoBot} onClick={salvarBotConfig} style={styles.btnCadastrar}>Salvar</LoadingButton>
+        </div>
+      </div>
+
+      <div style={{ ...styles.cardForm, marginTop: '20px' }}>
+        <h3 style={styles.tituloSecao}>Horário de atendimento do bot</h3>
+        <p style={{ margin: '0 0 16px', fontSize: '13px', color: 'var(--fx-muted)' }}>
+          Escolha se o bot responde seus clientes a qualquer hora ou só em um horário. Fora do horário ele avisa uma vez
+          que está fechado e fica quieto até abrir de novo. Lembretes e confirmações de agendamento continuam saindo normalmente.
+        </p>
+
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setBotConfig((c) => ({ ...c, horarioAtivo: false }))}
+            style={!botConfig.horarioAtivo ? styles.modoBtnAtivo : styles.modoBtn}
+          >
+            Ligado 24 horas
+          </button>
+          <button
+            type="button"
+            onClick={() => setBotConfig((c) => ({ ...c, horarioAtivo: true }))}
+            style={botConfig.horarioAtivo ? styles.modoBtnAtivo : styles.modoBtn}
+          >
+            Só em um horário
+          </button>
+        </div>
+
+        {botConfig.horarioAtivo && (
+          <>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '16px' }}>
+              <div>
+                <label style={styles.label}>Das</label>
+                <input
+                  type="time"
+                  value={botConfig.horarioInicio}
+                  onChange={(e) => setBotConfig((c) => ({ ...c, horarioInicio: e.target.value }))}
+                  style={{ ...styles.inputTexto, maxWidth: '160px' }}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Até</label>
+                <input
+                  type="time"
+                  value={botConfig.horarioFim}
+                  onChange={(e) => setBotConfig((c) => ({ ...c, horarioFim: e.target.value }))}
+                  style={{ ...styles.inputTexto, maxWidth: '160px' }}
+                />
+              </div>
+            </div>
+            <p style={{ margin: '8px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>
+              Horário de Brasília. Pode passar da meia-noite (ex: das 18:00 até 02:00).
+            </p>
+
+            <label style={{ ...styles.label, marginTop: '16px' }}>Dias</label>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((rotulo, dia) => {
+                const marcado = (botConfig.horarioDias || []).includes(dia);
+                return (
+                  <button
+                    key={rotulo}
+                    type="button"
+                    aria-pressed={marcado}
+                    onClick={() => setBotConfig((c) => {
+                      const dias = c.horarioDias || [];
+                      const novos = dias.includes(dia) ? dias.filter((d) => d !== dia) : [...dias, dia];
+                      return { ...c, horarioDias: novos.length ? novos : dias }; // pelo menos um dia
+                    })}
+                    style={{ ...(marcado ? styles.modoBtnAtivo : styles.modoBtn), padding: '8px 12px', minWidth: '52px' }}
+                  >
+                    {rotulo}
+                  </button>
+                );
+              })}
+            </div>
+
+            <label style={{ ...styles.label, marginTop: '16px' }}>Mensagem fora do horário</label>
+            <textarea
+              rows={3}
+              maxLength={500}
+              placeholder={botConfig.mensagemForaPadrao}
+              value={botConfig.mensagemFora}
+              onChange={(e) => setBotConfig((c) => ({ ...c, mensagemFora: e.target.value }))}
+              style={{ ...styles.inputTexto, resize: 'vertical', fontFamily: 'inherit' }}
+            />
+            <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>
+              Deixe em branco pra usar a mensagem padrão. Escreva {'{volta}'} onde quiser que apareça quando o atendimento volta (ex: "amanhã às 09:00").
             </p>
           </>
         )}

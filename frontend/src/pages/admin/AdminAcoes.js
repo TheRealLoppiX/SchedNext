@@ -64,26 +64,48 @@ function AdminAcoes() {
         }
     };
 
+    // Nome do serviço/produto escolhido (o select guarda o id, que é o que o caixa usa pra dar a
+    // cortesia sozinho, ver services/fidelidade.js no backend).
+    const nomeItemPremio = () => {
+        const lista = form.tipo_premio === 'servico' ? servicos : produtos;
+        return lista.find(i => String(i.id) === String(form.premio_selecionado))?.nome || '';
+    };
+    const descricaoPremio = () => {
+        if (form.tipo_premio === 'servico') return nomeItemPremio() ? `Serviço grátis: ${nomeItemPremio()}` : '';
+        if (form.tipo_premio === 'produto') return nomeItemPremio() ? `Produto grátis: ${nomeItemPremio()}` : '';
+        if (form.tipo_premio === 'desconto_percentual') return form.valor_desconto ? `${form.valor_desconto}% de desconto no atendimento` : '';
+        if (form.tipo_premio === 'desconto_valor') return form.valor_desconto ? `R$ ${form.valor_desconto} de desconto no atendimento` : '';
+        return '';
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        let premioFinal;
-        if (form.tipo_premio === 'servico') premioFinal = `Serviço: ${form.premio_selecionado}`;
-        else if (form.tipo_premio === 'produto') premioFinal = `Produto: ${form.premio_selecionado}`;
-        else if (form.tipo_premio === 'desconto_percent') premioFinal = `${form.valor_desconto}% de desconto`;
-        else if (form.tipo_premio === 'desconto_valor') premioFinal = `R$ ${form.valor_desconto} de desconto`;
+        const ehItem = form.tipo_premio === 'servico' || form.tipo_premio === 'produto';
 
         setLancando(true);
         try {
             const res = await fetch(`${API_URL}/admin/acoes`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...form, empresa_id: empresaId, premio_descritivo: premioFinal })
+                body: JSON.stringify({
+                    nome: form.nome,
+                    data_inicio: form.data_inicio,
+                    data_fim: form.data_fim,
+                    cortes_necessarios: form.cortes_necessarios,
+                    valor_minimo: form.valor_minimo,
+                    tipo_premio: form.tipo_premio,
+                    premio_descritivo: descricaoPremio(),
+                    premio_servico_id: form.tipo_premio === 'servico' ? form.premio_selecionado : null,
+                    premio_produto_id: form.tipo_premio === 'produto' ? form.premio_selecionado : null,
+                    premio_valor: ehItem ? null : form.valor_desconto
+                })
             });
             if (res.ok) {
                 setForm({ nome: '', data_inicio: '', data_fim: '', cortes_necessarios: '', valor_minimo: '0.00', tipo_premio: 'servico', premio_selecionado: '', valor_desconto: '' });
                 carregarDados();
                 toast.success("Campanha criada e ativada!");
             } else {
-                toast.error("Não foi possível criar a campanha. Tente novamente.");
+                const dados = await res.json().catch(() => ({}));
+                toast.error(dados.error || "Não foi possível criar a campanha. Tente novamente.");
             }
         } catch (err) {
             toast.error("Não foi possível conectar ao servidor. Tente novamente em instantes.");
@@ -181,7 +203,7 @@ function AdminAcoes() {
                             <select style={{...s.input, flex: 1}} value={form.tipo_premio} onChange={e => setForm({...form, tipo_premio: e.target.value, premio_selecionado: '', valor_desconto: ''})}>
                                 <option value="servico">Dar um Serviço</option>
                                 <option value="produto">Dar um Produto</option>
-                                <option value="desconto_percent">Desconto em %</option>
+                                <option value="desconto_percentual">Desconto em %</option>
                                 <option value="desconto_valor">Desconto em R$</option>
                             </select>
 
@@ -189,13 +211,13 @@ function AdminAcoes() {
                                 <select style={{...s.input, flex: 2}} required value={form.premio_selecionado} onChange={e => setForm({...form, premio_selecionado: e.target.value})}>
                                     <option value="">Selecione...</option>
                                     {form.tipo_premio === 'servico'
-                                        ? servicos.map(sv => <option key={sv.id} value={sv.nome}>{sv.nome}</option>)
-                                        : produtos.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)
+                                        ? servicos.map(sv => <option key={sv.id} value={sv.id}>{sv.nome}</option>)
+                                        : produtos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)
                                     }
                                 </select>
                             )}
 
-                            {form.tipo_premio === 'desconto_percent' && (
+                            {form.tipo_premio === 'desconto_percentual' && (
                                 <div style={{ display: 'flex', alignItems: 'center', flex: 2, gap: '8px' }}>
                                     <input
                                         type="number" min="1" max="100" step="1"
@@ -203,7 +225,7 @@ function AdminAcoes() {
                                         placeholder="Ex: 10"
                                         required
                                         value={form.valor_desconto}
-                                        onChange={e => setForm({...form, valor_desconto: e.target.value, premio_selecionado: e.target.value + '%'})}
+                                        onChange={e => setForm({...form, valor_desconto: e.target.value})}
                                     />
                                     <span style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--fx-text)' }}>%</span>
                                     <span style={{ fontSize: '12px', color: 'var(--fx-muted)', whiteSpace: 'nowrap' }}>de desconto</span>
@@ -219,7 +241,7 @@ function AdminAcoes() {
                                         placeholder="Ex: 15,00"
                                         required
                                         value={form.valor_desconto}
-                                        onChange={e => setForm({...form, valor_desconto: e.target.value, premio_selecionado: 'R$ ' + e.target.value})}
+                                        onChange={e => setForm({...form, valor_desconto: e.target.value})}
                                     />
                                     <span style={{ fontSize: '12px', color: 'var(--fx-muted)', whiteSpace: 'nowrap' }}>de desconto</span>
                                 </div>
@@ -227,16 +249,14 @@ function AdminAcoes() {
                         </div>
 
                         {/* Preview do prêmio */}
-                        {form.premio_selecionado && (
+                        {descricaoPremio() && (
                             <div style={{ background: 'var(--fx-green-bg)', border: '1px solid var(--fx-green-line)', borderRadius: '8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <div>
                                     <span style={{ fontSize: '12px', color: 'var(--fx-muted)', display: 'block' }}>O cliente vai ganhar:</span>
-                                    <strong style={{ color: 'var(--fx-green)', fontSize: '14px' }}>
-                                        {form.tipo_premio === 'servico' && `Serviço gratuito: ${form.premio_selecionado}`}
-                                        {form.tipo_premio === 'produto' && `Produto gratuito: ${form.premio_selecionado}`}
-                                        {form.tipo_premio === 'desconto_percent' && `${form.valor_desconto}% de desconto no próximo serviço`}
-                                        {form.tipo_premio === 'desconto_valor' && `R$ ${form.valor_desconto} de desconto no próximo serviço`}
-                                    </strong>
+                                    <strong style={{ color: 'var(--fx-green)', fontSize: '14px' }}>{descricaoPremio()}</strong>
+                                    <span style={{ fontSize: '12px', color: 'var(--fx-muted)', display: 'block', marginTop: '4px' }}>
+                                        Uma vez por cliente nesta ação. No fechamento de caixa do próximo atendimento aparece a opção de aplicar a cortesia; o que passar do prêmio é cobrado normalmente.
+                                    </span>
                                 </div>
                             </div>
                         )}

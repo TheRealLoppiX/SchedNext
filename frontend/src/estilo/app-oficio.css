@@ -951,3 +951,11 @@ body:has(.bb-page) .oc-tema-flutuante { display: flex; }
   .oc-agenda-titulo { gap: 14px; }
   .oc-avatar-pro-g { width: 60px; height: 60px; font-size: 24px; }
 }
+
+/* ============================ Telas de acesso: cabeçalho centralizado ============================ */
+/* logo (da SchedNext ou da empresa), título, frase e links do rodapé no centro do cartão; os
+   campos e rótulos do formulário continuam alinhados à esquerda. */
+.bb-card > div:first-child { justify-content: center !important; }
+.bb-card > .bb-logo-img { display: block; margin-left: auto; margin-right: auto; }
+.bb-card > .bb-title, .bb-card > .bb-subtitle { text-align: center; }
+.bb-card > p.bb-link, .bb-card > p.bb-text-muted, .bb-card > .bb-link { text-align: center; }

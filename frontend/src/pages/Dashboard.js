@@ -906,7 +906,9 @@ function FidelidadeView({ userId }) {
       </div>
       <div className="oc-carimbos-rodape">
         <small>Válido até {formatarDataSemFuso(info.data_fim)}{info.valor_minimo > 0 ? ` · serviços acima de R$ ${info.valor_minimo}` : ''}</small>
-        <strong className={info.ganhouPremio ? 'ok' : ''}>{info.ganhouPremio ? 'Prêmio liberado!' : `Faltam ${info.faltam}`}</strong>
+        <strong className={info.ganhouPremio ? 'ok' : ''}>
+          {info.premioResgatado ? 'Prêmio já usado' : info.ganhouPremio ? 'Prêmio liberado! Vale no próximo atendimento' : `Faltam ${info.faltam}`}
+        </strong>
       </div>
     </div>
   );

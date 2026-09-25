@@ -37,6 +37,9 @@ function AgendaModal({ barbeiro, empresaId, dataSelecionada, horaPreSelecionada,
     const [pagamentos, setPagamentos] = useState([{ forma_pagamento: null, valor: '' }]);
     const [mpConectado, setMpConectado] = useState(false);
     const [pixInfo, setPixInfo] = useState(null);
+    // Cortesia da ação de fidelidade que o cliente já conquistou (vem de /admin/agendamento-usuario)
+    const [premio, setPremio] = useState(null);
+    const [aplicarPremio, setAplicarPremio] = useState(false);
     const [gerandoPix, setGerandoPix] = useState(false);
     const pixPollRef = useRef(null);
 
@@ -253,7 +256,7 @@ const toggleServico = (servico) => {
     const linhaPix = () => pagamentos.find(p => p.forma_pagamento === 'pix');
 
     const handleFinalizarAtendimento = async () => {
-        const total = getValorBaseSeguro() + getValorAdicionais();
+        const total = getTotal();
         // Meio de pagamento só é exigido quando sobra algo pra cobrar (produto/serviço fora do
         // plano) — um atendimento 100% coberto pela assinatura não precisa vincular nada.
         if (total > 0) {
@@ -279,6 +282,7 @@ const toggleServico = (servico) => {
                     agendamento_id: modalFinalizar.id,
                     produtos_vendidos: produtosVendidos,
                     servicos_adicionais: servicosAdd,
+                    aplicar_premio: aplicarPremio,
                     formas_pagamento: total > 0 ? pagamentos.map(p => ({
                         forma_pagamento: p.forma_pagamento,
                         valor: pagamentos.length > 1 ? (parseFloat(String(p.valor).replace(',', '.')) || 0) : total
@@ -294,7 +298,9 @@ const toggleServico = (servico) => {
                 // realmente foi decidido lá, não o preview local.
                 const mensagem = dados.servicos_cobrados?.length > 0
                     ? "Atendimento finalizado! Um dos serviços já tinha estourado o limite da assinatura e foi cobrado."
-                    : "Atendimento finalizado com sucesso!";
+                    : dados.premio_aplicado
+                        ? "Atendimento finalizado com a cortesia da ação aplicada!"
+                        : "Atendimento finalizado com sucesso!";
                 toast.success(mensagem);
                 setModalFinalizar(null);
                 setExtrasSelecionados([]);
@@ -316,11 +322,14 @@ const toggleServico = (servico) => {
         setPagamentos([{ forma_pagamento: null, valor: '' }]);
         setPixInfo(null);
         if (pixPollRef.current) { clearInterval(pixPollRef.current); pixPollRef.current = null; }
+        setPremio(null);
+        setAplicarPremio(false);
         if (!modalFinalizar?.id) { setAssinaturaCheckout({ assinante: false, servicos_ids: [], servicos_agendados_ids: [], restantes: {} }); return; }
         fetch(`${API_URL}/admin/agendamento-usuario/${modalFinalizar.id}`)
             .then(r => r.json())
             .then(d => {
                 setAssinaturaCheckout({ assinante: !!d.assinante, servicos_ids: d.servicos_ids || [], servicos_agendados_ids: d.servicos_agendados_ids || [], restantes: d.restantes || {} });
+                setPremio(d.premio_fidelidade || null);
             })
             .catch(() => setAssinaturaCheckout({ assinante: false, servicos_ids: [], servicos_agendados_ids: [], restantes: {} }));
     }, [modalFinalizar]);
@@ -353,7 +362,7 @@ const toggleServico = (servico) => {
     const adicionarLinhaPagamento = () => {
         limparPixDaLinha();
         if (pagamentos.length === 1) {
-            const total = getValorBaseSeguro() + getValorAdicionais();
+            const total = getTotal();
             setPagamentos([{ ...pagamentos[0], valor: total }, { forma_pagamento: null, valor: '' }]);
         } else if (pagamentos.length < 4) {
             setPagamentos([...pagamentos, { forma_pagamento: null, valor: '' }]);
@@ -382,6 +391,7 @@ const toggleServico = (servico) => {
                 body: JSON.stringify({
                     produtos_vendidos: produtosVendidos,
                     servicos_adicionais: servicosAdd,
+                    aplicar_premio: aplicarPremio,
                     ...(valorLinhaPix ? { valor: valorLinhaPix } : {})
                 })
             });
@@ -471,6 +481,50 @@ const toggleServico = (servico) => {
             return acc + (valor * qtd);
         }, 0);
     };
+
+    // Estimativa do desconto da cortesia pra exibir antes de finalizar. Mesma regra de
+    // calcularDescontoPremio (backend, services/fidelidade.js), que é quem decide de verdade:
+    // serviço/produto grátis só se estiver no atendimento; % ou R$ sobre o atendimento inteiro.
+    const valorNum = (v) => parseFloat(String(v || '0').replace(',', '.')) || 0;
+    const calcularCortesia = () => {
+        if (!premio) return { aplicavel: false, desconto: 0, motivo: null };
+        const subtotal = getValorBaseSeguro() + getValorAdicionais();
+        let desconto = 0;
+        if (premio.tipo === 'servico') {
+            const idPremio = Number(premio.servico?.id);
+            const agendado = assinaturaCheckout.servicos_agendados_ids.map(Number).includes(idPremio);
+            const extra = extrasSelecionados.find(e => e.tipo === 'servico' && Number(e.id) === idPremio);
+            if (!agendado && !extra) return { aplicavel: false, desconto: 0, motivo: `A cortesia é ${premio.servico?.nome}. Adicione esse serviço acima pra aplicar.` };
+            const coberto = agendado && assinaturaCheckout.assinante && assinaturaCheckout.servicos_ids.map(Number).includes(idPremio)
+                && (assinaturaCheckout.restantes[idPremio] == null || assinaturaCheckout.restantes[idPremio] > 0);
+            desconto = coberto ? 0 : agendado ? valorNum(servicos.find(sv => Number(sv.id) === idPremio)?.valor) : valorNum(extra.valor);
+        } else if (premio.tipo === 'produto') {
+            const item = extrasSelecionados.find(e => e.tipo === 'produto' && Number(e.id) === Number(premio.produto?.id));
+            if (!item) return { aplicavel: false, desconto: 0, motivo: `A cortesia é ${premio.produto?.nome}. Adicione esse produto acima pra aplicar.` };
+            desconto = valorNum(item.valor);
+        } else if (premio.tipo === 'desconto_percentual') {
+            desconto = subtotal * (Number(premio.valor) / 100);
+        } else if (premio.tipo === 'desconto_valor') {
+            desconto = Number(premio.valor) || 0;
+        }
+        return { aplicavel: true, desconto: Math.round(Math.min(Math.max(desconto, 0), subtotal) * 100) / 100, motivo: null };
+    };
+    const cortesia = calcularCortesia();
+    const descontoCortesia = aplicarPremio && cortesia.aplicavel ? cortesia.desconto : 0;
+    const getTotal = () => Math.max(0, getValorBaseSeguro() + getValorAdicionais() - descontoCortesia);
+
+    // Se o item da cortesia sair do caixa, a cortesia deixa de valer: desmarca pra não mandar
+    // aplicar_premio num atendimento em que o servidor vai recusar.
+    useEffect(() => {
+        if (aplicarPremio && !cortesia.aplicavel) setAplicarPremio(false);
+    }, [aplicarPremio, cortesia.aplicavel]);
+
+    const alternarCortesia = () => {
+        limparPixDaLinha();
+        setPagamentos([{ forma_pagamento: pagamentos[0]?.forma_pagamento || null, valor: '' }]);
+        setAplicarPremio(v => !v);
+    };
+
 
     return (
         <div style={styles.overlay} onClick={(e) => { if(e.target === e.currentTarget) onClose(); }}>
@@ -660,7 +714,7 @@ const toggleServico = (servico) => {
                         </div>
 
                         <label style={subModalStyles.label}>Adicionar Mais Serviços:</label>
-                        <div style={{ maxHeight: '130px', overflowY: 'auto', marginBottom: '15px', border: '1px solid var(--fx-line)', padding: '5px', borderRadius: '8px', background: 'var(--fx-surface-2)' }}>
+                        <div style={{ maxHeight: '130px', flexShrink: 0, overflowY: 'auto', marginBottom: '15px', border: '1px solid var(--fx-line)', padding: '5px', borderRadius: '8px', background: 'var(--fx-surface-2)' }}>
                             {servicos.map(s => {
                                 // Comparação exata contra a lista já dividida, não substring da
                                 // string toda: "Corte" dentro de "Corte Infantil" não pode
@@ -711,7 +765,7 @@ const toggleServico = (servico) => {
                         </div>
 
                         <label style={subModalStyles.label}>Vender Produtos de Estoque:</label>
-                        <div style={{ maxHeight: '150px', overflowY: 'auto', marginBottom: '20px', border: '1px solid var(--fx-line)', padding: '5px', borderRadius: '8px', background: 'var(--fx-surface-2)' }}>
+                        <div style={{ maxHeight: '150px', flexShrink: 0, overflowY: 'auto', marginBottom: '20px', border: '1px solid var(--fx-line)', padding: '5px', borderRadius: '8px', background: 'var(--fx-surface-2)' }}>
                             {estoque.length > 0 ? estoque.filter(p => p.ativo !== 0).map(p => {
                                 const itemNoCarrinho = extrasSelecionados.find(item => item.id === p.id && item.tipo === 'produto');
                                 const qtd = itemNoCarrinho ? itemNoCarrinho.quantidade : 0;
@@ -771,13 +825,33 @@ const toggleServico = (servico) => {
                                         })}
                                 </div>
                             )}
+                            {premio && modalFinalizar.status !== 'concluido' && (
+                                <div className={`oa-cortesia${aplicarPremio ? ' aplicada' : ''}`}>
+                                    <div className="oa-cortesia-icone" aria-hidden="true">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>
+                                    </div>
+                                    <div className="oa-cortesia-texto">
+                                        <small>Bateu a meta da ação {premio.campanha_nome}</small>
+                                        <strong>{premio.descricao}</strong>
+                                        {cortesia.motivo
+                                            ? <span className="oa-cortesia-aviso">{cortesia.motivo}</span>
+                                            : premio.tipo === 'manual'
+                                                ? <span>Prêmio sem valor automático: entregue ao cliente e marque aqui pra registrar.</span>
+                                                : <span>{aplicarPremio ? `Cortesia aplicada: menos R$ ${cortesia.desconto.toFixed(2)}.` : `Aplicando, sai R$ ${cortesia.desconto.toFixed(2)} mais barato.`} O que passar do prêmio é cobrado normalmente.</span>}
+                                    </div>
+                                    <button type="button" className="oa-cortesia-botao" onClick={alternarCortesia} disabled={!cortesia.aplicavel}>
+                                        {aplicarPremio ? 'Remover' : 'Aplicar cortesia'}
+                                    </button>
+                                </div>
+                            )}
                             <div style={{ textAlign: 'right' }}>
                                 <span style={{ fontSize: '13px', color: 'var(--fx-muted)' }}>Base: R$ {getValorBaseSeguro().toFixed(2)}</span><br/>
-                                <strong style={{ fontSize: '22px', color: 'var(--fx-text)' }}>Total: R$ {(getValorBaseSeguro() + getValorAdicionais()).toFixed(2)}</strong>
+                                {descontoCortesia > 0 && <><span style={{ fontSize: '13px', color: 'var(--fx-green)' }}>Cortesia da ação: − R$ {descontoCortesia.toFixed(2)}</span><br/></>}
+                                <strong style={{ fontSize: '22px', color: 'var(--fx-text)' }}>Total: R$ {getTotal().toFixed(2)}</strong>
                             </div>
                         </div>
 
-                        {modalFinalizar.status !== 'concluido' && (getValorBaseSeguro() + getValorAdicionais() > 0) && (
+                        {modalFinalizar.status !== 'concluido' && (getTotal() > 0) && (
                             <div style={{ marginBottom: '15px' }}>
                                 <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--fx-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Forma de pagamento</span>
                                 {pagamentos.map((p, i) => (
@@ -823,8 +897,8 @@ const toggleServico = (servico) => {
                                     </button>
                                 ) : (
                                     <>
-                                        <p style={{ margin: '4px 0 0', fontSize: '12px', fontWeight: '600', color: Math.abs(totalPago() - (getValorBaseSeguro() + getValorAdicionais())) > 0.01 ? 'var(--fx-red)' : 'var(--fx-green)' }}>
-                                            Somado: R$ {totalPago().toFixed(2)} de R$ {(getValorBaseSeguro() + getValorAdicionais()).toFixed(2)}
+                                        <p style={{ margin: '4px 0 0', fontSize: '12px', fontWeight: '600', color: Math.abs(totalPago() - getTotal()) > 0.01 ? 'var(--fx-red)' : 'var(--fx-green)' }}>
+                                            Somado: R$ {totalPago().toFixed(2)} de R$ {getTotal().toFixed(2)}
                                         </p>
                                         {pagamentos.length < 4 && (
                                             <button type="button" onClick={adicionarLinhaPagamento} style={{ border: 'none', background: 'none', color: 'var(--fx-blue)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', padding: 0, marginTop: '4px' }}>
@@ -889,7 +963,7 @@ const toggleServico = (servico) => {
                                 <>
                                     <button style={{...subModalStyles.btnConfirm, background: '#ef4444'}} onClick={() => { setModalCancelamento(modalFinalizar); setModalFinalizar(null); }}>Cancelar Horário</button>
                                     <LoadingButton loading={finalizando} style={{...subModalStyles.btnConfirm, background: '#10b981'}} onClick={handleFinalizarAtendimento}>
-                                        {(getValorBaseSeguro() + getValorAdicionais() > 0) ? 'Cobrar & Finalizar' : 'Finalizar Serviço'}
+                                        {(getTotal() > 0) ? 'Cobrar & Finalizar' : 'Finalizar Serviço'}
                                     </LoadingButton>
                                 </>
                             ) : (
