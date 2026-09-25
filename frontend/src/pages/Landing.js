@@ -390,7 +390,7 @@ function Landing() {
     c.midia === 'video' ? (
       comVideo ? (
         <video ref={refVideo} className="of-midia" src="/videos/hero-barbearia.mp4" poster="/videos/hero-barbearia-poster.jpg" autoPlay loop muted playsInline preload="auto" aria-hidden="true" />
-      ) : <img className="of-midia" src="/videos/hero-barbearia-poster.jpg" alt="" />
+      ) : <img className="of-midia" src={modoQuadros ? '/images/hero-barbearia-mobile.jpg' : '/videos/hero-barbearia-poster.jpg'} alt="" />
     ) : c.midia.startsWith('/') ? (
       <div className="of-midia of-foto" style={{ backgroundImage: `url(${c.midia})` }} />
     ) : (
