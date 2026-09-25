@@ -34,7 +34,7 @@ const CAPITULOS = [
     tags: ['Lembrete no WhatsApp', 'Confirmação automática', 'Horários curtos']
   },
   {
-    id: 'estetica', tom: '#2ee6d0', midia: 'estetica', rotulo: 'Estética',
+    id: 'estetica', tom: '#2ee6d0', midia: '/images/casos/estetica.jpg', midiaMobile: '/images/casos/estetica-mobile.jpg', rotulo: 'Estética',
     kicker: '04 · Estética', titulo: ['PELE', 'EM DIA.'],
     texto: 'Planos de assinatura pra sessões recorrentes, histórico de cada cliente e lembrete antes de cada retorno.',
     tags: ['Sessões recorrentes', 'Histórico do cliente', 'Retorno lembrado']
@@ -392,7 +392,7 @@ function Landing() {
         <video ref={refVideo} className="of-midia" src="/videos/hero-barbearia.mp4" poster="/videos/hero-barbearia-poster.jpg" autoPlay loop muted playsInline preload="auto" aria-hidden="true" />
       ) : <img className="of-midia" src={modoQuadros ? '/images/hero-barbearia-mobile.jpg' : '/videos/hero-barbearia-poster.jpg'} alt="" />
     ) : c.midia.startsWith('/') ? (
-      <div className="of-midia of-foto" style={{ backgroundImage: `url(${c.midia})` }} />
+      <div className="of-midia of-foto" style={{ backgroundImage: `url(${modoQuadros && c.midiaMobile ? c.midiaMobile : c.midia})` }} />
     ) : (
       <div className={`of-midia of-abstrato of-abstrato-${c.midia}`} />
     )

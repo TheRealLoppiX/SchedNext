@@ -186,25 +186,7 @@ video.of-midia, img.of-midia { filter: grayscale(0.85) contrast(1.15) brightness
     linear-gradient(90deg, rgba(6, 11, 24, 0.92) 0%, rgba(6, 11, 24, 0.55) 45%, rgba(6, 11, 24, 0.25) 100%),
     linear-gradient(0deg, rgba(6, 11, 24, 0.85) 0%, transparent 40%);
 }
-.of-abstrato-estetica {
-  background:
-    radial-gradient(circle at 70% 45%, rgba(46, 230, 208, 0.35), transparent 45%),
-    radial-gradient(circle at 85% 80%, rgba(255, 255, 255, 0.1), transparent 30%),
-    radial-gradient(circle at 60% 15%, rgba(34, 211, 238, 0.3), transparent 35%),
-    linear-gradient(135deg, #061425, #0a2a3a 55%, #060f1e);
-}
-.of-abstrato-estetica::before, .of-abstrato-estetica::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(40px);
-  background: rgba(160, 245, 255, 0.22);
-  animation: of-bokeh 9s ease-in-out infinite alternate;
-}
-.of-abstrato-estetica::before { width: 320px; height: 320px; left: 58%; top: 20%; }
-.of-abstrato-estetica::after { width: 180px; height: 180px; left: 80%; top: 60%; animation-delay: -4s; }
-@keyframes of-bokeh { to { transform: translate(-60px, 40px) scale(1.2); } }
-.of-fundo-estetica .of-tinta, .of-fundo-como-funciona .of-tinta, .of-fundo-agenda .of-tinta { display: none; }
+.of-fundo-como-funciona .of-tinta, .of-fundo-agenda .of-tinta { display: none; }
 .of-abstrato-poste {
   background:
     radial-gradient(circle at 72% 40%, rgba(34, 211, 238, 0.25), transparent 40%),
@@ -452,7 +434,6 @@ video.of-midia, img.of-midia { filter: grayscale(0.85) contrast(1.15) brightness
 .of-quadro-abertura img.of-midia { object-position: 50% 25%; }
 /* multiply sobre camada animada custa caro no Android; tinta normal com opacidade menor chega perto */
 .of-quadro .of-tinta { mix-blend-mode: normal; opacity: 0.4; }
-.of-quadro .of-abstrato-estetica::before, .of-quadro .of-abstrato-estetica::after { animation: none; }
 .of-quadro .of-texto { position: relative; left: auto; right: auto; bottom: auto; max-width: 620px; will-change: auto; }
 .of-quadro .of-tags li { backdrop-filter: none; background: rgba(6, 11, 24, 0.6); }
 
@@ -480,7 +461,7 @@ video.of-midia, img.of-midia { filter: grayscale(0.85) contrast(1.15) brightness
 
 @media (prefers-reduced-motion: reduce) {
   .of-quadro .of-midia, .of-quadro .of-texto > *, .of-quadro .of-passos li { animation: none !important; opacity: 1; }
-  .of-grao, .of-ponto, .of-abstrato-estetica::before, .of-abstrato-estetica::after, .of-intro-marca { animation: none !important; }
+  .of-grao, .of-ponto, .of-intro-marca { animation: none !important; }
   .of-titulo { color: var(--creme); }
   .of-revelar { opacity: 1; transform: none; transition: none; }
 }
