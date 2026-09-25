@@ -76,6 +76,12 @@ const FAQ = [
 
 const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&*';
 
+// Celular/tablet: em vez do palco fixo (vídeo + three.js + loop de rolagem a cada frame, que trava
+// Android mais fraco), os capítulos viram "quadros" empilhados, com foto estática e entrada por
+// keyframes de CSS (Landing.css, bloco "quadros").
+const QUERY_QUADROS = '(max-width: 760px), (pointer: coarse) and (max-width: 1100px)';
+const MARCOS_QUADROS = { 0: '1_topo', 1: '4_casos_de_uso', 5: '2_como_funciona' };
+
 // Título que "decodifica": letras embaralhadas que vão assentando, contorno virando sólido.
 function TituloDecodificado({ linhas, ativo, className = '' }) {
   const alvo = linhas.join('\n');
@@ -182,6 +188,9 @@ function Landing() {
   const [capAtivo, setCapAtivo] = useState(0);
   const [faqAberto, setFaqAberto] = useState(0);
   const [reduzirMovimento] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [modoQuadros, setModoQuadros] = useState(() => typeof window !== 'undefined' && window.matchMedia(QUERY_QUADROS).matches);
+  const [vistos, setVistos] = useState(() => new Set([0]));
+  const refQuadros = useRef([]);
 
   const refCanvas = useRef(null);
   const refExp = useRef(null);
@@ -224,7 +233,34 @@ function Landing() {
       v.removeEventListener('canplay', tentarTocar);
       eventosGesto.forEach((ev) => window.removeEventListener(ev, tentarTocar));
     };
-  }, [reduzirMovimento]);
+  }, [reduzirMovimento, modoQuadros]);
+
+  useEffect(() => {
+    const mq = window.matchMedia(QUERY_QUADROS);
+    const aoMudar = (e) => setModoQuadros(e.matches);
+    if (mq.addEventListener) mq.addEventListener('change', aoMudar);
+    else mq.addListener(aoMudar);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', aoMudar);
+      else mq.removeListener(aoMudar);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Modo quadros: o quadro que ocupa metade da tela vira o ativo (tom, HUD do título) e fica
+    // marcado como visto, o que dispara os keyframes de entrada só uma vez.
+    if (!modoQuadros || typeof IntersectionObserver === 'undefined') return undefined;
+    const obs = new IntersectionObserver((entradas) => {
+      entradas.forEach((e) => {
+        if (!e.isIntersecting) return;
+        const k = Number(e.target.dataset.k);
+        setCapAtivo(k);
+        setVistos((v) => (v.has(k) ? v : new Set(v).add(k)));
+      });
+    }, { threshold: 0.5 });
+    refQuadros.current.forEach((el) => el && obs.observe(el));
+    return () => obs.disconnect();
+  }, [modoQuadros]);
 
   useEffect(() => {
     document.body.style.overflow = menuAberto ? 'hidden' : '';
@@ -232,6 +268,7 @@ function Landing() {
   }, [menuAberto]);
 
   useEffect(() => {
+    if (modoQuadros) return undefined;
     const canvas = refCanvas.current;
     const mobile = window.matchMedia('(max-width: 760px)').matches;
     let part = null;
@@ -311,15 +348,55 @@ function Landing() {
       window.removeEventListener('mousemove', aoMover);
       if (part) part.destruir();
     };
-  }, [reduzirMovimento]);
+  }, [reduzirMovimento, modoQuadros]);
 
   const irPara = (k) => {
+    if (modoQuadros) { refQuadros.current[k]?.scrollIntoView({ behavior: 'smooth' }); return; }
     const el = refExp.current;
     const total = el.offsetHeight - window.innerHeight;
     window.scrollTo({ top: el.offsetTop + total * ((k + (k === 0 ? 0 : 0.5)) / CAPITULOS.length), behavior: 'smooth' });
   };
 
   const cap = CAPITULOS[capAtivo];
+
+  const conteudoCapitulo = (c, k) => (
+    <>
+      <span className="of-kicker">{c.kicker}</span>
+      <TituloDecodificado linhas={c.titulo} ativo={introFeita && capAtivo === k} className={k === 0 ? 'of-titulo-hero' : ''} />
+      {c.texto && <p className="of-paragrafo">{c.texto}</p>}
+      {k === 0 && (
+        <>
+          <div className="of-ctas">
+            <Link to="/cadastrar" data-track="hero_criar_conta" className="of-btn of-btn-claro">Criar conta grátis <Seta /></Link>
+            <button type="button" data-track="hero_ver_como_funciona" className="of-btn of-btn-contorno" onClick={() => irPara(1)}>Ver os ofícios</button>
+          </div>
+          <p className="of-mini">{diasTesteGratis > 0 ? `Teste grátis por ${diasTesteGratis} dias · sem cartão` : 'Grátis pra começar · sem cartão'}</p>
+        </>
+      )}
+      {c.tags && (
+        <ul className="of-tags">{c.tags.map((t) => <li key={t}>{t}</li>)}</ul>
+      )}
+      {c.passos && (
+        <ol className="of-passos">
+          {c.passos.map((p) => (
+            <li key={p.n}><span>{p.n}</span><div><strong>{p.t}</strong><p>{p.d}</p></div></li>
+          ))}
+        </ol>
+      )}
+    </>
+  );
+
+  const midiaCapitulo = (c, comVideo) => (
+    c.midia === 'video' ? (
+      comVideo ? (
+        <video ref={refVideo} className="of-midia" src="/videos/hero-barbearia.mp4" poster="/videos/hero-barbearia-poster.jpg" autoPlay loop muted playsInline preload="auto" aria-hidden="true" />
+      ) : <img className="of-midia" src="/videos/hero-barbearia-poster.jpg" alt="" />
+    ) : c.midia.startsWith('/') ? (
+      <div className="of-midia of-foto" style={{ backgroundImage: `url(${c.midia})` }} />
+    ) : (
+      <div className={`of-midia of-abstrato of-abstrato-${c.midia}`} />
+    )
+  );
 
   return (
     <div className={`of-landing ${introFeita ? 'pronta' : ''}`} style={{ '--tom': cap.tom }}>
@@ -338,7 +415,28 @@ function Landing() {
         </div>
       </header>
 
-      {/* ============ CAPÍTULOS (rolagem controla fundos, textos e partículas) ============ */}
+      {/* ============ CAPÍTULOS ============ */}
+      {modoQuadros ? (
+        <div className="of-quadros">
+          {CAPITULOS.map((c, k) => (
+            <section
+              key={c.id}
+              ref={(el) => { refQuadros.current[k] = el; }}
+              data-k={k}
+              data-track-secao={MARCOS_QUADROS[k]}
+              className={`of-quadro of-quadro-${c.id} ${vistos.has(k) && introFeita ? 'visto' : ''}`}
+              style={{ '--tom-cap': c.tom }}
+            >
+              <div className={`of-fundo of-fundo-${c.id}`}>
+                {midiaCapitulo(c, false)}
+                <div className="of-tinta" />
+                <div className="of-sombra" />
+              </div>
+              <div className={`of-texto of-texto-${c.id}`}>{conteudoCapitulo(c, k)}</div>
+            </section>
+          ))}
+        </div>
+      ) : (
       <div ref={refExp} className="of-exp" style={{ height: `${CAPITULOS.length * 115}vh` }}>
         <div className="of-marco" data-track-secao="1_topo" style={{ top: 0 }} />
         <div className="of-marco" data-track-secao="4_casos_de_uso" style={{ top: `${(1 / CAPITULOS.length) * 100}%` }} />
@@ -347,15 +445,7 @@ function Landing() {
         <div className="of-palco">
           {CAPITULOS.map((c, k) => (
             <div key={c.id} ref={(el) => { refFundos.current[k] = el; }} className={`of-fundo of-fundo-${c.id}`} style={{ '--tom-cap': c.tom }}>
-              {c.midia === 'video' ? (
-                reduzirMovimento ? <img className="of-midia" src="/videos/hero-barbearia-poster.jpg" alt="" /> : (
-                  <video ref={refVideo} className="of-midia" src="/videos/hero-barbearia.mp4" poster="/videos/hero-barbearia-poster.jpg" autoPlay loop muted playsInline preload="auto" aria-hidden="true" />
-                )
-              ) : c.midia.startsWith('/') ? (
-                <div className="of-midia of-foto" style={{ backgroundImage: `url(${c.midia})` }} />
-              ) : (
-                <div className={`of-midia of-abstrato of-abstrato-${c.midia}`} />
-              )}
+              {midiaCapitulo(c, !reduzirMovimento)}
               <div className="of-tinta" />
               <div className="of-sombra" />
             </div>
@@ -366,28 +456,7 @@ function Landing() {
 
           {CAPITULOS.map((c, k) => (
             <section key={c.id} ref={(el) => { refTextos.current[k] = el; }} className={`of-texto of-texto-${c.id}`}>
-              <span className="of-kicker">{c.kicker}</span>
-              <TituloDecodificado linhas={c.titulo} ativo={introFeita && capAtivo === k} className={k === 0 ? 'of-titulo-hero' : ''} />
-              {c.texto && <p className="of-paragrafo">{c.texto}</p>}
-              {k === 0 && (
-                <>
-                  <div className="of-ctas">
-                    <Link to="/cadastrar" data-track="hero_criar_conta" className="of-btn of-btn-claro">Criar conta grátis <Seta /></Link>
-                    <button type="button" data-track="hero_ver_como_funciona" className="of-btn of-btn-contorno" onClick={() => irPara(1)}>Ver os ofícios</button>
-                  </div>
-                  <p className="of-mini">{diasTesteGratis > 0 ? `Teste grátis por ${diasTesteGratis} dias · sem cartão` : 'Grátis pra começar · sem cartão'}</p>
-                </>
-              )}
-              {c.tags && (
-                <ul className="of-tags">{c.tags.map((t) => <li key={t}>{t}</li>)}</ul>
-              )}
-              {c.passos && (
-                <ol className="of-passos">
-                  {c.passos.map((p) => (
-                    <li key={p.n}><span>{p.n}</span><div><strong>{p.t}</strong><p>{p.d}</p></div></li>
-                  ))}
-                </ol>
-              )}
+              {conteudoCapitulo(c, k)}
             </section>
           ))}
 
@@ -410,6 +479,7 @@ function Landing() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ============ SEÇÕES ============ */}
       <main className="of-conteudo">
