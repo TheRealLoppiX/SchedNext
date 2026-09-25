@@ -24,7 +24,7 @@ function AdminWhatsapp() {
   const [telefoneTeste, setTelefoneTeste] = useState('');
   const [testando, setTestando] = useState(false);
 
-  const [botConfig, setBotConfig] = useState({ permiteIa: false, modo: 'guiado', nome: '', personalidade: '', boasVindas: '', temperatura: 0.6, resumoProfissionaisAtivo: false, resumoProfissionaisHorario: '08:00', horarioAtivo: false, horarioInicio: '09:00', horarioFim: '18:00', horarioDias: [1, 2, 3, 4, 5, 6], mensagemFora: '', mensagemForaPadrao: '' });
+  const [botConfig, setBotConfig] = useState({ permiteIa: false, modo: 'guiado', modoLivreDisponivel: true, nome: '', personalidade: '', boasVindas: '', temperatura: 0.6, resumoProfissionaisAtivo: false, resumoProfissionaisHorario: '08:00', horarioAtivo: false, horarioInicio: '09:00', horarioFim: '18:00', horarioDias: [1, 2, 3, 4, 5, 6], mensagemFora: '', mensagemForaPadrao: '' });
   const [salvandoBot, setSalvandoBot] = useState(false);
 
   const pollRef = useRef(null);
@@ -300,16 +300,27 @@ function AdminWhatsapp() {
               </button>
               <button
                 type="button"
-                onClick={() => setBotConfig((c) => ({ ...c, modo: 'livre' }))}
-                style={botConfig.modo === 'livre' ? styles.modoBtnAtivo : styles.modoBtn}
+                disabled={!botConfig.modoLivreDisponivel}
+                onClick={() => botConfig.modoLivreDisponivel && setBotConfig((c) => ({ ...c, modo: 'livre' }))}
+                title={!botConfig.modoLivreDisponivel ? 'Modo livre temporariamente em manutenção' : undefined}
+                style={{
+                  ...(botConfig.modo === 'livre' ? styles.modoBtnAtivo : styles.modoBtn),
+                  ...(!botConfig.modoLivreDisponivel ? { opacity: 0.55, cursor: 'not-allowed' } : {})
+                }}
               >
-                Livre (IA conduz a conversa)
+                Livre (IA conduz a conversa){!botConfig.modoLivreDisponivel && (
+                  <span style={styles.badgeManutencao}>Em manutenção</span>
+                )}
               </button>
             </div>
             <p style={{ margin: '8px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>
-              {botConfig.modo === 'livre'
-                ? 'A IA conversa livremente com o cliente, decidindo quando checar horários, cadastrar e agendar.'
-                : 'O bot segue um menu numerado fixo, entendendo texto livre só pra identificar a intenção inicial.'}
+              {!botConfig.modoLivreDisponivel
+                ? (botConfig.modo === 'livre'
+                    ? 'Você tinha o modo livre selecionado, mas ele está temporariamente em manutenção — o bot está respondendo no modo guiado por enquanto. Sua escolha fica salva e volta sozinha quando o modo livre voltar.'
+                    : 'O modo livre está temporariamente em manutenção.')
+                : (botConfig.modo === 'livre'
+                    ? 'A IA conversa livremente com o cliente, decidindo quando checar horários, cadastrar e agendar.'
+                    : 'O bot segue um menu numerado fixo, entendendo texto livre só pra identificar a intenção inicial.')}
             </p>
 
             <label style={{ ...styles.label, marginTop: '16px' }}>Nome do assistente</label>
@@ -505,7 +516,8 @@ const styles = {
   inputTexto: { width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', fontSize: '13px', boxSizing: 'border-box' },
   textarea: { width: '100%', minHeight: '80px', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', fontSize: '13px', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' },
   modoBtn: { padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', color: 'var(--fx-text)', cursor: 'pointer', fontSize: '13px', fontWeight: '600' },
-  modoBtnAtivo: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #2554eb', background: 'var(--fx-violet-bg)', color: 'var(--fx-blue)', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }
+  modoBtnAtivo: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #2554eb', background: 'var(--fx-violet-bg)', color: 'var(--fx-blue)', cursor: 'pointer', fontSize: '13px', fontWeight: '700' },
+  badgeManutencao: { marginLeft: '8px', padding: '2px 8px', borderRadius: '20px', fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.3px', background: '#fef3c7', color: '#92400e' }
 };
 
 export default AdminWhatsapp;

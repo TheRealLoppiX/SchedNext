@@ -364,6 +364,9 @@ function Docs() {
           {/* ===================== WHATSAPP: MODO LIVRE (IA) ===================== */}
           <section id="whatsapp-livre" className="doc-secao">
             <h2>Modo livre (agente de IA) <Badge tipo="pro" /></h2>
+            <p style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24', fontSize: '13.5px', fontWeight: '600' }}>
+              Em manutenção temporariamente — negócios com o modo livre selecionado continuam funcionando normalmente no modo guiado enquanto isso, sem perder a preferência salva.
+            </p>
             <p className="doc-intro">Recurso de IA (planos Profissional e Enterprise): em vez do menu fixo, um agente conduz a conversa inteira de forma natural, decidindo sozinho o que perguntar e quando agir, sem abrir mão da confiabilidade do modo guiado.</p>
             <h3>Como o agente evita "inventar" informação</h3>
             <p>
