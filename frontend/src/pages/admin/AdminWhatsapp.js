@@ -18,6 +18,8 @@ function AdminWhatsapp() {
   const [carregando, setCarregando] = useState(true);
   const [permitido, setPermitido] = useState(false);
   const [conectado, setConectado] = useState(false);
+  // Servidor do WhatsApp (Evolution/VPS) não respondeu na última consulta de status.
+  const [servidorIndisponivel, setServidorIndisponivel] = useState(false);
   const [instancia, setInstancia] = useState(null);
   const [qrcode, setQrcode] = useState(null);
   // Conexão por código de pareamento (sem QR Code), pra quem só tem o celular.
@@ -51,6 +53,7 @@ function AdminWhatsapp() {
       const dados = await res.json();
       setPermitido(!!dados.permitido);
       setConectado(!!dados.conectado);
+      setServidorIndisponivel(!!dados.erroConsulta);
       setInstancia(dados.instancia || null);
       if (dados.botConfig && !botConfigCarregadoRef.current) {
         setBotConfig(dados.botConfig);
@@ -249,6 +252,15 @@ function AdminWhatsapp() {
     <div style={styles.container}>
       <h2 style={styles.title}>WhatsApp</h2>
       <p style={styles.subtitle}>Conecte um número de WhatsApp para seus clientes agendarem horário direto por lá.</p>
+
+      {servidorIndisponivel && (
+        <div style={{ ...styles.upsell, marginBottom: '16px' }}>
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--fx-text)' }}>
+            <span style={{ ...styles.badgeManutencao, marginLeft: 0, marginRight: '8px' }}>Instabilidade</span>
+            O servidor do WhatsApp não está respondendo agora. Não é preciso reconectar: assim que ele voltar, esta tela se atualiza sozinha.
+          </p>
+        </div>
+      )}
 
       {conectado ? (
         <div style={styles.cardAtual}>
