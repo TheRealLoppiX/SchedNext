@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import './Landing.css';
 import { API_URL } from '../services/api';
 import { observarSecoes } from '../utils/analytics';
+import { formatarReal, precoPromocionalPrimeiroMes, resumoCampanha } from '../utils/campanhaPlano';
 
 // Landing "ofício": capítulos em tela cheia (um por tipo de negócio) controlados pela rolagem,
 // com foto/vídeo do ofício ao fundo e partículas (oficio/particulasOficio.js) que viram o símbolo
@@ -575,10 +576,13 @@ function Landing() {
                   {destaque && <span className="of-plano-selo">Mais escolhido</span>}
                   <span className="of-plano-nome">{p.nome}</span>
                   <div className="of-plano-preco">
-                    {p.preco_mensal == null ? <span className="of-plano-consulta">SOB CONSULTA</span> : (
+                    {p.preco_mensal == null ? <span className="of-plano-consulta">SOB CONSULTA</span> : precoPromocionalPrimeiroMes(p) != null ? (
+                      <><small>R$</small>{formatarReal(precoPromocionalPrimeiroMes(p))}<small>no 1º mês</small></>
+                    ) : (
                       <><small>R$</small>{p.preco_mensal === 0 ? '0' : Number(p.preco_mensal).toFixed(2).replace('.', ',')}{p.preco_mensal > 0 && <small>/mês</small>}</>
                     )}
                   </div>
+                  {resumoCampanha(p) && <p className="of-plano-promo">{resumoCampanha(p)}</p>}
                   <ul>
                     {p.dias_teste > 0 && <li>{p.dias_teste} dias de teste grátis</li>}
                     <li>{p.limite_profissionais == null ? 'Profissionais ilimitados' : `Até ${p.limite_profissionais} profissional(is)`}</li>

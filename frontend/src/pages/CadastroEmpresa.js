@@ -8,6 +8,7 @@ import { emailValido, formatarDocumento, documentoTemTamanhoValido } from '../ut
 import { formatarTelefone } from '../utils/telefone';
 import { API_URL } from '../services/api';
 import { rastrearEvento } from '../utils/analytics';
+import { formatarReal, precoPromocionalPrimeiroMes, resumoCampanha } from '../utils/campanhaPlano';
 
 function gerarSlug(nome) {
   return nome
@@ -321,8 +322,13 @@ function CadastroEmpresa({ setEmpresaLogada }) {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                       <span>{p.nome}</span>
-                      <span>{ehEnterprise ? 'Sob consulta' : p.preco_mensal === 0 ? 'Grátis' : `R$ ${Number(p.preco_mensal).toFixed(2)}/mês`}</span>
+                      <span>{ehEnterprise ? 'Sob consulta' : p.preco_mensal === 0 ? 'Grátis' : precoPromocionalPrimeiroMes(p) != null ? `R$ ${formatarReal(precoPromocionalPrimeiroMes(p))} no 1º mês` : `R$ ${Number(p.preco_mensal).toFixed(2)}/mês`}</span>
                     </div>
+                    {!ehEnterprise && resumoCampanha(p) && (
+                      <div style={{ fontSize: '12px', color: 'var(--bb-gold)', fontWeight: 700, marginTop: '4px' }}>
+                        {resumoCampanha(p)}
+                      </div>
+                    )}
                     {p.dias_teste > 0 && (
                       <div style={{ fontSize: '12px', color: 'var(--bb-success)', fontWeight: 700, marginTop: '4px' }}>
                         {p.dias_teste} dias de teste grátis
