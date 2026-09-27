@@ -24,7 +24,7 @@ function AdminWhatsapp() {
   const [telefoneTeste, setTelefoneTeste] = useState('');
   const [testando, setTestando] = useState(false);
 
-  const [botConfig, setBotConfig] = useState({ permiteIa: false, modo: 'guiado', modoLivreDisponivel: true, nome: '', personalidade: '', boasVindas: '', temperatura: 0.6, resumoProfissionaisAtivo: false, resumoProfissionaisHorario: '08:00', horarioAtivo: false, horarioInicio: '09:00', horarioFim: '18:00', horarioDias: [1, 2, 3, 4, 5, 6], mensagemFora: '', mensagemForaPadrao: '' });
+  const [botConfig, setBotConfig] = useState({ permiteIa: false, modo: 'guiado', modoLivreDisponivel: true, personalidadeDisponivel: true, nome: '', personalidade: '', boasVindas: '', temperatura: 0.6, resumoProfissionaisAtivo: false, resumoProfissionaisHorario: '08:00', horarioAtivo: false, horarioInicio: '09:00', horarioFim: '18:00', horarioDias: [1, 2, 3, 4, 5, 6], mensagemFora: '', mensagemForaPadrao: '' });
   const [salvandoBot, setSalvandoBot] = useState(false);
 
   const pollRef = useRef(null);
@@ -323,6 +323,19 @@ function AdminWhatsapp() {
                     : 'O bot segue um menu numerado fixo, entendendo texto livre só pra identificar a intenção inicial.')}
             </p>
 
+            {botConfig.personalidadeDisponivel === false && (
+              <div style={{ ...styles.upsell, marginTop: '16px' }}>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--fx-muted)' }}>
+                  <span style={{ ...styles.badgeManutencao, marginLeft: 0, marginRight: '8px' }}>Em manutenção</span>
+                  Nome, personalidade e criatividade do assistente estão temporariamente em manutenção. O bot responde com as mensagens padrão por enquanto, e o que você já configurou fica salvo.
+                </p>
+              </div>
+            )}
+
+            <fieldset
+              disabled={botConfig.personalidadeDisponivel === false}
+              style={{ border: 0, padding: 0, margin: 0, minWidth: 0, ...(botConfig.personalidadeDisponivel === false ? { opacity: 0.55, cursor: 'not-allowed' } : {}) }}
+            >
             <label style={{ ...styles.label, marginTop: '16px' }}>Nome do assistente</label>
             <input
               type="text"
@@ -357,6 +370,7 @@ function AdminWhatsapp() {
             <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>
               Mais baixo = respostas mais previsíveis e diretas. Mais alto = respostas mais variadas e criativas.
             </p>
+            </fieldset>
           </>
         )}
 

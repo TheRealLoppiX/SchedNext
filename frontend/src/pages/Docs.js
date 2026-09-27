@@ -388,6 +388,9 @@ function Docs() {
           {/* ===================== WHATSAPP: PERSONALIDADE ===================== */}
           <section id="whatsapp-personalidade" className="doc-secao">
             <h2>Personalidade do assistente <Badge tipo="pro" /></h2>
+            <p style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24', fontSize: '13.5px', fontWeight: '600' }}>
+              Nome, personalidade e criatividade do assistente estão em manutenção temporariamente. O bot responde com as mensagens padrão enquanto isso, e o que já foi configurado fica salvo. A mensagem de boas-vindas continua funcionando normalmente.
+            </p>
             <p className="doc-intro">Em <em>Admin → WhatsApp</em>, cada negócio pode ajustar como o bot se comunica:</p>
             <div className="doc-grid-2">
               <div className="doc-card">
