@@ -334,8 +334,27 @@ code {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Cursor piscando enquanto a resposta da IA/time é "digitada" na tela (ver TextoDigitando em
+   HelpButton.js) — a revelação do texto em si é feita em JS (progressiva, char a char), porque o
+   truque de CSS puro (width 0->100% com overflow escondido) só funciona bem em texto de uma
+   linha só, e as respostas do chat quebram em várias linhas. */
+@keyframes bb-cursor-pisca {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.bb-cursor-digitando {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: currentColor;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: bb-cursor-pisca 0.8s step-end infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .bb-help-fab, .bb-help-box, .bb-help-bolha, .bb-help-item { animation: none !important; }
+  .bb-help-fab, .bb-help-box, .bb-help-bolha, .bb-help-item, .bb-cursor-digitando { animation: none !important; }
 }
 
 .bb-help-fab {

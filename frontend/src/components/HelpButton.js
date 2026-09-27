@@ -32,6 +32,35 @@ const FAQ = [
 // suporte@ é reservado só pra suporte técnico (contato@ é comercial/Enterprise, nunca misturar).
 const EMAIL_SUPORTE = 'suporte@schednext.com.br';
 const INTERVALO_POLL_MS = 8000;
+const VELOCIDADE_DIGITACAO_MS = 14; // por caractere
+
+// Revela o texto progressivamente, caractere por caractere, simulando o time/IA "digitando" —
+// só quando `ativo` (decidido uma única vez em HelpButton, ver deveAnimar) é true; senão mostra
+// o texto pronto direto. Roda inteiramente em JS porque o truque de CSS puro (width 0% -> 100%)
+// só funciona bem numa linha só, e as respostas do chat quebram em várias linhas.
+function TextoDigitando({ texto, ativo }) {
+  const [exibido, setExibido] = useState(ativo ? '' : texto);
+  const [terminou, setTerminou] = useState(!ativo);
+
+  useEffect(() => {
+    if (!ativo) return;
+    let cancelado = false;
+    let i = 0;
+    const passo = () => {
+      if (cancelado) return;
+      i += 1;
+      setExibido(texto.slice(0, i));
+      if (i < texto.length) setTimeout(passo, VELOCIDADE_DIGITACAO_MS);
+      else setTerminou(true);
+    };
+    const primeiro = setTimeout(passo, VELOCIDADE_DIGITACAO_MS);
+    return () => { cancelado = true; clearTimeout(primeiro); };
+    // ativo já vem decidido de fora e nunca muda depois de montado — roda só uma vez.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return <>{exibido}{!terminou && <span className="bb-cursor-digitando" aria-hidden="true" />}</>;
+}
 
 // Botão flutuante único de ajuda: perguntas frequentes (qualquer página logada, exceto a
 // landing) em cima, e atendimento embaixo — chat com IA pra admin de empresa com IA liberada no
@@ -74,19 +103,36 @@ function HelpButton() {
   const pollRef = useRef(null);
   const fimListaRef = useRef(null);
 
+  // Controla o efeito de "digitando" (ver TextoDigitando abaixo): só anima uma mensagem na
+  // primeira vez que ela aparece nesta sessão do widget — reabrir o painel, trocar de aba ou
+  // qualquer outro re-render não repete a animação em cima do que já foi mostrado.
+  const mensagensVistasRef = useRef(new Set());
+  const decisaoAnimarRef = useRef(new Map());
+  const deveAnimar = (id) => {
+    if (decisaoAnimarRef.current.has(id)) return decisaoAnimarRef.current.get(id);
+    const animar = !mensagensVistasRef.current.has(id);
+    decisaoAnimarRef.current.set(id, animar);
+    mensagensVistasRef.current.add(id);
+    return animar;
+  };
+
   const carregarAtual = useCallback(async () => {
+    const primeiraCarga = !carregadoSuporte;
     try {
       const res = await fetch(`${API_URL}/admin/suporte`);
       const dados = await res.json();
       setPermitidoIA(!!dados.permitido);
       setConversa(dados.conversa || null);
+      // Mensagens já existentes na primeira busca (histórico da conversa ativa) aparecem
+      // prontas — só as que chegarem DEPOIS (resposta nova da IA/time) digitam na tela.
+      if (primeiraCarga) (dados.mensagens || []).forEach((m) => mensagensVistasRef.current.add(m.id));
       setMensagens(dados.mensagens || []);
     } catch (err) {
       console.error('Erro ao carregar suporte:', err);
     } finally {
       setCarregadoSuporte(true);
     }
-  }, []);
+  }, [carregadoSuporte]);
 
   // Carrega o status do suporte assim que o painel abre (só pra quem pode ter atendimento) —
   // decide se a segunda seção mostra o card de chat ou o de e-mail.
@@ -132,8 +178,13 @@ function HelpButton() {
     try {
       const res = await fetch(`${API_URL}/admin/suporte/historico/${id}`);
       const dados = await res.json();
-      if (res.ok) setItemHistoricoAberto(dados);
-      else toast.error('Não foi possível abrir essa conversa.');
+      if (res.ok) {
+        // Conversa antiga: mostra tudo pronto, sem digitar de novo o que já foi lido antes.
+        (dados.mensagens || []).forEach((m) => mensagensVistasRef.current.add(m.id));
+        setItemHistoricoAberto(dados);
+      } else {
+        toast.error('Não foi possível abrir essa conversa.');
+      }
     } catch (err) {
       toast.error('Erro de conexão. Tente novamente.');
     }
@@ -204,7 +255,7 @@ function HelpButton() {
     <div key={m.id} className="bb-help-bolha" style={{ display: 'flex', justifyContent: m.remetente === 'empresa' ? 'flex-end' : 'flex-start' }}>
       <div style={m.remetente === 'empresa' ? chatStyles.bolhaEmpresa : (m.remetente === 'super_admin' ? chatStyles.bolhaHumano : chatStyles.bolhaIa)}>
         {m.remetente === 'super_admin' && <div style={chatStyles.rotuloHumano}>{m.nome_admin || 'Time SchedNext'}</div>}
-        {m.texto}
+        {m.remetente === 'empresa' ? m.texto : <TextoDigitando texto={m.texto} ativo={deveAnimar(m.id)} />}
       </div>
     </div>
   );
