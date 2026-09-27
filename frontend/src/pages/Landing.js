@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import './Landing.css';
 import { API_URL } from '../services/api';
 import { observarSecoes } from '../utils/analytics';
-import { formatarReal, precoPromocionalPrimeiroMes, resumoCampanha } from '../utils/campanhaPlano';
+import { formatarReal, precoPromocionalPrimeiroMes, continuacaoCampanha } from '../utils/campanhaPlano';
 
 // Landing "ofício": capítulos em tela cheia (um por tipo de negócio) controlados pela rolagem,
 // com foto/vídeo do ofício ao fundo e partículas (oficio/particulasOficio.js) que viram o símbolo
@@ -212,6 +212,9 @@ function Landing() {
   const refPalcoVisivel = useRef(true);
 
   const diasTesteGratis = planos.find((pl) => pl.nome === 'Grátis')?.dias_teste || 0;
+  // Reserva a linha da promoção em todos os cards (vazia nos sem campanha) pra as listas
+  // continuarem alinhadas entre si.
+  const algumaCampanha = planos.some((pl) => continuacaoCampanha(pl));
 
   useEffect(() => observarSecoes(), []);
   useEffect(() => { if (reduzirMovimento) setIntroFeita(true); }, [reduzirMovimento]);
@@ -582,7 +585,7 @@ function Landing() {
                       <><small>R$</small>{p.preco_mensal === 0 ? '0' : Number(p.preco_mensal).toFixed(2).replace('.', ',')}{p.preco_mensal > 0 && <small>/mês</small>}</>
                     )}
                   </div>
-                  {resumoCampanha(p) && <p className="of-plano-promo">{resumoCampanha(p)}</p>}
+                  {algumaCampanha && <p className="of-plano-promo">{continuacaoCampanha(p) || ' '}</p>}
                   <ul>
                     {p.dias_teste > 0 && <li>{p.dias_teste} dias de teste grátis</li>}
                     <li>{p.limite_profissionais == null ? 'Profissionais ilimitados' : `Até ${p.limite_profissionais} profissional(is)`}</li>

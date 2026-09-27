@@ -20,3 +20,14 @@ export function resumoCampanha(plano) {
   partes.push(`depois R$ ${formatarReal(plano.preco_mensal)}/mês`);
   return partes.join(' · ');
 }
+
+// Complemento do preço do 1º mês já em destaque no card: "depois R$ 99,90/mês" (ou, com mais
+// ciclos promocionais, "2º mês R$ 19,90 · depois R$ 99,90/mês").
+export function continuacaoCampanha(plano) {
+  if (precoPromocionalPrimeiroMes(plano) == null) return null;
+  const partes = plano.campanha.precos_por_ciclo
+    .filter((c) => c.numero_ciclo > 1)
+    .map((c) => `${c.numero_ciclo}º mês R$ ${formatarReal(c.valor)}`);
+  partes.push(`depois R$ ${formatarReal(plano.preco_mensal)}/mês`);
+  return partes.join(' · ');
+}
