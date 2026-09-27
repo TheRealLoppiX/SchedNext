@@ -356,6 +356,7 @@ video.of-midia, img.of-midia { filter: grayscale(0.85) contrast(1.15) brightness
 .of-plano-preco { font-family: var(--display); font-size: 62px; line-height: 1; margin: 16px 0 24px; }
 .of-plano-preco small { font-family: var(--corpo); font-size: 15px; color: var(--creme-fraco); margin: 0 4px; }
 .of-plano-consulta { font-size: 38px; }
+.of-plano-promo { margin: -12px 0 16px; min-height: 1.4em; font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; color: var(--tom); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .of-plano ul { list-style: none; padding: 20px 0 0; margin: 0 0 26px; border-top: 1px solid var(--linha); display: flex; flex-direction: column; gap: 10px; flex: 1; font-size: 14px; color: rgba(244, 236, 225, 0.82); }
 .of-plano li::before { content: '+'; color: var(--tom); font-family: var(--mono); margin-right: 10px; }
 

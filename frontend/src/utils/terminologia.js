@@ -12,7 +12,9 @@ const TERMINOLOGIA = {
     exemploNome: 'Barbearia do João'
   },
   salao: {
-    profissional: 'Cabeleireiro', profissionalPlural: 'Cabeleireiros',
+    // Neutro de propósito: "Cabeleireiro(s)" soava masculino num segmento em que a maioria da
+    // equipe é de mulheres, e "Profissional" serve pros dois gêneros.
+    profissional: 'Profissional', profissionalPlural: 'Profissionais',
     local: 'Salão', artigo: 'o', artigoContraido: 'do',
     exemploNome: 'Salão da Maria'
   },

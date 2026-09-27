@@ -3,6 +3,7 @@ import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
+import { formatarTelefone } from '../../utils/telefone';
 
 const INTERVALO_POLL_MS = 5000;
 // Depois de conectado, o poll rápido de 5s (feito só enquanto tem QR pendente) para de rodar —
@@ -17,14 +18,20 @@ function AdminWhatsapp() {
   const [carregando, setCarregando] = useState(true);
   const [permitido, setPermitido] = useState(false);
   const [conectado, setConectado] = useState(false);
+  // Servidor do WhatsApp (Evolution/VPS) não respondeu na última consulta de status.
+  const [servidorIndisponivel, setServidorIndisponivel] = useState(false);
   const [instancia, setInstancia] = useState(null);
   const [qrcode, setQrcode] = useState(null);
+  // Conexão por código de pareamento (sem QR Code), pra quem só tem o celular.
+  const [codigoPareamento, setCodigoPareamento] = useState(null);
+  const [mostrarFormCodigo, setMostrarFormCodigo] = useState(false);
+  const [telefonePareamento, setTelefonePareamento] = useState('');
   const [conectando, setConectando] = useState(false);
   const [desconectando, setDesconectando] = useState(false);
   const [telefoneTeste, setTelefoneTeste] = useState('');
   const [testando, setTestando] = useState(false);
 
-  const [botConfig, setBotConfig] = useState({ permiteIa: false, modo: 'guiado', modoLivreDisponivel: true, nome: '', personalidade: '', boasVindas: '', temperatura: 0.6, resumoProfissionaisAtivo: false, resumoProfissionaisHorario: '08:00', horarioAtivo: false, horarioInicio: '09:00', horarioFim: '18:00', horarioDias: [1, 2, 3, 4, 5, 6], mensagemFora: '', mensagemForaPadrao: '' });
+  const [botConfig, setBotConfig] = useState({ permiteIa: false, modo: 'guiado', modoLivreDisponivel: true, personalidadeDisponivel: true, nome: '', personalidade: '', boasVindas: '', temperatura: 0.6, resumoProfissionaisAtivo: false, resumoProfissionaisHorario: '08:00', horarioAtivo: false, horarioInicio: '09:00', horarioFim: '18:00', horarioDias: [1, 2, 3, 4, 5, 6], mensagemFora: '', mensagemForaPadrao: '' });
   const [salvandoBot, setSalvandoBot] = useState(false);
 
   const pollRef = useRef(null);
@@ -46,6 +53,7 @@ function AdminWhatsapp() {
       const dados = await res.json();
       setPermitido(!!dados.permitido);
       setConectado(!!dados.conectado);
+      setServidorIndisponivel(!!dados.erroConsulta);
       setInstancia(dados.instancia || null);
       if (dados.botConfig && !botConfigCarregadoRef.current) {
         setBotConfig(dados.botConfig);
@@ -53,11 +61,13 @@ function AdminWhatsapp() {
       }
       if (dados.conectado) {
         setQrcode(null);
+        setCodigoPareamento(null);
+        setMostrarFormCodigo(false);
         pararPoll();
       } else if (conectadoRef.current && !dados.erroConsulta) {
         // Estava conectado e agora não está mais — sessão caiu sozinha (ex: celular desparelhado
         // do lado do WhatsApp). Sem isso, o admin só descobria recarregando a página por acaso.
-        toast.error('O WhatsApp desconectou. Escaneie o QR Code novamente para reconectar.');
+        toast.error('O WhatsApp desconectou. Conecte novamente pelo celular ou pelo QR Code.');
       }
       conectadoRef.current = !!dados.conectado;
       return dados;
@@ -75,10 +85,10 @@ function AdminWhatsapp() {
   // Enquanto tem QR pendente pra escanear, confere a cada 5s se já conectou (sem exigir que o
   // usuário fique clicando em nada — o pareamento no celular é instantâneo do lado do WhatsApp).
   useEffect(() => {
-    if (!qrcode) return;
+    if (!qrcode && !codigoPareamento) return;
     pollRef.current = setInterval(() => { carregarStatus(); }, INTERVALO_POLL_MS);
     return pararPoll;
-  }, [qrcode, carregarStatus]);
+  }, [qrcode, codigoPareamento, carregarStatus]);
 
   // Já conectado: poll bem mais espaçado só pra detectar uma queda silenciosa da sessão.
   useEffect(() => {
@@ -121,6 +131,36 @@ function AdminWhatsapp() {
     }
   };
 
+  const gerarCodigoPareamento = async () => {
+    if (telefonePareamento.replace(/\D/g, '').length < 10) return toast.error('Informe o número do WhatsApp com DDD.');
+    setConectando(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/whatsapp/codigo-pareamento`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefone: telefonePareamento })
+      });
+      const dados = await res.json();
+      if (!res.ok) return toast.error(dados.error || 'Não foi possível gerar o código.');
+      setInstancia(dados.instancia);
+      setQrcode(null);
+      setCodigoPareamento(dados.codigo);
+    } catch (err) {
+      toast.error('Erro de conexão. Tente novamente.');
+    } finally {
+      setConectando(false);
+    }
+  };
+
+  const copiarCodigo = async () => {
+    try {
+      await navigator.clipboard.writeText(codigoPareamento);
+      toast.success('Código copiado!');
+    } catch {
+      toast.error('Não foi possível copiar. Digite o código manualmente.');
+    }
+  };
+
   const gerarNovoQrCode = async () => {
     setConectando(true);
     try {
@@ -137,7 +177,7 @@ function AdminWhatsapp() {
 
   const desconectar = async () => {
     const ok = await confirmar('Desconectar o WhatsApp desta empresa?', {
-      detail: 'O bot de agendamento por WhatsApp para de funcionar até conectar de novo (vai precisar escanear o QR Code outra vez, possivelmente com outro número).',
+      detail: 'O bot de agendamento por WhatsApp para de funcionar até conectar de novo (vai precisar conectar de novo, pelo celular ou pelo QR Code, possivelmente com outro número).',
       confirmText: 'Desconectar',
       danger: true
     });
@@ -213,6 +253,15 @@ function AdminWhatsapp() {
       <h2 style={styles.title}>WhatsApp</h2>
       <p style={styles.subtitle}>Conecte um número de WhatsApp para seus clientes agendarem horário direto por lá.</p>
 
+      {servidorIndisponivel && (
+        <div style={{ ...styles.upsell, marginBottom: '16px' }}>
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--fx-text)' }}>
+            <span style={{ ...styles.badgeManutencao, marginLeft: 0, marginRight: '8px' }}>Instabilidade</span>
+            O servidor do WhatsApp não está respondendo agora. Não é preciso reconectar: assim que ele voltar, esta tela se atualiza sozinha.
+          </p>
+        </div>
+      )}
+
       {conectado ? (
         <div style={styles.cardAtual}>
           <div style={styles.linhaTopo}>
@@ -242,6 +291,31 @@ function AdminWhatsapp() {
             </div>
           </div>
         </div>
+      ) : codigoPareamento ? (
+        <div style={styles.cardAtual}>
+          <p style={{ margin: '0 0 12px', fontSize: '14px', color: 'var(--fx-text)' }}>
+            Digite este código no WhatsApp do número informado:
+          </p>
+          <div style={{ textAlign: 'center' }}>
+            <div style={styles.codigoPareamento}>
+              {codigoPareamento.length === 8 ? `${codigoPareamento.slice(0, 4)}-${codigoPareamento.slice(4)}` : codigoPareamento}
+            </div>
+            <button type="button" onClick={copiarCodigo} style={{ ...styles.btnSecundario, marginTop: '10px' }}>Copiar código</button>
+          </div>
+          <ol style={{ margin: '16px 0 0', paddingLeft: '20px', fontSize: '13px', color: 'var(--fx-text)', lineHeight: 1.7 }}>
+            <li>Abra o WhatsApp e toque em <strong>Configurações</strong> (iPhone) ou nos <strong>três pontinhos</strong> (Android).</li>
+            <li>Toque em <strong>Aparelhos conectados → Conectar um aparelho</strong>.</li>
+            <li>Na tela da câmera, toque em <strong>Conectar com número de telefone</strong>.</li>
+            <li>Digite o código acima.</li>
+          </ol>
+          <p style={{ margin: '14px 0 0', fontSize: '12px', color: 'var(--fx-muted)', textAlign: 'center' }}>
+            Dá pra fazer tudo neste mesmo celular: copie o código, abra o WhatsApp e volte pra cá depois. Essa página confere sozinha se já conectou.
+          </p>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '14px' }}>
+            <LoadingButton loading={conectando} onClick={gerarCodigoPareamento} style={styles.btnSecundario}>Gerar novo código</LoadingButton>
+            <button type="button" onClick={() => { setCodigoPareamento(null); conectar(); }} style={styles.btnSecundario}>Usar QR Code</button>
+          </div>
+        </div>
       ) : qrcode ? (
         <div style={styles.cardAtual}>
           <p style={{ margin: '0 0 16px', fontSize: '14px', color: 'var(--fx-text)' }}>
@@ -261,7 +335,30 @@ function AdminWhatsapp() {
       ) : (
         <div style={styles.cardForm}>
           <p style={{ margin: '0 0 16px', fontSize: '14px', color: 'var(--fx-text)' }}>Nenhum WhatsApp conectado ainda.</p>
-          <LoadingButton loading={conectando} onClick={conectar} style={styles.btnCadastrar}>Conectar WhatsApp</LoadingButton>
+          {mostrarFormCodigo ? (
+            <>
+              <label style={styles.label}>Número do WhatsApp que vai atender seus clientes</label>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <input
+                  type="tel"
+                  placeholder="(11) 91234-5678"
+                  value={telefonePareamento}
+                  onChange={(e) => setTelefonePareamento(formatarTelefone(e.target.value))}
+                  style={styles.inputTeste}
+                />
+                <LoadingButton loading={conectando} onClick={gerarCodigoPareamento} style={styles.btnCadastrar}>Gerar código</LoadingButton>
+              </div>
+              <button type="button" onClick={() => setMostrarFormCodigo(false)} style={{ ...styles.btnSecundario, marginTop: '12px' }}>Voltar</button>
+            </>
+          ) : (
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button type="button" onClick={() => setMostrarFormCodigo(true)} style={styles.btnCadastrar}>Conectar pelo celular</button>
+              <LoadingButton loading={conectando} onClick={conectar} style={styles.btnSecundario}>Conectar com QR Code</LoadingButton>
+            </div>
+          )}
+          <p style={{ margin: '12px 0 0', fontSize: '12px', color: 'var(--fx-muted)' }}>
+            <strong>Pelo celular:</strong> você recebe um código e digita no próprio WhatsApp, sem precisar de outro aparelho. <strong>QR Code:</strong> escaneie com o celular um código mostrado na tela do computador.
+          </p>
         </div>
       )}
 
@@ -323,6 +420,19 @@ function AdminWhatsapp() {
                     : 'O bot segue um menu numerado fixo, entendendo texto livre só pra identificar a intenção inicial.')}
             </p>
 
+            {botConfig.personalidadeDisponivel === false && (
+              <div style={{ ...styles.upsell, marginTop: '16px' }}>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--fx-muted)' }}>
+                  <span style={{ ...styles.badgeManutencao, marginLeft: 0, marginRight: '8px' }}>Em manutenção</span>
+                  Nome, personalidade e criatividade do assistente estão temporariamente em manutenção. O bot responde com as mensagens padrão por enquanto, e o que você já configurou fica salvo.
+                </p>
+              </div>
+            )}
+
+            <fieldset
+              disabled={botConfig.personalidadeDisponivel === false}
+              style={{ border: 0, padding: 0, margin: 0, minWidth: 0, ...(botConfig.personalidadeDisponivel === false ? { opacity: 0.55, cursor: 'not-allowed' } : {}) }}
+            >
             <label style={{ ...styles.label, marginTop: '16px' }}>Nome do assistente</label>
             <input
               type="text"
@@ -357,6 +467,7 @@ function AdminWhatsapp() {
             <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>
               Mais baixo = respostas mais previsíveis e diretas. Mais alto = respostas mais variadas e criativas.
             </p>
+            </fieldset>
           </>
         )}
 
@@ -508,6 +619,7 @@ const styles = {
   btnCadastrar: { padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4c74f0, #2554eb)', color: '#fff', fontWeight: '600', cursor: 'pointer' },
   btnSecundario: { padding: '8px 14px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', cursor: 'pointer', fontSize: '13px' },
   btnExcluir: { padding: '8px 14px', borderRadius: '6px', border: '1px solid var(--fx-red-line)', background: 'var(--fx-red-bg)', color: 'var(--fx-red)', cursor: 'pointer', fontSize: '13px' },
+  codigoPareamento: { display: 'inline-block', padding: '12px 20px', borderRadius: '10px', border: '1px solid var(--fx-line)', background: 'var(--fx-surface-2)', fontFamily: 'monospace', fontSize: '30px', fontWeight: 800, letterSpacing: '4px', color: 'var(--fx-text)' },
   qrImg: { width: '220px', maxWidth: '100%', height: 'auto', aspectRatio: '1', border: '1px solid var(--fx-line)', borderRadius: '8px', padding: '8px' },
   blocoTeste: { marginTop: '18px', paddingTop: '16px', borderTop: '1px solid var(--fx-line)' },
   inputTeste: { flex: '1 1 200px', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--fx-line-2)', fontSize: '13px' },
