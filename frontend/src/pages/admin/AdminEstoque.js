@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import useEscToClose from '../../hooks/useEscToClose';
@@ -6,6 +6,9 @@ import LoadingButton from '../../components/LoadingButton';
 import EmptyState from '../../components/EmptyState';
 import { obterTerminologia } from '../../utils/terminologia';
 import { API_URL } from '../../services/api';
+import LeitorCodigoBarras from '../../components/LeitorCodigoBarras';
+
+const formatarReal = (v) => `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
 
 function AdminEstoque({ empresaId }) {
   const toast = useToast();
@@ -35,7 +38,13 @@ function AdminEstoque({ empresaId }) {
   // --- ESTADOS DO ESTOQUE E RELATÓRIO ---
   const [produtos, setProdutos] = useState([]);
   const [editandoId, setEditandoId] = useState(null);
-  const [formData, setFormData] = useState({ nome: '', valor: '', quantidade: '0' });
+  // Estoque separado: produtos de venda (vão pro caixa) e de uso do estabelecimento.
+  const [abaTipo, setAbaTipo] = useState('venda');
+  const [formData, setFormData] = useState({ nome: '', tipo: 'venda', codigo_barras: '', valor: '', custo: '', data_compra: '', quantidade: '0' });
+  const [busca, setBusca] = useState('');
+  // 'cadastro' preenche o código no formulário; 'busca' procura o produto na lista.
+  const [leitorPara, setLeitorPara] = useState(null);
+  const campoPrecoRef = useRef(null);
 
   const [filtroRelatorio, setFiltroRelatorio] = useState({ 
       inicio: new Date().toISOString().split('T')[0], 
@@ -116,6 +125,60 @@ function AdminEstoque({ empresaId }) {
     }
   };
 
+  const limparFormulario = () => {
+    setEditandoId(null);
+    setFormData({ nome: '', tipo: abaTipo, codigo_barras: '', valor: '', custo: '', data_compra: '', quantidade: '0' });
+  };
+
+  // Troca de aba limpa o formulário pra não cadastrar no tipo errado.
+  useEffect(() => {
+    setEditandoId(null);
+    setFormData({ nome: '', tipo: abaTipo, codigo_barras: '', valor: '', custo: '', data_compra: '', quantidade: '0' });
+  }, [abaTipo]);
+
+  // Código lido na busca: acha o produto (e troca pra aba dele) ou oferece cadastrar com o código.
+  const procurarPorCodigo = (codigo) => {
+    const achado = produtos.find(p => p.codigo_barras === codigo);
+    if (achado) {
+      if ((achado.tipo || 'venda') !== abaTipo) setAbaTipo(achado.tipo || 'venda');
+      setBusca(codigo);
+      return;
+    }
+    setEditandoId(null);
+    setFormData({ ...{ nome: '', tipo: abaTipo, codigo_barras: '', valor: '', custo: '', data_compra: '', quantidade: '0' }, codigo_barras: codigo });
+    toast.info('Nenhum produto com esse código. Complete o cadastro acima.');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const aoLerCodigo = useCallback((codigo) => {
+    const destino = leitorPara;
+    setLeitorPara(null);
+    if (destino === 'cadastro') {
+      setFormData(f => ({ ...f, codigo_barras: codigo }));
+      setTimeout(() => campoPrecoRef.current?.focus(), 0);
+    } else {
+      procurarPorCodigo(codigo);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leitorPara, produtos, abaTipo]);
+
+  // Leitor USB/Bluetooth digita o código e manda Enter: no campo de código, o Enter só pula pro
+  // próximo campo em vez de enviar o formulário pela metade.
+  const enterDoLeitorNoCadastro = (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    campoPrecoRef.current?.focus();
+  };
+
+  const enterDoLeitorNaBusca = (e) => {
+    if (e.key !== 'Enter' || !busca.trim()) return;
+    e.preventDefault();
+    const codigo = busca.trim();
+    if (!produtos.some(p => p.codigo_barras === codigo) && /^[0-9A-Za-z-]{3,40}$/.test(codigo) && !produtosDaAba.some(p => p.nome.toLowerCase().includes(codigo.toLowerCase()))) {
+      procurarPorCodigo(codigo);
+    }
+  };
+
   // --- FUNÇÕES DE ESTOQUE ---
   const carregarProdutos = useCallback(async () => {
     if (!idEfetivo) return;
@@ -136,28 +199,47 @@ function AdminEstoque({ empresaId }) {
       const res = await fetch(url, {
         method: editandoId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ empresa_id: idEfetivo, nome: formData.nome, valor: formData.valor, quantidade: formData.quantidade })
+        body: JSON.stringify({
+          nome: formData.nome,
+          tipo: formData.tipo,
+          codigo_barras: formData.codigo_barras,
+          valor: formData.tipo === 'uso' ? '' : formData.valor,
+          custo: formData.custo,
+          data_compra: formData.data_compra,
+          quantidade: formData.quantidade,
+          usuario_nome: autorizado?.nome
+        })
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        toast.success(editandoId ? "Produto atualizado." : "Produto cadastrado.");
-        setFormData({ nome: '', valor: '', quantidade: '0' });
-        setEditandoId(null);
+        toast.success(editandoId ? "Produto atualizado." : `Produto cadastrado. Código: ${data.codigo_barras}`);
+        limparFormulario();
         carregarProdutos();
-      } else { toast.error("Não foi possível processar a requisição."); }
+      } else { toast.error(data.error || "Não foi possível processar a requisição."); }
     } catch (err) { toast.error("Não foi possível conectar ao servidor. Tente novamente em instantes."); }
     finally { setSalvandoProduto(false); }
   };
 
   const prepararEdicao = (produto) => {
     setEditandoId(produto.id);
-    setFormData({ nome: produto.nome, valor: produto.preco || produto.valor, quantidade: produto.quantidade });
+    setFormData({
+      nome: produto.nome,
+      tipo: produto.tipo || 'venda',
+      codigo_barras: produto.codigo_barras || '',
+      valor: produto.valor ?? '',
+      custo: produto.custo ?? '',
+      data_compra: '',
+      quantidade: produto.quantidade
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const alternarStatus = async (id, statusAtual, nome) => {
     const ativoSeguro = statusAtual === undefined ? 1 : statusAtual;
     const ok = await confirmar(`Deseja ${ativoSeguro ? 'ocultar' : 'reativar'} ${nome}?`, {
-      detail: ativoSeguro ? 'O produto para de aparecer para venda imediatamente.' : 'O produto volta a ficar disponível para venda.',
+      detail: abaTipo === 'uso'
+        ? (ativoSeguro ? 'O produto fica oculto da lista de uso.' : 'O produto volta pra lista de uso.')
+        : (ativoSeguro ? 'O produto para de aparecer para venda imediatamente.' : 'O produto volta a ficar disponível para venda.'),
       confirmText: ativoSeguro ? 'Ocultar' : 'Reativar',
       danger: !!ativoSeguro
     });
@@ -207,7 +289,9 @@ function AdminEstoque({ empresaId }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           produto_id: modalAjuste.id, usuario_nome: autorizado.nome,
-          quantidade: modalAjuste.quantidade, tipo: modalAjuste.tipo, justificativa: modalAjuste.justificativa
+          quantidade: modalAjuste.quantidade, tipo: modalAjuste.tipo, justificativa: modalAjuste.justificativa,
+          custo_unitario: modalAjuste.tipo === 'ADICIONAR' ? modalAjuste.custo_unitario : '',
+          data_compra: modalAjuste.tipo === 'ADICIONAR' ? modalAjuste.data_compra : ''
         })
       });
       if (res.ok) {
@@ -215,7 +299,8 @@ function AdminEstoque({ empresaId }) {
         setModalAjuste(null);
         carregarProdutos();
       } else {
-        toast.error("Não foi possível atualizar o estoque.");
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Não foi possível atualizar o estoque.");
       }
     } catch (err) {
       toast.error('Não foi possível conectar ao servidor. Tente novamente em instantes.');
@@ -247,9 +332,9 @@ function AdminEstoque({ empresaId }) {
 
       dadosRelatorio.forEach(r => {
           const dataFormatada = new Date(r.data_movimentacao).toLocaleString('pt-BR');
-          const tipo = r.tipo === 'ADICIONAR' ? 'Entrada' : 'Saida';
+          const tipo = r.tipo === 'ADICIONAR' ? 'Entrada' : r.tipo === 'VENDA' ? 'Venda' : 'Saida';
           // Trata a justificativa para evitar quebra de linha ou ponto e vírgula no CSV
-          const justificativa = r.justificativa.replace(/;/g, ',').replace(/\n/g, ' '); 
+          const justificativa = (r.justificativa || '').replace(/;/g, ',').replace(/\n/g, ' '); 
           
           csvContent += `${dataFormatada};${r.usuario_nome};${r.produto_nome};${tipo};${r.quantidade};${justificativa}\n`;
       });
@@ -287,6 +372,13 @@ function AdminEstoque({ empresaId }) {
       janela.document.close();
       setTimeout(() => { janela.print(); }, 400);
   };
+
+  const produtosDaAba = produtos.filter(p => (p.tipo || 'venda') === abaTipo);
+  const termoBusca = busca.trim().toLowerCase();
+  const produtosVisiveis = termoBusca
+    ? produtosDaAba.filter(p => p.nome.toLowerCase().includes(termoBusca) || (p.codigo_barras || '').toLowerCase().includes(termoBusca))
+    : produtosDaAba;
+  const ehVenda = formData.tipo === 'venda';
 
   // ==========================================
   // TELA DE BLOQUEIO
@@ -369,10 +461,23 @@ function AdminEstoque({ empresaId }) {
         </div>
       </header>
 
+      <div style={styles.abas} role="tablist">
+        {[['venda', 'Produtos de venda'], ['uso', 'Uso do estabelecimento']].map(([valor, rotulo]) => (
+          <button key={valor} role="tab" aria-selected={abaTipo === valor} onClick={() => { setAbaTipo(valor); setBusca(''); }} style={{ ...styles.aba, ...(abaTipo === valor ? styles.abaAtiva : {}) }}>
+            {rotulo} <span style={styles.abaContagem}>{produtos.filter(p => (p.tipo || 'venda') === valor).length}</span>
+          </button>
+        ))}
+      </div>
+      <p style={styles.dicaAba}>
+        {abaTipo === 'venda'
+          ? 'Produtos que você vende pro cliente. Aparecem no caixa ao finalizar o atendimento.'
+          : 'Produtos que o estabelecimento consome no dia a dia (ex: lâminas, toalhas, shampoo do lavatório). Não aparecem no caixa.'}
+      </p>
+
       <div style={styles.cardPadrao}>
         <div style={styles.cardHeader}>
             <h4 style={styles.cardTitle}>
-            {editandoId ? <><Icons.Edit color="var(--fx-muted)" /> Editando: {formData.nome}</> : <><Icons.Plus color="var(--fx-muted)" /> Cadastrar Novo Produto</>}
+            {editandoId ? <><Icons.Edit color="var(--fx-muted)" /> Editando: {formData.nome}</> : <><Icons.Plus color="var(--fx-muted)" /> {abaTipo === 'venda' ? 'Cadastrar produto de venda' : 'Cadastrar produto de uso'}</>}
             </h4>
         </div>
         
@@ -381,24 +486,61 @@ function AdminEstoque({ empresaId }) {
             <label style={styles.label}>Nome do Produto</label>
             <input placeholder="Ex: Pomada Modeladora" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} required style={styles.input} />
           </div>
+          {editandoId && (
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Tipo</label>
+              <select value={formData.tipo} onChange={e => setFormData({...formData, tipo: e.target.value})} style={styles.select}>
+                <option value="venda">Produto de venda</option>
+                <option value="uso">Uso do estabelecimento</option>
+              </select>
+            </div>
+          )}
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Preço de Venda (R$)</label>
-            <input placeholder="0,00" type="number" step="0.01" min="0" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} required style={styles.input} />
+            <label style={styles.label}>Código de barras (opcional)</label>
+            <div style={styles.linhaCodigo}>
+              <input
+                placeholder="Leia ou digite o código"
+                value={formData.codigo_barras}
+                onChange={e => setFormData({...formData, codigo_barras: e.target.value.trim()})}
+                onKeyDown={enterDoLeitorNoCadastro}
+                style={{ ...styles.input, flex: 1, minWidth: 0 }}
+              />
+              <button type="button" onClick={() => setLeitorPara('cadastro')} style={styles.btnCamera} title="Ler com a câmera" aria-label="Ler código com a câmera"><Icons.Camera color="var(--fx-text)" /></button>
+            </div>
+            <small style={styles.dicaCampo}>Sem código, o sistema gera um automaticamente.</small>
           </div>
+          {ehVenda && (
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Preço de Venda (R$)</label>
+              <input ref={campoPrecoRef} placeholder="0,00" type="number" step="0.01" min="0" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} required style={styles.input} />
+            </div>
+          )}
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Estoque Atual</label>
-            <input 
-              type="number" min="0" value={formData.quantidade} disabled={!!editandoId}
-              onChange={e => setFormData({...formData, quantidade: e.target.value})} required 
-              style={{...styles.input, backgroundColor: editandoId ? 'var(--fx-surface-2)' : 'var(--fx-card)', cursor: editandoId ? 'not-allowed' : 'text'}}
-            />
+            <label style={styles.label}>Custo unitário de compra (opcional)</label>
+            <input ref={ehVenda ? undefined : campoPrecoRef} placeholder="0,00" type="number" step="0.01" min="0" value={formData.custo} onChange={e => setFormData({...formData, custo: e.target.value})} style={styles.input} />
           </div>
+          {!editandoId && (
+            <>
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Data da compra (opcional)</label>
+                <input type="date" value={formData.data_compra} onChange={e => setFormData({...formData, data_compra: e.target.value})} style={styles.input} />
+              </div>
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Estoque inicial</label>
+                <input
+                  type="number" min="0" value={formData.quantidade}
+                  onChange={e => setFormData({...formData, quantidade: e.target.value})} required
+                  style={styles.input}
+                />
+              </div>
+            </>
+          )}
 
           <div style={{ ...styles.inputGroup, justifyContent: 'flex-end' }}>
             <div style={{ display: 'flex', gap: '10px' }}>
                 <LoadingButton type="submit" loading={salvandoProduto} style={styles.btnPrincipal}>{editandoId ? 'Salvar Edição' : 'Cadastrar Produto'}</LoadingButton>
                 {editandoId && (
-                <button type="button" onClick={() => {setEditandoId(null); setFormData({nome:'', valor:'', quantidade:'0'})}} style={styles.btnAcaoClaro}>Cancelar</button>
+                <button type="button" onClick={limparFormulario} style={styles.btnAcaoClaro}>Cancelar</button>
                 )}
             </div>
           </div>
@@ -406,36 +548,53 @@ function AdminEstoque({ empresaId }) {
       </div>
 
       <div style={{...styles.cardPadrao, padding: 0, overflow: 'hidden'}}>
+        <div style={styles.barraBusca}>
+          <input
+            placeholder="Buscar por nome ou código (o leitor também funciona aqui)"
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            onKeyDown={enterDoLeitorNaBusca}
+            style={{ ...styles.input, flex: 1, minWidth: 0 }}
+          />
+          <button type="button" onClick={() => setLeitorPara('busca')} style={styles.btnCamera} title="Buscar com a câmera" aria-label="Buscar produto com a câmera"><Icons.Camera color="var(--fx-text)" /></button>
+        </div>
         <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>
             <thead>
                 <tr>
                 <th style={{...styles.th, paddingLeft: '25px'}}>PRODUTO</th>
                 <th style={{...styles.th, textAlign: 'center'}}>QTD</th>
-                <th style={{...styles.th, textAlign: 'center'}}>PREÇO</th>
+                <th style={{...styles.th, textAlign: 'center'}}>{abaTipo === 'venda' ? 'PREÇO' : 'CUSTO'}</th>
                 <th style={{...styles.th, textAlign: 'center'}}>STATUS</th>
                 <th style={{...styles.th, textAlign: 'right', paddingRight: '25px'}}>AÇÕES</th>
                 </tr>
             </thead>
             <tbody>
-                {produtos.length > 0 ? produtos.map(p => {
+                {produtosVisiveis.length > 0 ? produtosVisiveis.map(p => {
                 const isAtivo = p.ativo !== 0; 
                 const estoqueBaixo = p.quantidade <= 3;
                 return (
                     <tr key={p.id} style={{...styles.tr, opacity: isAtivo ? 1 : 0.6}}>
-                    <td style={{...styles.td, paddingLeft: '25px'}}><strong style={{color: 'var(--fx-text)', textDecoration: isAtivo ? 'none' : 'line-through'}}>{p.nome}</strong></td>
+                    <td style={{...styles.td, paddingLeft: '25px'}}>
+                        <strong style={{color: 'var(--fx-text)', textDecoration: isAtivo ? 'none' : 'line-through'}}>{p.nome}</strong>
+                        {p.codigo_barras && <div style={styles.codigoLinha}>{p.codigo_barras}</div>}
+                    </td>
                     <td style={{...styles.td, textAlign: 'center'}}>
                         <span style={{...styles.badgeQuantidade, backgroundColor: estoqueBaixo ? 'var(--fx-red-bg)' : 'var(--fx-surface-2)', color: estoqueBaixo ? 'var(--fx-red)' : 'var(--fx-text)', border: `1px solid ${estoqueBaixo ? 'var(--fx-red-line)' : 'var(--fx-line-2)'}`}}>
                             {p.quantidade} un
                         </span>
                     </td>
-                    <td style={{...styles.td, textAlign: 'center'}}><span style={styles.textoPreco}>R$ {parseFloat(p.valor || 0).toFixed(2).replace('.', ',')}</span></td>
                     <td style={{...styles.td, textAlign: 'center'}}>
-                        <span style={{ padding: '4px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', backgroundColor: isAtivo ? 'var(--fx-green-bg)' : 'var(--fx-red-bg)', color: isAtivo ? 'var(--fx-green)' : 'var(--fx-red)' }}>{isAtivo ? 'Venda Ativa' : 'Oculto'}</span>
+                        {abaTipo === 'venda'
+                          ? <><span style={styles.textoPreco}>{formatarReal(p.valor)}</span>{p.custo != null && <div style={styles.codigoLinha}>custo {formatarReal(p.custo)}</div>}</>
+                          : <span style={{ color: 'var(--fx-text)', fontWeight: 600 }}>{p.custo != null ? formatarReal(p.custo) : '-'}</span>}
+                    </td>
+                    <td style={{...styles.td, textAlign: 'center'}}>
+                        <span style={{ padding: '4px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', backgroundColor: isAtivo ? 'var(--fx-green-bg)' : 'var(--fx-red-bg)', color: isAtivo ? 'var(--fx-green)' : 'var(--fx-red)' }}>{isAtivo ? (abaTipo === 'venda' ? 'Venda Ativa' : 'Ativo') : 'Oculto'}</span>
                     </td>
                     <td style={{...styles.td, textAlign: 'right', paddingRight: '25px'}}>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                            <button onClick={() => setModalAjuste({ ...p, tipo: 'ADICIONAR', quantidade: '', justificativa: '' })} style={{...styles.btnIcon, backgroundColor: 'var(--fx-violet-bg)', color: 'var(--fx-violet)'}} title="Ajustar Estoque"><Icons.Trending color="var(--fx-violet)" /></button>
+                            <button onClick={() => setModalAjuste({ ...p, tipo: 'ADICIONAR', quantidade: '', justificativa: '', custo_unitario: p.custo ?? '', data_compra: '' })} style={{...styles.btnIcon, backgroundColor: 'var(--fx-violet-bg)', color: 'var(--fx-violet)'}} title="Ajustar Estoque"><Icons.Trending color="var(--fx-violet)" /></button>
                             <button onClick={() => alternarStatus(p.id, p.ativo, p.nome)} style={styles.btnIcon} title={isAtivo ? "Inativar" : "Ativar"}><Icons.Power color={isAtivo ? "var(--fx-green)" : "var(--fx-faint)"} /></button>
                             <button onClick={() => prepararEdicao(p)} style={styles.btnIcon} title="Editar Cadastro"><Icons.Edit color="var(--fx-muted)" /></button>
                             <button onClick={() => deletar(p.id, p.nome)} style={{...styles.btnIcon, backgroundColor: 'var(--fx-red-bg)'}} title="Excluir"><Icons.Trash color="var(--fx-red)" /></button>
@@ -445,7 +604,9 @@ function AdminEstoque({ empresaId }) {
                 )
                 }) : (
                     <tr><td colSpan="5">
-                        <EmptyState title="Nenhum produto cadastrado no estoque." hint="Use o formulário acima para cadastrar o primeiro produto." />
+                        {termoBusca
+                          ? <EmptyState title="Nenhum produto encontrado." hint="Confira o nome ou o código, ou cadastre o produto no formulário acima." />
+                          : <EmptyState title={abaTipo === 'venda' ? 'Nenhum produto de venda cadastrado.' : 'Nenhum produto de uso cadastrado.'} hint="Use o formulário acima para cadastrar o primeiro produto." />}
                     </td></tr>
                 )}
             </tbody>
@@ -463,14 +624,26 @@ function AdminEstoque({ empresaId }) {
             <h3 style={{marginTop: 0, color: 'var(--fx-text)', fontSize: '18px'}}>Ajuste: {modalAjuste.nome}</h3>
             <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
               <button onClick={() => setModalAjuste({...modalAjuste, tipo: 'ADICIONAR'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', backgroundColor: modalAjuste.tipo === 'ADICIONAR' ? '#10b981' : 'var(--fx-surface-2)', color: modalAjuste.tipo === 'ADICIONAR' ? '#fff' : 'var(--fx-muted)' }}>Adicionar (+)</button>
-              <button onClick={() => setModalAjuste({...modalAjuste, tipo: 'RETIRAR'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', backgroundColor: modalAjuste.tipo === 'RETIRAR' ? '#ef4444' : 'var(--fx-surface-2)', color: modalAjuste.tipo === 'RETIRAR' ? '#fff' : 'var(--fx-muted)' }}>Retirar (-)</button>
+              <button onClick={() => setModalAjuste({...modalAjuste, tipo: 'REMOVER'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', backgroundColor: modalAjuste.tipo === 'REMOVER' ? '#ef4444' : 'var(--fx-surface-2)', color: modalAjuste.tipo === 'REMOVER' ? '#fff' : 'var(--fx-muted)' }}>Retirar (-)</button>
             </div>
             <form onSubmit={realizarMovimentacao}>
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Quantidade a {modalAjuste.tipo === 'ADICIONAR' ? 'Entrar' : 'Sair'}</label>
                 <input type="number" min="1" required style={styles.input} value={modalAjuste.quantidade} onChange={e => setModalAjuste({...modalAjuste, quantidade: e.target.value})} placeholder="Ex: 5" />
               </div>
-              <div style={styles.inputGroup}>
+              {modalAjuste.tipo === 'ADICIONAR' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginTop: '12px' }}>
+                  <div style={styles.inputGroup}>
+                    <label style={styles.label}>Custo unitário (opcional)</label>
+                    <input type="number" step="0.01" min="0" style={styles.input} value={modalAjuste.custo_unitario} onChange={e => setModalAjuste({...modalAjuste, custo_unitario: e.target.value})} placeholder="0,00" />
+                  </div>
+                  <div style={styles.inputGroup}>
+                    <label style={styles.label}>Data da compra (opcional)</label>
+                    <input type="date" style={styles.input} value={modalAjuste.data_compra} onChange={e => setModalAjuste({...modalAjuste, data_compra: e.target.value})} />
+                  </div>
+                </div>
+              )}
+              <div style={{ ...styles.inputGroup, marginTop: '12px' }}>
                 <label style={styles.label}>Justificativa da Alteração</label>
                 <textarea required style={{...styles.input, height: '80px', resize: 'none'}} value={modalAjuste.justificativa} onChange={e => setModalAjuste({...modalAjuste, justificativa: e.target.value})} placeholder={modalAjuste.tipo === 'ADICIONAR' ? "Ex: Compra de novo lote..." : "Ex: Produto avariado, Brinde..."} />
               </div>
@@ -482,6 +655,8 @@ function AdminEstoque({ empresaId }) {
           </div>
         </div>
       )}
+
+      {leitorPara && <LeitorCodigoBarras onLer={aoLerCodigo} onFechar={() => setLeitorPara(null)} />}
 
       {modalSublogin && (
         <div style={styles.overlay}>
@@ -608,6 +783,7 @@ const Icons = {
   UserPlus: ({color}) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '6px', verticalAlign: 'text-bottom'}}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>,
   Search: ({color}) => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
   Download: ({color}) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
+  Camera: ({color}) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>,
   Close: ({color}) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 };
 
@@ -643,6 +819,16 @@ const styles = {
   badgeQuantidade: { padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' },
   textoPreco: { fontWeight: '700', color: 'var(--fx-green)' },
   
+  abas: { display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' },
+  aba: { padding: '10px 16px', borderRadius: '999px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', color: 'var(--fx-muted)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' },
+  abaAtiva: { background: 'var(--fx-strong)', color: '#fff', borderColor: 'var(--fx-strong)' },
+  abaContagem: { fontSize: '11px', opacity: 0.8 },
+  dicaAba: { color: 'var(--fx-muted)', fontSize: '13px', margin: '0 0 20px' },
+  dicaCampo: { color: 'var(--fx-faint)', fontSize: '11.5px' },
+  linhaCodigo: { display: 'flex', gap: '8px' },
+  btnCamera: { background: 'var(--fx-surface-2)', border: '1px solid var(--fx-line-2)', borderRadius: '8px', padding: '0 12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px' },
+  barraBusca: { display: 'flex', gap: '8px', padding: '16px', borderBottom: '1px solid var(--fx-line)' },
+  codigoLinha: { fontSize: '11px', color: 'var(--fx-faint)', marginTop: '2px', fontFamily: 'monospace' },
   btnIcon: { background: 'var(--fx-surface-2)', border: '1px solid var(--fx-line)', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', transition: '0.2s' },
   
   overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '20px', backdropFilter: 'blur(4px)' },

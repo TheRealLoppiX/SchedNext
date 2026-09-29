@@ -3,6 +3,7 @@ import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
+import RelatorioProdutos from './RelatorioProdutos';
 
 const CAMPOS_TAXA = [
   { chave: 'dinheiro', rotulo: 'Dinheiro' },
@@ -863,6 +864,14 @@ function AdminRelatorios({ empresaId }) {
           )}
         </>
       )}
+
+      <RelatorioProdutos
+        empresaId={idEfetivo}
+        dataInicio={filtrosAplicados.dataInicio}
+        dataFim={filtrosAplicados.dataFim}
+        styles={styles}
+        formatarMoeda={formatarMoeda}
+      />
 
       {/* Fica fechada por padrão e visualmente separada do resto (fundo escuro, cadeado) de
           propósito — é configuração financeira sensível, não um filtro do dia a dia (ver

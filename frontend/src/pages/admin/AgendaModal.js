@@ -77,7 +77,7 @@ function AgendaModal({ barbeiro, empresaId, dataSelecionada, horaPreSelecionada,
             const [resAgs, resServicos, resEstoque] = await Promise.all([
                 fetch(`${API_URL}/admin/agendamentos/${empresaId}?dataInicio=${dataSelecionada}&dataFim=${dataSelecionada}`),
                 fetch(`${API_URL}/admin/servicos?empresa=${empresaId}`),
-                fetch(`${API_URL}/admin/estoque/${empresaId}`)
+                fetch(`${API_URL}/admin/estoque/${empresaId}?tipo=venda`)
             ]);
 
             if (resAgs.ok) {

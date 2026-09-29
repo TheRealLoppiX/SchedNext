@@ -112,14 +112,15 @@ const FLAGS_PLANO = [
   ['permite_api_publica', 'API pública'],
   ['permite_relatorios_avancados', 'Relatórios avançados'],
   ['permite_dominio_customizado', 'Domínio próprio'],
-  ['permite_campanhas_assinatura', 'Campanhas promocionais de assinatura']
+  ['permite_campanhas_assinatura', 'Campanhas promocionais de assinatura'],
+  ['permite_relatorio_produtos', 'Relatório de receita líquida por produto']
 ];
 
 const PLANO_VAZIO = {
   nome: '', preco_mensal: '', limite_profissionais: '', limite_agendamentos_mes: '',
   permite_paleta_customizada: false, permite_whatsapp_bot: false, permite_remover_marca: false,
   permite_ia: false, permite_multi_unidade: false, permite_api_publica: false,
-  permite_relatorios_avancados: false, permite_dominio_customizado: false, permite_campanhas_assinatura: false,
+  permite_relatorios_avancados: false, permite_dominio_customizado: false, permite_campanhas_assinatura: false, permite_relatorio_produtos: false,
   ativo: true, publico: true, dias_teste: ''
 };
 

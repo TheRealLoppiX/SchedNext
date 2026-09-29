@@ -27,7 +27,7 @@ function AdminAcoes() {
             const [resCamp, resServ, resProd] = await Promise.all([
                 fetch(`${API_URL}/admin/acoes/${empresaId}`),
                 fetch(`${API_URL}/admin/servicos?empresa=${empresaId}`),
-                fetch(`${API_URL}/admin/estoque/${empresaId}`)
+                fetch(`${API_URL}/admin/estoque/${empresaId}?tipo=venda`)
             ]);
             setCampanhas(await resCamp.json() || []);
             setServicos(await resServ.json() || []);
