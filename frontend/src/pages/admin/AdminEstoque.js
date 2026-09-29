@@ -6,7 +6,7 @@ import LoadingButton from '../../components/LoadingButton';
 import EmptyState from '../../components/EmptyState';
 import { obterTerminologia } from '../../utils/terminologia';
 import { API_URL } from '../../services/api';
-import LeitorCodigoBarras from '../../components/LeitorCodigoBarras';
+import LeitorCodigoBarras, { desbloquearBip } from '../../components/LeitorCodigoBarras';
 
 const formatarReal = (v) => `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
 
@@ -505,7 +505,7 @@ function AdminEstoque({ empresaId }) {
                 onKeyDown={enterDoLeitorNoCadastro}
                 style={{ ...styles.input, flex: 1, minWidth: 0 }}
               />
-              <button type="button" onClick={() => setLeitorPara('cadastro')} style={styles.btnCamera} title="Ler com a câmera" aria-label="Ler código com a câmera"><Icons.Camera color="var(--fx-text)" /></button>
+              <button type="button" onClick={() => { desbloquearBip(); setLeitorPara('cadastro'); }} style={styles.btnCamera} title="Ler com a câmera" aria-label="Ler código com a câmera"><Icons.Camera color="var(--fx-text)" /></button>
             </div>
             <small style={styles.dicaCampo}>Sem código, o sistema gera um automaticamente.</small>
           </div>
@@ -554,7 +554,7 @@ function AdminEstoque({ empresaId }) {
             onKeyDown={enterDoLeitorNaBusca}
             style={{ ...styles.input, flex: 1, minWidth: 0 }}
           />
-          <button type="button" onClick={() => setLeitorPara('busca')} style={styles.btnCamera} title="Buscar com a câmera" aria-label="Buscar produto com a câmera"><Icons.Camera color="var(--fx-text)" /></button>
+          <button type="button" onClick={() => { desbloquearBip(); setLeitorPara('busca'); }} style={styles.btnCamera} title="Buscar com a câmera" aria-label="Buscar produto com a câmera"><Icons.Camera color="var(--fx-text)" /></button>
         </div>
         <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>

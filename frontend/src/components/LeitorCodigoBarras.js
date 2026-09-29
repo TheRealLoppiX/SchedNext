@@ -12,6 +12,43 @@ const RESTRICOES_VIDEO = {
   video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
 };
 
+// Bip de leitor de caixa ao ler. O contexto de áudio precisa ser criado/destravado dentro de um
+// toque do usuário (exigência do iPhone), por isso quem abre o leitor chama desbloquearBip() no
+// clique do botão da câmera.
+let contextoAudio = null;
+
+export function desbloquearBip() {
+  try {
+    const Contexto = window.AudioContext || window.webkitAudioContext;
+    if (!Contexto) return;
+    if (!contextoAudio) contextoAudio = new Contexto();
+    if (contextoAudio.state === 'suspended') contextoAudio.resume();
+  } catch (_) {
+    // sem áudio, segue só com a vibração
+  }
+}
+
+function tocarBip() {
+  try {
+    if (!contextoAudio) desbloquearBip();
+    if (!contextoAudio) return;
+    const agora = contextoAudio.currentTime;
+    const oscilador = contextoAudio.createOscillator();
+    const volume = contextoAudio.createGain();
+    oscilador.type = 'square';
+    oscilador.frequency.value = 2700;
+    volume.gain.setValueAtTime(0.0001, agora);
+    volume.gain.exponentialRampToValueAtTime(0.15, agora + 0.005);
+    volume.gain.setValueAtTime(0.15, agora + 0.1);
+    volume.gain.exponentialRampToValueAtTime(0.0001, agora + 0.12);
+    oscilador.connect(volume).connect(contextoAudio.destination);
+    oscilador.start(agora);
+    oscilador.stop(agora + 0.13);
+  } catch (_) {
+    // sem áudio, segue só com a vibração
+  }
+}
+
 // Lê código de barras pela câmera. Usa o leitor nativo do aparelho quando existe (Chrome no
 // Android, bem mais rápido e preciso) e cai pra ZXing nos demais (iPhone, Firefox, desktop). A
 // ZXing só é baixada nesse caso. Leitor USB/Bluetooth não passa por aqui: ele "digita" o código
@@ -34,6 +71,7 @@ function LeitorCodigoBarras({ onLer, onFechar }) {
     const concluir = (codigo) => {
       if (cancelado || !codigo) return;
       cancelado = true;
+      tocarBip();
       if (navigator.vibrate) navigator.vibrate(80);
       onLer(String(codigo).trim());
     };
