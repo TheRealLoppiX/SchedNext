@@ -516,7 +516,7 @@ function AdminEstoque({ empresaId }) {
             </div>
           )}
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Custo unitário de compra (opcional)</label>
+            <label style={styles.label}>Custo de compra (opcional)</label>
             <input ref={ehVenda ? undefined : campoPrecoRef} placeholder="0,00" type="number" step="0.01" min="0" value={formData.custo} onChange={e => setFormData({...formData, custo: e.target.value})} style={styles.input} />
           </div>
           {!editandoId && (
@@ -536,13 +536,11 @@ function AdminEstoque({ empresaId }) {
             </>
           )}
 
-          <div style={{ ...styles.inputGroup, justifyContent: 'flex-end' }}>
-            <div style={{ display: 'flex', gap: '10px' }}>
-                <LoadingButton type="submit" loading={salvandoProduto} style={styles.btnPrincipal}>{editandoId ? 'Salvar Edição' : 'Cadastrar Produto'}</LoadingButton>
-                {editandoId && (
-                <button type="button" onClick={limparFormulario} style={styles.btnAcaoClaro}>Cancelar</button>
-                )}
-            </div>
+          <div style={styles.linhaBotoesForm}>
+            {editandoId && (
+              <button type="button" onClick={limparFormulario} style={styles.btnAcaoClaro}>Cancelar</button>
+            )}
+            <LoadingButton type="submit" loading={salvandoProduto} style={{ ...styles.btnPrincipal, flex: '0 1 240px' }}>{editandoId ? 'Salvar Edição' : 'Cadastrar Produto'}</LoadingButton>
           </div>
         </form>
       </div>
@@ -804,7 +802,9 @@ const styles = {
   cardHeader: { borderBottom: '1px solid var(--fx-line)', paddingBottom: '15px', marginBottom: '20px' },
   cardTitle: { margin: 0, color: 'var(--fx-text)', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' },
   
-  formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', alignItems: 'flex-end' },
+  // Alinhado pelo topo: a dica embaixo do campo de código não desloca os vizinhos.
+  formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', alignItems: 'start' },
+  linhaBotoesForm: { gridColumn: '1 / -1', display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap', borderTop: '1px solid var(--fx-line)', paddingTop: '20px' },
   inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
   label: { fontSize: '12px', fontWeight: '700', color: 'var(--fx-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
   input: { padding: '12px 15px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px', boxSizing: 'border-box', background: 'var(--fx-card)', color: 'var(--fx-text)', outline: 'none', transition: '0.2s' },
