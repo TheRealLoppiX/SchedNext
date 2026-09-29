@@ -2403,7 +2403,7 @@ function AbaEmpresas({ toast, confirmar }) {
   const alternarSuspensao = async (empresa) => {
     const suspender = empresa.status_assinatura !== 'suspensa';
     const ok = await confirmar(`${suspender ? 'Suspender' : 'Reativar'} a empresa "${empresa.nome}"?`, {
-      detail: suspender ? 'O painel da empresa (inclusive quem já está logado) e o site de agendamento dela saem do ar, e qualquer cobrança recorrente ativa é cancelada imediatamente.' : 'O painel e o site voltam a funcionar normalmente. Se ela tinha cobrança recorrente, precisa ser reconfigurada.',
+      detail: suspender ? 'O painel da empresa (inclusive quem já está logado), o site de agendamento e o WhatsApp dela (bot, lembretes e mensagens automáticas) saem do ar, e qualquer cobrança recorrente ativa é cancelada imediatamente.' : 'O painel, o site e o WhatsApp voltam a funcionar normalmente. Se ela tinha cobrança recorrente, precisa ser reconfigurada.',
       confirmText: suspender ? 'Suspender' : 'Reativar',
       danger: suspender
     });
