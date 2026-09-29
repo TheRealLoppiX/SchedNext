@@ -190,8 +190,17 @@ function AdminEstoque({ empresaId }) {
     try {
       const res = await fetch(`${API_URL}/admin/estoque/${idEfetivo}`);
       const data = await res.json();
-      setProdutos(Array.isArray(data) ? data : []);
-    } catch (err) { console.error("Erro ao carregar estoque:", err); }
+      // Falha na listagem avisa em vez de mostrar o estoque vazio, que parecia "produto não salvou".
+      if (!res.ok || !Array.isArray(data)) {
+        toast.error(data?.error || 'Não foi possível carregar os produtos do estoque.');
+        return;
+      }
+      setProdutos(data);
+    } catch (err) {
+      console.error("Erro ao carregar estoque:", err);
+      toast.error('Não foi possível carregar os produtos do estoque.');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idEfetivo]);
 
   useEffect(() => { if (autorizado) carregarProdutos(); }, [autorizado, carregarProdutos]);
