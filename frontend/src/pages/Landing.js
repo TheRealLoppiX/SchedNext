@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import './Landing.css';
 import { API_URL } from '../services/api';
 import { observarSecoes } from '../utils/analytics';
+import reduzirMovimento from '../utils/prefersReducedMotion';
 import { formatarReal, precoPromocionalPrimeiroMes, continuacaoCampanha } from '../utils/campanhaPlano';
 
 // Landing "ofício": capítulos em tela cheia (um por tipo de negócio) controlados pela rolagem,
@@ -191,7 +192,6 @@ function Landing() {
   const [menuAberto, setMenuAberto] = useState(false);
   const [capAtivo, setCapAtivo] = useState(0);
   const [faqAberto, setFaqAberto] = useState(0);
-  const [reduzirMovimento] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [modoQuadros, setModoQuadros] = useState(() => typeof window !== 'undefined' && window.matchMedia(QUERY_QUADROS).matches);
   const [vistos, setVistos] = useState(() => new Set([0]));
   // modo leve: o renderizador das partículas detectou máquina fraca (ou FPS caindo) e a página
@@ -217,7 +217,7 @@ function Landing() {
   const algumaCampanha = planos.some((pl) => continuacaoCampanha(pl));
 
   useEffect(() => observarSecoes(), []);
-  useEffect(() => { if (reduzirMovimento) setIntroFeita(true); }, [reduzirMovimento]);
+  useEffect(() => { if (reduzirMovimento) setIntroFeita(true); }, []);
   useEffect(() => {
     fetch(`${API_URL}/planos-plataforma`)
       .then((r) => r.json())
@@ -248,7 +248,7 @@ function Landing() {
       v.removeEventListener('canplay', tentarTocar);
       eventosGesto.forEach((ev) => window.removeEventListener(ev, tentarTocar));
     };
-  }, [reduzirMovimento, modoQuadros]);
+  }, [modoQuadros]);
 
   useEffect(() => {
     // Vídeo só decodifica enquanto aparece: da abertura até o corte do capítulo 2 (depois fica
@@ -412,7 +412,7 @@ function Landing() {
       if (part) part.destruir();
       refPart.current = null;
     };
-  }, [reduzirMovimento, modoQuadros]);
+  }, [modoQuadros]);
 
   const irPara = (k) => {
     if (modoQuadros) { refQuadros.current[k]?.scrollIntoView({ behavior: 'smooth' }); return; }

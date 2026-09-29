@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import useEscToClose from '../hooks/useEscToClose';
+import prefersReducedMotion from '../utils/prefersReducedMotion';
 import { useToast } from './Toast';
 import { useConfirm } from './ConfirmDialog';
 import LoadingButton from './LoadingButton';
@@ -34,28 +35,47 @@ const EMAIL_SUPORTE = 'suporte@schednext.com.br';
 const INTERVALO_POLL_MS = 8000;
 const VELOCIDADE_DIGITACAO_MS = 14; // por caractere
 
-// Revela o texto progressivamente, caractere por caractere, simulando o time/IA "digitando" —
-// só quando `ativo` (decidido uma única vez em HelpButton, ver deveAnimar) é true; senão mostra
-// o texto pronto direto. Roda inteiramente em JS porque o truque de CSS puro (width 0% -> 100%)
-// só funciona bem numa linha só, e as respostas do chat quebram em várias linhas.
-function TextoDigitando({ texto, ativo }) {
+// Separador de grafemas (não de code point): um par substituto de emoji simples já não quebrava
+// com Array.from, mas uma bandeira (2 code points) ou um emoji com modificador de tom de pele
+// (base + modificador) ainda aparecia partido por um instante com essa abordagem. Intl.Segmenter
+// existe em todo navegador relevante hoje; o fallback é só por segurança (ex: ambiente de teste
+// sem essa API), e nesse caso volta a separar por code point.
+const segmentador = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('pt-BR', { granularity: 'grapheme' }) : null;
+const separarEmGrafemas = (texto) =>
+  segmentador ? Array.from(segmentador.segment(texto), (s) => s.segment) : Array.from(texto);
+
+// Revela o texto progressivamente, grafema por grafema, simulando o time/IA "digitando" — só
+// quando `ativo` (decidido em HelpButton: mensagem nova + SO não pedindo "reduzir movimento") é
+// true; senão mostra o texto pronto direto. Roda inteiramente em JS porque o truque de CSS puro
+// (width 0% -> 100%) só funciona bem numa linha só, e as respostas do chat quebram em várias linhas.
+function TextoDigitando({ texto, ativo, aoRevelar }) {
   const [exibido, setExibido] = useState(ativo ? '' : texto);
   const [terminou, setTerminou] = useState(!ativo);
 
   useEffect(() => {
     if (!ativo) return;
+    const unidades = separarEmGrafemas(texto || '');
+    if (unidades.length === 0) { setTerminou(true); return; }
     let cancelado = false;
     let i = 0;
+    let acumulado = '';
     const passo = () => {
       if (cancelado) return;
+      acumulado += unidades[i];
       i += 1;
-      setExibido(texto.slice(0, i));
-      if (i < texto.length) setTimeout(passo, VELOCIDADE_DIGITACAO_MS);
+      setExibido(acumulado);
+      aoRevelar();
+      if (i < unidades.length) setTimeout(passo, VELOCIDADE_DIGITACAO_MS);
       else setTerminou(true);
     };
     const primeiro = setTimeout(passo, VELOCIDADE_DIGITACAO_MS);
     return () => { cancelado = true; clearTimeout(primeiro); };
-    // ativo já vem decidido de fora e nunca muda depois de montado — roda só uma vez.
+    // Deps vazio de propósito, pra rodar só uma vez: NÃO adicionar `ativo`/`texto`/`aoRevelar` aqui
+    // achando que corrige o exhaustive-deps. `ativo` pode mudar de true pra false num re-render
+    // seguinte (deveAnimar, em HelpButton, some assim que a mensagem é marcada como vista), mas
+    // essa mudança deve ser ignorada por uma animação já em andamento — colocar `ativo` nas deps
+    // aborta a digitação no meio (limpa o timer) assim que isso acontecer, travando o cursor
+    // piscando sobre um texto pela metade.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -102,19 +122,38 @@ function HelpButton() {
 
   const pollRef = useRef(null);
   const fimListaRef = useRef(null);
+  const listaMensagensRef = useRef(null);
+  const scrollAgendadoRef = useRef(false);
+  // Agendado via requestAnimationFrame (não direto): (1) coalesce várias chamadas no mesmo frame —
+  // várias bolhas podem estar digitando ao mesmo tempo, cada uma chamando isto no seu próprio
+  // timer — em um scroll só; (2) espera o navegador pintar o setExibido mais recente antes de
+  // medir a posição, senão o scroll mede o layout de antes do último caractere revelado. Só desce
+  // sozinho se já estava perto do fim: se o admin rolou pra cima pra reler o histórico, não puxa
+  // a tela de volta a cada caractere.
+  const aoRevelarMensagem = useCallback(() => {
+    if (scrollAgendadoRef.current) return;
+    scrollAgendadoRef.current = true;
+    requestAnimationFrame(() => {
+      scrollAgendadoRef.current = false;
+      const lista = listaMensagensRef.current;
+      if (lista && lista.scrollHeight - lista.scrollTop - lista.clientHeight > 80) return;
+      fimListaRef.current?.scrollIntoView({ block: 'end' });
+    });
+  }, []);
 
   // Controla o efeito de "digitando" (ver TextoDigitando abaixo): só anima uma mensagem na
   // primeira vez que ela aparece nesta sessão do widget — reabrir o painel, trocar de aba ou
-  // qualquer outro re-render não repete a animação em cima do que já foi mostrado.
+  // qualquer outro re-render não repete a animação em cima do que já foi mostrado. deveAnimar é
+  // uma leitura pura (nunca muta o Set): mutar aqui dentro, chamada de dentro de mensagens.map no
+  // corpo do componente, quebrava sob React.StrictMode (dev) — a segunda invocação do corpo já
+  // achava o id marcado pela primeira e a animação nunca rodava pra mensagem nenhuma. Marcar como
+  // "visto" é feito à parte, no efeito abaixo, depois do commit — idempotente mesmo chamado mais
+  // de uma vez (Set.add do mesmo id de novo é no-op), então sobrevive ao double-invoke também.
   const mensagensVistasRef = useRef(new Set());
-  const decisaoAnimarRef = useRef(new Map());
-  const deveAnimar = (id) => {
-    if (decisaoAnimarRef.current.has(id)) return decisaoAnimarRef.current.get(id);
-    const animar = !mensagensVistasRef.current.has(id);
-    decisaoAnimarRef.current.set(id, animar);
-    mensagensVistasRef.current.add(id);
-    return animar;
-  };
+  const deveAnimar = (id) => !mensagensVistasRef.current.has(id);
+  useEffect(() => {
+    mensagens.forEach((m) => mensagensVistasRef.current.add(m.id));
+  }, [mensagens]);
 
   const carregarAtual = useCallback(async () => {
     const primeiraCarga = !carregadoSuporte;
@@ -255,7 +294,13 @@ function HelpButton() {
     <div key={m.id} className="bb-help-bolha" style={{ display: 'flex', justifyContent: m.remetente === 'empresa' ? 'flex-end' : 'flex-start' }}>
       <div style={m.remetente === 'empresa' ? chatStyles.bolhaEmpresa : (m.remetente === 'super_admin' ? chatStyles.bolhaHumano : chatStyles.bolhaIa)}>
         {m.remetente === 'super_admin' && <div style={chatStyles.rotuloHumano}>{m.nome_admin || 'Time SchedNext'}</div>}
-        {m.remetente === 'empresa' ? m.texto : <TextoDigitando texto={m.texto} ativo={deveAnimar(m.id)} />}
+        {m.remetente === 'empresa' ? m.texto : (
+          <TextoDigitando
+            texto={m.texto}
+            ativo={deveAnimar(m.id) && !prefersReducedMotion}
+            aoRevelar={aoRevelarMensagem}
+          />
+        )}
       </div>
     </div>
   );
@@ -363,7 +408,7 @@ function HelpButton() {
                         {conversa.atendido_por_nome ? `${conversa.atendido_por_nome} está te atendendo.` : 'Encaminhado pro nosso time.'} A resposta aparece aqui mesmo.
                       </div>
                     )}
-                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                    <div ref={listaMensagensRef} style={{ flex: 1, overflowY: 'auto' }}>
                       <div style={chatStyles.listaMensagens}>
                         {mensagens.length === 0 && <p style={chatStyles.textoVazio}>Digite sua dúvida abaixo pra começar.</p>}
                         {mensagens.map(renderBolha)}
