@@ -8,6 +8,7 @@ import { obterTerminologia } from '../../utils/terminologia';
 import { API_URL } from '../../services/api';
 import LeitorCodigoBarras, { desbloquearBip } from '../../components/LeitorCodigoBarras';
 
+const rotuloMovimentacao = (tipo) => ({ ADICIONAR: 'Entrada', VENDA: 'Venda', EXCLUSAO: 'Exclusão do produto' }[tipo] || 'Saída');
 const formatarReal = (v) => `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
 
 function AdminEstoque({ empresaId }) {
@@ -28,9 +29,13 @@ function AdminEstoque({ empresaId }) {
   const [salvandoProduto, setSalvandoProduto] = useState(false);
   const [criandoSublogin, setCriandoSublogin] = useState(false);
   const [movimentando, setMovimentando] = useState(false);
+  // Excluir pede motivo (vai pro histórico de auditoria); o produto é arquivado, não apagado.
+  const [modalExclusao, setModalExclusao] = useState(null);
+  const [excluindo, setExcluindo] = useState(false);
 
-  useEscToClose(!!(modalAjuste || modalSublogin || modalRelatorio), () => {
+  useEscToClose(!!(modalAjuste || modalSublogin || modalRelatorio || modalExclusao), () => {
     setModalAjuste(null);
+    setModalExclusao(null);
     setModalSublogin(false);
     setModalRelatorio(false);
   });
@@ -260,21 +265,31 @@ function AdminEstoque({ empresaId }) {
     }
   };
 
-  const deletar = async (id, nome) => {
-    const ok = await confirmar(`Excluir ${nome} definitivamente?`, { confirmText: 'Excluir', danger: true });
-    if (!ok) return;
+  const deletar = (produto) => setModalExclusao({ id: produto.id, nome: produto.nome, quantidade: produto.quantidade, justificativa: '' });
 
+  const confirmarExclusao = async (e) => {
+    e.preventDefault();
+    if (modalExclusao.justificativa.trim().length < 5) return toast.error('Explique o motivo da exclusão (mínimo 5 caracteres).');
+
+    setExcluindo(true);
     try {
-      const res = await fetch(`${API_URL}/admin/estoque/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/admin/estoque/${modalExclusao.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ justificativa: modalExclusao.justificativa, usuario_nome: autorizado?.nome })
+      });
       if (res.ok) {
-        toast.success("Produto excluído.");
+        toast.success("Produto excluído. O motivo ficou registrado no relatório.");
+        setModalExclusao(null);
         carregarProdutos();
       } else {
-        const data = await res.json();
-        toast.error(data.error || "Não foi possível excluir. Recomendamos inativar.");
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Não foi possível excluir o produto.");
       }
     } catch (err) {
       toast.error('Não foi possível conectar ao servidor. Tente novamente em instantes.');
+    } finally {
+      setExcluindo(false);
     }
   };
 
@@ -332,7 +347,7 @@ function AdminEstoque({ empresaId }) {
 
       dadosRelatorio.forEach(r => {
           const dataFormatada = new Date(r.data_movimentacao).toLocaleString('pt-BR');
-          const tipo = r.tipo === 'ADICIONAR' ? 'Entrada' : r.tipo === 'VENDA' ? 'Venda' : 'Saida';
+          const tipo = rotuloMovimentacao(r.tipo);
           // Trata a justificativa para evitar quebra de linha ou ponto e vírgula no CSV
           const justificativa = (r.justificativa || '').replace(/;/g, ',').replace(/\n/g, ' '); 
           
@@ -364,7 +379,7 @@ function AdminEstoque({ empresaId }) {
       const periodo = `${new Date(filtroRelatorio.inicio + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(filtroRelatorio.fim + 'T00:00:00').toLocaleDateString('pt-BR')}`;
       const linhas = dadosRelatorio.map(r => {
           const data = new Date(r.data_movimentacao).toLocaleString('pt-BR');
-          const tipo = r.tipo === 'ADICIONAR' ? 'Entrada' : 'Saída';
+          const tipo = rotuloMovimentacao(r.tipo);
           const corTipo = r.tipo === 'ADICIONAR' ? 'var(--fx-green)' : 'var(--fx-red)';
           return `<tr style='border-bottom:1px solid var(--fx-surface-2)'><td style='padding:9px 12px;font-size:12px;color:var(--fx-text)'>${data}</td><td style='padding:9px 12px;font-size:12px'>${escaparHtml(r.usuario_nome)}</td><td style='padding:9px 12px;font-size:12px;font-weight:600;color:var(--fx-text)'>${escaparHtml(r.produto_nome)}</td><td style='padding:9px 12px;font-size:12px;font-weight:700;color:${corTipo}'>${tipo}</td><td style='padding:9px 12px;font-size:12px;text-align:center;font-weight:700'>${r.quantidade}</td><td style='padding:9px 12px;font-size:12px;color:var(--fx-muted)'>${escaparHtml(r.justificativa) || '-'}</td></tr>`;
       }).join('');
@@ -595,7 +610,7 @@ function AdminEstoque({ empresaId }) {
                             <button onClick={() => setModalAjuste({ ...p, tipo: 'ADICIONAR', quantidade: '', justificativa: '', custo_unitario: p.custo ?? '', data_compra: '' })} style={{...styles.btnIcon, backgroundColor: 'var(--fx-violet-bg)', color: 'var(--fx-violet)'}} title="Ajustar Estoque"><Icons.Trending color="var(--fx-violet)" /></button>
                             <button onClick={() => alternarStatus(p.id, p.ativo, p.nome)} style={styles.btnIcon} title={isAtivo ? "Inativar" : "Ativar"}><Icons.Power color={isAtivo ? "var(--fx-green)" : "var(--fx-faint)"} /></button>
                             <button onClick={() => prepararEdicao(p)} style={styles.btnIcon} title="Editar Cadastro"><Icons.Edit color="var(--fx-muted)" /></button>
-                            <button onClick={() => deletar(p.id, p.nome)} style={{...styles.btnIcon, backgroundColor: 'var(--fx-red-bg)'}} title="Excluir"><Icons.Trash color="var(--fx-red)" /></button>
+                            <button onClick={() => deletar(p)} style={{...styles.btnIcon, backgroundColor: 'var(--fx-red-bg)'}} title="Excluir"><Icons.Trash color="var(--fx-red)" /></button>
                         </div>
                     </td>
                     </tr>
@@ -648,6 +663,33 @@ function AdminEstoque({ empresaId }) {
               <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
                 <LoadingButton type="submit" loading={movimentando} style={{...styles.btnPrincipal, background: modalAjuste.tipo === 'ADICIONAR' ? '#10b981' : '#ef4444', color: '#fff'}}>{modalAjuste.tipo === 'ADICIONAR' ? 'Registrar Entrada' : 'Registrar Saída'}</LoadingButton>
                 <button type="button" onClick={() => setModalAjuste(null)} style={styles.btnAcaoClaro}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {modalExclusao && (
+        <div style={styles.overlay}>
+          <div style={styles.modalCard}>
+            <h3 style={{marginTop: 0, color: 'var(--fx-text)', fontSize: '18px'}}>Excluir {modalExclusao.nome}?</h3>
+            <p style={{fontSize: '13px', color: 'var(--fx-muted)', margin: '0 0 16px', lineHeight: 1.4}}>
+              O produto sai do estoque e do caixa{modalExclusao.quantidade > 0 ? ` (ainda há ${modalExclusao.quantidade} un)` : ''}, mas continua nos relatórios e no histórico. O motivo fica registrado no relatório de auditoria.
+            </p>
+            <form onSubmit={confirmarExclusao}>
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Motivo da exclusão</label>
+                <textarea
+                  required autoFocus minLength={5} maxLength={255}
+                  style={{...styles.input, height: '80px', resize: 'none'}}
+                  value={modalExclusao.justificativa}
+                  onChange={e => setModalExclusao({...modalExclusao, justificativa: e.target.value})}
+                  placeholder="Ex: Produto descontinuado pelo fornecedor, cadastrado em duplicidade..."
+                />
+              </div>
+              <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
+                <LoadingButton type="submit" loading={excluindo} style={{...styles.btnPrincipal, background: '#ef4444', color: '#fff'}}>Excluir produto</LoadingButton>
+                <button type="button" onClick={() => setModalExclusao(null)} style={styles.btnAcaoClaro}>Cancelar</button>
               </div>
             </form>
           </div>
@@ -745,7 +787,7 @@ function AdminEstoque({ empresaId }) {
                                 <td style={styles.td}>{r.produto_nome}</td>
                                 <td style={styles.td}>
                                     <span style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', background: r.tipo === 'ADICIONAR' ? 'var(--fx-green-bg)' : 'var(--fx-red-bg)', color: r.tipo === 'ADICIONAR' ? 'var(--fx-green)' : 'var(--fx-red)' }}>
-                                        {r.tipo === 'ADICIONAR' ? '+' : '-'}{r.quantidade}
+                                        {r.tipo === 'EXCLUSAO' ? `Excluído (${r.quantidade} un)` : `${r.tipo === 'ADICIONAR' ? '+' : '-'}${r.quantidade}`}
                                     </span>
                                 </td>
                                 <td style={{...styles.td, fontSize: '12px', color: 'var(--fx-muted)'}}>{r.justificativa}</td>
