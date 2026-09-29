@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/Toast';
 import LoadingButton from '../../components/LoadingButton';
@@ -11,6 +11,14 @@ function LoginAdmin({ setEmpresaLogada }) {
   const [entrando, setEntrando] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
+
+  // Vindo de services/authFetch.js quando o admin absoluto suspendeu a conta com a sessão aberta.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('suspensa')) {
+      toast.error('Esta conta foi suspensa. Entre em contato com o suporte da SchedNext.');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();

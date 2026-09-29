@@ -8,6 +8,7 @@ import BotaoTema from '../../components/BotaoTema';
 import { API_URL } from '../../services/api';
 import { formatarDataSemFuso, partesDataSemFuso } from '../../utils/dataSemFuso';
 import { formatarDocumento } from '../../utils/validacao';
+import { acessoAteCancelamento } from '../../utils/cancelamentoPlano';
 
 const STATUS_LEAD_INFO = {
   novo: { label: 'Novo', bg: 'var(--fx-blue-bg)', fg: 'var(--fx-blue)' },
@@ -25,7 +26,8 @@ function infoStatusEmpresa(empresa) {
     return { label: 'Excluída', bg: 'var(--fx-surface-2)', fg: 'var(--fx-muted)' };
   }
   if (empresa.status_assinatura === 'ativa' && empresa.cancelamento_agendado && empresa.proxima_cobranca_em) {
-    return { label: `Cancelamento agendado p/ ${formatarData(empresa.proxima_cobranca_em)}`, bg: 'var(--fx-amber-bg)', fg: 'var(--fx-amber)' };
+    const { data, dias } = acessoAteCancelamento(empresa.proxima_cobranca_em);
+    return { label: `Cancelando: plano até ${data} (${dias} ${dias === 1 ? 'dia' : 'dias'})`, bg: 'var(--fx-amber-bg)', fg: 'var(--fx-amber)' };
   }
   const mapa = {
     trial: { label: 'Em teste', bg: 'var(--fx-blue-bg)', fg: 'var(--fx-blue)' },
@@ -2401,7 +2403,7 @@ function AbaEmpresas({ toast, confirmar }) {
   const alternarSuspensao = async (empresa) => {
     const suspender = empresa.status_assinatura !== 'suspensa';
     const ok = await confirmar(`${suspender ? 'Suspender' : 'Reativar'} a empresa "${empresa.nome}"?`, {
-      detail: suspender ? 'O login do admin dessa empresa fica bloqueado e qualquer cobrança recorrente ativa é cancelada imediatamente.' : 'O login volta a funcionar normalmente. Se ela tinha cobrança recorrente, precisa ser reconfigurada.',
+      detail: suspender ? 'O painel da empresa (inclusive quem já está logado) e o site de agendamento dela saem do ar, e qualquer cobrança recorrente ativa é cancelada imediatamente.' : 'O painel e o site voltam a funcionar normalmente. Se ela tinha cobrança recorrente, precisa ser reconfigurada.',
       confirmText: suspender ? 'Suspender' : 'Reativar',
       danger: suspender
     });
@@ -2801,7 +2803,7 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
                 <InfoItem label="Trocando para" valor={`${empresa.plano_plataforma_pendente?.nome} · ${formatarPreco(empresa.plano_plataforma_pendente?.preco_mensal)} (aguardando confirmação de pagamento)`} cor="var(--fx-amber)" />
               )}
               {empresa.cancelamento_agendado && (
-                <InfoItem label="Cancelamento" valor="Agendado, cai pro plano Grátis na próxima cobrança" cor="var(--fx-amber)" />
+                <InfoItem label="Cancelamento" valor={(() => { const { data, dias } = acessoAteCancelamento(empresa.proxima_cobranca_em); return `Usa o plano até ${data} (${dias === 1 ? 'falta 1 dia' : `faltam ${dias} dias`}), depois cai pro Grátis`; })()} cor="var(--fx-amber)" />
               )}
               {empresa.chave_ativacao_expira_em && (
                 <InfoItem label="Plano por chave promocional" valor={`expira em ${formatarData(empresa.chave_ativacao_expira_em)}`} cor="var(--fx-amber)" />

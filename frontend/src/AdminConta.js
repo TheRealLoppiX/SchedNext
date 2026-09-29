@@ -4,6 +4,7 @@ import { useConfirm } from './components/ConfirmDialog';
 import { obterTerminologia } from './utils/terminologia';
 import { API_URL } from './services/api';
 import { resumoCampanha } from './utils/campanhaPlano';
+import { acessoAteCancelamento, textoDiasRestantes } from './utils/cancelamentoPlano';
 
 const HORARIOS_PADRAO = {
     0: { aberto: false, abre: '08:00', fecha: '18:00', label: 'Domingo' },
@@ -216,7 +217,7 @@ function AdminConta({ empresaId }) {
 
     const cancelarPlanoAgora = async () => {
         const ok = await confirmar('Cancelar o plano agora?', {
-            detail: 'Os recursos pagos são encerrados imediatamente, sem reembolso do período restante. Diferente de "cancelar cobrança", que mantém o acesso até a próxima data de cobrança.',
+            detail: 'Os recursos pagos são encerrados imediatamente, sem reembolso do período restante. Diferente de "cancelar cobrança", que mantém o acesso até o dia anterior à próxima cobrança.',
             confirmText: 'Cancelar agora',
             danger: true
         });
@@ -428,14 +429,14 @@ function AdminConta({ empresaId }) {
                                 </div>
                                 {assinatura.proxima_cobranca_em && (
                                     <div style={styles.linhaAssinatura}>
-                                        <span style={styles.labelAssinatura}>{assinatura.cancelamento_agendado ? 'Encerra em' : 'Próxima cobrança'}</span>
-                                        <strong>{new Date(assinatura.proxima_cobranca_em).toLocaleDateString('pt-BR')}</strong>
+                                        <span style={styles.labelAssinatura}>{assinatura.cancelamento_agendado ? 'Acesso ao plano até' : 'Próxima cobrança'}</span>
+                                        <strong>{assinatura.cancelamento_agendado ? acessoAteCancelamento(assinatura.proxima_cobranca_em).data : new Date(assinatura.proxima_cobranca_em).toLocaleDateString('pt-BR')}</strong>
                                     </div>
                                 )}
 
                                 {assinatura.cancelamento_agendado && (
                                     <div style={styles.avisoCancelamento}>
-                                        Cobrança cancelada. Seu plano continua ativo até a data acima, depois cai automaticamente pro plano Grátis.
+                                        Cobrança cancelada. {textoDiasRestantes(acessoAteCancelamento(assinatura.proxima_cobranca_em).dias)} Depois disso a conta passa automaticamente pro plano Grátis.
                                         <button onClick={reativarCobranca} disabled={processandoAssinatura} style={styles.btnLinkReativar}>Reativar cobrança</button>
                                     </div>
                                 )}
