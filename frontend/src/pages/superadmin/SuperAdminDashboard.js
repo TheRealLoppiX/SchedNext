@@ -9,6 +9,7 @@ import { API_URL } from '../../services/api';
 import { formatarDataSemFuso, partesDataSemFuso } from '../../utils/dataSemFuso';
 import { formatarDocumento } from '../../utils/validacao';
 import { acessoAteCancelamento } from '../../utils/cancelamentoPlano';
+import { RECURSOS_PLANO } from '../../utils/recursosPlano';
 
 const STATUS_LEAD_INFO = {
   novo: { label: 'Novo', bg: 'var(--fx-blue-bg)', fg: 'var(--fx-blue)' },
@@ -103,18 +104,8 @@ function paraInputData(iso) {
   return iso ? new Date(iso).toISOString().slice(0, 10) : '';
 }
 
-const FLAGS_PLANO = [
-  ['permite_paleta_customizada', 'Paleta customizada'],
-  ['permite_whatsapp_bot', 'Bot de WhatsApp'],
-  ['permite_remover_marca', 'Remover marca'],
-  ['permite_ia', 'Recursos com IA'],
-  ['permite_multi_unidade', 'Múltiplas unidades'],
-  ['permite_api_publica', 'API pública'],
-  ['permite_relatorios_avancados', 'Relatórios avançados'],
-  ['permite_dominio_customizado', 'Domínio próprio'],
-  ['permite_campanhas_assinatura', 'Campanhas promocionais de assinatura'],
-  ['permite_relatorio_produtos', 'Relatório de receita líquida por produto']
-];
+// Mesma lista dos cards de plano do site (ver utils/recursosPlano.js).
+const FLAGS_PLANO = RECURSOS_PLANO.map((r) => [r.chave, r.rotuloAdmin]);
 
 const PLANO_VAZIO = {
   nome: '', preco_mensal: '', limite_profissionais: '', limite_agendamentos_mes: '',
