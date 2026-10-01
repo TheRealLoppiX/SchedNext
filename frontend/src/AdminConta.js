@@ -92,11 +92,16 @@ function AdminConta({ empresaId }) {
 
     useEffect(() => { carregarDados(); }, [carregarDados]);
 
+    // Planos do site + o plano exclusivo que o admin absoluto montou pra esta empresa (se houver),
+    // que aparece primeiro na lista.
     useEffect(() => {
-        fetch(`${API_URL}/planos-plataforma`)
-            .then(r => r.json())
-            .then(data => setPlanosDisponiveis(Array.isArray(data) ? data : []))
-            .catch(() => {});
+        Promise.all([
+            fetch(`${API_URL}/planos-plataforma`).then(r => r.json()).catch(() => []),
+            fetch(`${API_URL}/admin/assinatura-plataforma/plano-exclusivo`).then(r => (r.ok ? r.json() : null)).catch(() => null)
+        ]).then(([publicos, exclusivo]) => {
+            const lista = Array.isArray(publicos) ? publicos : [];
+            setPlanosDisponiveis(exclusivo ? [exclusivo, ...lista.filter(p => p.id !== exclusivo.id)] : lista);
+        });
     }, []);
 
     const planoSelecionado = planosDisponiveis.find(p => p.id === planoEscolhidoId);
@@ -464,7 +469,7 @@ function AdminConta({ empresaId }) {
                                         >
                                             {planosDisponiveis.map(p => (
                                                 <option key={p.id} value={p.id}>
-                                                    {p.nome}{p.dias_teste > 0 ? ` · ${p.dias_teste} dias de teste` : ''}{p.preco_mensal > 0 ? (resumoCampanha(p) ? ` · ${resumoCampanha(p)}` : ` · R$ ${Number(p.preco_mensal).toFixed(2)}/mês`) : p.preco_mensal === 0 ? ' · Grátis' : ' · sob consulta'}
+                                                    {p.exclusivo ? '★ ' : ''}{p.nome}{p.exclusivo ? ' (exclusivo pra você)' : ''}{p.dias_teste > 0 ? ` · ${p.dias_teste} dias de teste` : ''}{p.preco_mensal > 0 ? (resumoCampanha(p) ? ` · ${resumoCampanha(p)}` : ` · R$ ${Number(p.preco_mensal).toFixed(2)}/mês`) : p.preco_mensal === 0 ? ' · Grátis' : ' · sob consulta'}
                                                 </option>
                                             ))}
                                         </select>

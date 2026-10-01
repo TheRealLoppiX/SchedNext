@@ -2543,6 +2543,210 @@ function BarraUso({ label, usado, limite }) {
   );
 }
 
+// Plano exclusivo da empresa (ver backend/src/routes/superAdminPlataforma.js): mesmas regras de
+// um plano normal + campanha de preço por ciclo própria. Oculto do site; só essa empresa vê e
+// contrata na tela Conta dela, ou você aplica na hora.
+const vazioParaNull = (v) => (v === '' || v === undefined ? null : v);
+
+function PlanoExclusivoEmpresa({ empresaId, empresaNome, planoAtual, toast, confirmar, aoAtualizar }) {
+  const [dados, setDados] = useState(null);
+  const [editando, setEditando] = useState(null);
+  const [salvando, setSalvando] = useState(false);
+
+  const carregar = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/super-admin/empresas/${empresaId}/plano-exclusivo`);
+      if (res.ok) setDados(await res.json());
+    } catch (err) {
+      // seção opcional, falha não trava o detalhe da empresa
+    }
+  }, [empresaId]);
+  useEffect(() => { carregar(); }, [carregar]);
+
+  if (!dados) return null;
+  const plano = dados.plano && dados.plano.ativo !== false ? dados.plano : null;
+  const emUso = plano && String(planoAtual?.id) === String(plano.id);
+
+  const abrirEditor = () => {
+    const base = plano || planoAtual || {};
+    setEditando({
+      ...Object.fromEntries(FLAGS_PLANO.map(([chave]) => [chave, !!base[chave]])),
+      nome: plano ? plano.nome : `${base.nome || 'Plano'} - ${empresaNome}`,
+      preco_mensal: base.preco_mensal ?? '',
+      limite_profissionais: base.limite_profissionais ?? '',
+      limite_agendamentos_mes: base.limite_agendamentos_mes ?? '',
+      dias_teste: base.dias_teste ?? '',
+      taxa_marketplace_percentual: base.taxa_marketplace_percentual ?? 0,
+      precos_por_ciclo: plano ? dados.precos_por_ciclo.map((c) => ({ numero_ciclo: c.numero_ciclo, valor: c.valor })) : [],
+      aplicar_agora: false,
+      gerar_cobranca: true
+    });
+  };
+
+  const alterarCiclo = (i, campo, valor) => setEditando((e) => ({ ...e, precos_por_ciclo: e.precos_por_ciclo.map((c, j) => (j === i ? { ...c, [campo]: valor } : c)) }));
+  const addCiclo = () => setEditando((e) => ({ ...e, precos_por_ciclo: [...e.precos_por_ciclo, { numero_ciclo: e.precos_por_ciclo.length + 1, valor: '' }] }));
+  const removerCiclo = (i) => setEditando((e) => ({ ...e, precos_por_ciclo: e.precos_por_ciclo.filter((_, j) => j !== i) }));
+
+  const salvar = async () => {
+    if (!editando.nome.trim()) { toast.error('Dê um nome pro plano.'); return; }
+    if (editando.precos_por_ciclo.some((c) => c.valor === '' || c.numero_ciclo === '')) { toast.error('Preencha o número e o valor de cada ciclo da campanha.'); return; }
+    if (editando.aplicar_agora) {
+      const ok = await confirmar(`Aplicar o plano exclusivo em "${empresaNome}" agora?`, {
+        detail: 'Se havia uma cobrança recorrente ativa no Mercado Pago, ela é cancelada. O plano passa a valer na hora' + (editando.gerar_cobranca ? ', e a cobrança do 1º ciclo é lançada em Contas a Receber.' : ', sem lançar cobrança (cortesia).'),
+        confirmText: 'Aplicar'
+      });
+      if (!ok) return;
+    }
+    setSalvando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/empresas/${empresaId}/plano-exclusivo`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editando,
+          preco_mensal: vazioParaNull(editando.preco_mensal),
+          limite_profissionais: vazioParaNull(editando.limite_profissionais),
+          limite_agendamentos_mes: vazioParaNull(editando.limite_agendamentos_mes),
+          dias_teste: vazioParaNull(editando.dias_teste),
+          taxa_marketplace_percentual: editando.taxa_marketplace_percentual === '' ? 0 : editando.taxa_marketplace_percentual,
+          precos_por_ciclo: editando.precos_por_ciclo.map((c) => ({ numero_ciclo: Number(c.numero_ciclo), valor: Number(c.valor) })),
+          aplicar_agora: !emUso && editando.aplicar_agora
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast.success(data.message || 'Plano exclusivo salvo.');
+        setEditando(null);
+        carregar();
+        aoAtualizar?.();
+      } else {
+        toast.error(data.detalhes?.[0] ? `${data.detalhes[0].campo}: ${data.detalhes[0].mensagem}` : (data.error || 'Não foi possível salvar.'));
+      }
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const remover = async () => {
+    const ok = await confirmar(`Remover o plano exclusivo de "${empresaNome}"?`, {
+      detail: 'A empresa deixa de ver essa oferta na tela Conta dela.',
+      confirmText: 'Remover',
+      danger: true
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/empresas/${empresaId}/plano-exclusivo`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) { toast.success(data.message); carregar(); aoAtualizar?.(); } else toast.error(data.error || 'Não foi possível remover.');
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    }
+  };
+
+  return (
+    <div style={{ gridColumn: '1 / -1' }}>
+      <div style={s.infoLabel}>Plano exclusivo</div>
+      {!plano ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13px', color: 'var(--fx-muted)' }}>Nenhum. Monte um plano com regras e campanha só pra esta empresa.</span>
+          <button onClick={abrirEditor} style={s.btnLink}>Criar plano exclusivo</button>
+        </div>
+      ) : (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '14px', color: 'var(--fx-text)' }}>{plano.nome} · {formatarPreco(plano.preco_mensal)}</span>
+            <span style={{ ...s.badgeRoxo, ...(emUso ? { background: 'var(--fx-green-bg)', color: 'var(--fx-green)' } : {}) }}>{emUso ? 'Em uso' : 'Oferecido na Conta da empresa'}</span>
+            <button onClick={abrirEditor} style={s.btnLink}>Editar</button>
+            {!emUso && <button onClick={remover} style={{ ...s.btnLink, color: 'var(--fx-red)' }}>Remover</button>}
+          </div>
+          {dados.precos_por_ciclo.length > 0 && (
+            <div style={s.subTexto}>Campanha: {dados.precos_por_ciclo.map((c) => `${c.numero_ciclo}º mês ${formatarPreco(c.valor)}`).join(' · ')}, depois {formatarPreco(plano.preco_mensal)}</div>
+          )}
+        </div>
+      )}
+
+      {editando && (
+        <div className="sa-overlay" style={{ ...s.overlay, zIndex: 3100 }} onClick={() => setEditando(null)}>
+          <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
+            <div style={s.modalHeader}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)' }}>Plano exclusivo</h3>
+                <div style={s.subTexto}>{empresaNome}</div>
+              </div>
+              <button onClick={() => setEditando(null)} style={s.btnFechar}><Icons.Close /></button>
+            </div>
+
+            <label style={s.label}>Nome</label>
+            <input style={s.input} value={editando.nome} onChange={(e) => setEditando({ ...editando, nome: e.target.value })} />
+
+            <label style={s.label}>Preço mensal cheio (vazio = sob consulta)</label>
+            <input type="number" step="0.01" min="0" style={s.input} value={editando.preco_mensal} onChange={(e) => setEditando({ ...editando, preco_mensal: e.target.value })} />
+
+            <label style={s.label}>Limite de profissionais (vazio = ilimitado)</label>
+            <input type="number" min="1" style={s.input} value={editando.limite_profissionais} onChange={(e) => setEditando({ ...editando, limite_profissionais: e.target.value })} />
+
+            <label style={s.label}>Limite de agendamentos/mês (vazio = ilimitado)</label>
+            <input type="number" min="1" style={s.input} value={editando.limite_agendamentos_mes} onChange={(e) => setEditando({ ...editando, limite_agendamentos_mes: e.target.value })} />
+
+            <label style={s.label}>Dias de teste (vazio = sem limite de tempo)</label>
+            <input type="number" min="1" style={s.input} value={editando.dias_teste} onChange={(e) => setEditando({ ...editando, dias_teste: e.target.value })} />
+
+            <label style={s.label}>Taxa da SchedNext em cada Pix (%)</label>
+            <input type="number" step="0.01" min="0" max="100" style={s.input} value={editando.taxa_marketplace_percentual} onChange={(e) => setEditando({ ...editando, taxa_marketplace_percentual: e.target.value })} />
+
+            <label style={s.label}>Recursos</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {FLAGS_PLANO.map(([chave, rotulo]) => (
+                <label key={chave} style={s.checkboxLinha}>
+                  <input type="checkbox" checked={!!editando[chave]} onChange={(e) => setEditando({ ...editando, [chave]: e.target.checked })} />
+                  {rotulo}
+                </label>
+              ))}
+            </div>
+
+            <label style={s.label}>Campanha: preço por ciclo (opcional)</label>
+            <p style={{ ...s.subTexto, marginTop: 0 }}>Ex: 1º mês R$ 19,90, 2º mês R$ 29,90. Depois do último ciclo cobra o preço cheio. Vazio = sem campanha.</p>
+            {editando.precos_por_ciclo.map((c, i) => (
+              <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
+                <input type="number" min="1" style={{ ...s.input, width: '80px' }} value={c.numero_ciclo} onChange={(e) => alterarCiclo(i, 'numero_ciclo', e.target.value)} aria-label="Número do ciclo" />
+                <span style={{ fontSize: '13px', color: 'var(--fx-muted)' }}>º mês R$</span>
+                <input type="number" step="0.01" min="0" style={{ ...s.input, flex: 1 }} value={c.valor} onChange={(e) => alterarCiclo(i, 'valor', e.target.value)} aria-label="Valor do ciclo" />
+                <button onClick={() => removerCiclo(i)} style={s.btnOutline} aria-label="Remover ciclo">Remover</button>
+              </div>
+            ))}
+            <button onClick={addCiclo} style={{ ...s.btnLink, marginTop: '8px' }}>+ Adicionar ciclo</button>
+
+            {!emUso && (
+              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={s.checkboxLinha}>
+                  <input type="checkbox" checked={editando.aplicar_agora} onChange={(e) => setEditando({ ...editando, aplicar_agora: e.target.checked })} />
+                  Aplicar agora na empresa (sem ela precisar contratar pela Conta)
+                </label>
+                {editando.aplicar_agora && (
+                  <label style={s.checkboxLinha}>
+                    <input type="checkbox" checked={editando.gerar_cobranca} onChange={(e) => setEditando({ ...editando, gerar_cobranca: e.target.checked })} />
+                    Lançar a cobrança do 1º ciclo em Contas a Receber (desmarque só pra cortesia)
+                  </label>
+                )}
+              </div>
+            )}
+            {emUso && (
+              <p style={{ ...s.subTexto, marginTop: '16px' }}>A empresa já usa este plano: recursos e limites mudam na hora. Preço e campanha valem a partir do próximo ciclo (o preço cheio que ela contratou fica travado).</p>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button onClick={() => setEditando(null)} style={{ ...s.btnOutline, flex: 1 }}>Cancelar</button>
+              <LoadingButton loading={salvando} onClick={salvar} style={{ ...s.btnPrimario, flex: 2 }}>Salvar plano exclusivo</LoadingButton>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
   const [empresa, setEmpresa] = useState(null);
   const [planos, setPlanos] = useState([]);
@@ -2749,7 +2953,7 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
                   <div>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                       <select style={s.selectFiltro} value={novoPlanoId} onChange={(e) => setNovoPlanoId(e.target.value)}>
-                        {planos.map((p) => <option key={p.id} value={p.id}>{p.nome} · {formatarPreco(p.preco_mensal)}</option>)}
+                        {planos.filter((p) => !p.empresa_exclusiva_id || String(p.empresa_exclusiva_id) === String(id)).map((p) => <option key={p.id} value={p.id}>{p.nome} · {formatarPreco(p.preco_mensal)}{p.empresa_exclusiva_id ? ' (exclusivo)' : ''}</option>)}
                       </select>
                       <LoadingButton loading={salvandoPlano} onClick={salvarPlano} style={s.btnPrimario}>Salvar</LoadingButton>
                       <button onClick={() => setEditandoPlano(false)} style={s.btnOutline}>Cancelar</button>
@@ -2763,6 +2967,17 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
                   </div>
                 )}
               </div>
+
+              {!empresa.excluida_em && (
+                <PlanoExclusivoEmpresa
+                  empresaId={id}
+                  empresaNome={empresa.nome}
+                  planoAtual={empresa.plano_plataforma}
+                  toast={toast}
+                  confirmar={confirmar}
+                  aoAtualizar={() => { carregar(); aoAtualizar?.(); }}
+                />
+              )}
 
               <div>
                 <div style={s.infoLabel}>Forma de pagamento</div>
@@ -2939,7 +3154,9 @@ function AbaPlanos({ toast, confirmar }) {
                 <div>
                   <strong style={{ fontSize: '15px', color: 'var(--fx-text)' }}>{p.nome}</strong>
                   {p.ativo === false && <span style={{ ...s.badgeRoxo, background: 'var(--fx-red-bg)', color: 'var(--fx-red)', marginLeft: '8px' }}>Desligado</span>}
-                  {p.publico === false && <span style={{ ...s.badgeRoxo, background: 'var(--fx-amber-bg)', color: 'var(--fx-amber)', marginLeft: '8px' }}>Oculto do site</span>}
+                  {p.empresa_exclusiva
+                    ? <span style={{ ...s.badgeRoxo, background: 'var(--fx-violet-bg)', color: 'var(--fx-violet)', marginLeft: '8px' }}>Exclusivo: {p.empresa_exclusiva.nome}</span>
+                    : p.publico === false && <span style={{ ...s.badgeRoxo, background: 'var(--fx-amber-bg)', color: 'var(--fx-amber)', marginLeft: '8px' }}>Oculto do site</span>}
                   {p.dias_teste ? <span style={{ ...s.badgeRoxo, background: 'var(--fx-blue-bg)', color: 'var(--fx-blue)', marginLeft: '8px' }}>{p.dias_teste} dias de teste</span> : null}
                   <div style={s.subTexto}>
                     {formatarPreco(p.preco_mensal)} ·{' '}
