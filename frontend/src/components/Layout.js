@@ -6,6 +6,7 @@ import usePaletaTenant from '../hooks/usePaletaTenant';
 import MarcaPlataforma from './MarcaPlataforma';
 import BotaoTema from './BotaoTema';
 import { API_URL } from '../services/api';
+import { AvisoCobrancaPlataforma } from './CobrancaPlataforma';
 
 
 function Layout({ setEmpresaId }) {
@@ -440,6 +441,7 @@ function Layout({ setEmpresaId }) {
             <Relogio />
           </div>
         </div>
+        <AvisoCobrancaPlataforma caminho={location.pathname} />
         <Outlet context={{ dados, setDados, userId, empresaId: dados?.empresa_id }} />
       </main>
     </div>

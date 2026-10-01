@@ -125,6 +125,10 @@ window.fetch = (input, init = {}) => {
           window.location.href = '/admin/login?suspensa=1';
         } else if (corpo && corpo.code === 'TRIAL_EXPIRADO' && !window.location.pathname.startsWith('/admin/conta')) {
           window.location.href = '/admin/conta?trial=expirado';
+        } else if (corpo && corpo.code === 'PAGAMENTO_PENDENTE' && !window.location.pathname.startsWith('/admin/conta')) {
+          // Mensalidade do plano pago em atraso (ver backend/src/middleware/trialAuth.js): só a
+          // Conta abre, com o quadro de pagamento.
+          window.location.href = '/admin/conta?pagamento=pendente';
         }
       }).catch(() => {});
     }

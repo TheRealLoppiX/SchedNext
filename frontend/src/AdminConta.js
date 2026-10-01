@@ -5,6 +5,7 @@ import { obterTerminologia } from './utils/terminologia';
 import { API_URL } from './services/api';
 import { resumoCampanha } from './utils/campanhaPlano';
 import { acessoAteCancelamento, textoDiasRestantes } from './utils/cancelamentoPlano';
+import { PagamentoPendentePlataforma } from './components/CobrancaPlataforma';
 
 const HORARIOS_PADRAO = {
     0: { aberto: false, abre: '08:00', fecha: '18:00', label: 'Domingo' },
@@ -422,6 +423,7 @@ function AdminConta({ empresaId }) {
 
                         {assinatura && (
                             <>
+                                <PagamentoPendentePlataforma planoAtualId={assinatura.plano?.id} aoPagar={carregarDados} />
                                 <div style={styles.linhaAssinatura}>
                                     <span style={styles.labelAssinatura}>Plano atual</span>
                                     <strong>{assinatura.plano?.nome || '—'}{assinatura.plano?.preco_mensal > 0 ? ` · R$ ${Number(assinatura.plano.preco_mensal).toFixed(2)}/mês` : assinatura.plano?.preco_mensal === 0 ? ' · Grátis' : ''}</strong>
