@@ -6,6 +6,7 @@ import usePaletaTenant from '../hooks/usePaletaTenant';
 import MarcaPlataforma from './MarcaPlataforma';
 import BotaoTema from './BotaoTema';
 import { API_URL } from '../services/api';
+import { AvisoCobrancaPlataforma } from './CobrancaPlataforma';
 
 
 function Layout({ setEmpresaId }) {
@@ -23,6 +24,8 @@ function Layout({ setEmpresaId }) {
   // navegador com sessão de cliente salva de OUTRA empresa conseguia abrir /:slug/barbeiros de
   // um slug inexistente e ver a página renderizada (vazia, mas aberta) em vez de barrada.
   const [empresaValidada, setEmpresaValidada] = useState(false);
+  // Empresa suspensa pelo admin absoluto: o site sai do ar com um aviso, em vez de "não existe".
+  const [empresaIndisponivel, setEmpresaIndisponivel] = useState(false);
 
   usePaletaTenant(empresaTenant);
  
@@ -132,14 +135,23 @@ function Layout({ setEmpresaId }) {
   useEffect(() => {
     if (isAdminPath || !empresaSlug) return;
     setEmpresaValidada(false);
+    setEmpresaIndisponivel(false);
     let cancelado = false;
     fetch(`${API_URL}/empresa/slug/${empresaSlug}`)
-      .then((r) => {
+      .then(async (r) => {
+        if (r.status === 403) {
+          const corpo = await r.json().catch(() => null);
+          if (corpo?.code === 'EMPRESA_INDISPONIVEL') return { indisponivel: true };
+        }
         if (!r.ok) throw new Error('Empresa não encontrada');
         return r.json();
       })
       .then((data) => {
         if (cancelado) return;
+        if (data.indisponivel) {
+          setEmpresaIndisponivel(true);
+          return;
+        }
         setEmpresaTenant(data);
         setEmpresaValidada(true);
       })
@@ -358,6 +370,11 @@ function Layout({ setEmpresaId }) {
                 )}
               </div>
             </div>
+          ) : empresaIndisponivel ? (
+            <div style={{ maxWidth: 420, margin: '80px auto', padding: '0 16px', textAlign: 'center' }}>
+              <h2 style={{ margin: '0 0 8px' }}>Estabelecimento indisponível</h2>
+              <p style={{ margin: 0, opacity: 0.75 }}>Este estabelecimento está temporariamente fora do ar. Tente novamente mais tarde.</p>
+            </div>
           ) : empresaValidada ? (
             <Outlet context={{ dados, setDados, userId, empresaId: dados?.empresa_id, empresa: empresaTenant }} />
           ) : null}
@@ -424,6 +441,7 @@ function Layout({ setEmpresaId }) {
             <Relogio />
           </div>
         </div>
+        <AvisoCobrancaPlataforma caminho={location.pathname} />
         <Outlet context={{ dados, setDados, userId, empresaId: dados?.empresa_id }} />
       </main>
     </div>

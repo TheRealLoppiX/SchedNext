@@ -8,6 +8,8 @@ import BotaoTema from '../../components/BotaoTema';
 import { API_URL } from '../../services/api';
 import { formatarDataSemFuso, partesDataSemFuso } from '../../utils/dataSemFuso';
 import { formatarDocumento } from '../../utils/validacao';
+import { acessoAteCancelamento } from '../../utils/cancelamentoPlano';
+import { RECURSOS_PLANO } from '../../utils/recursosPlano';
 
 const STATUS_LEAD_INFO = {
   novo: { label: 'Novo', bg: 'var(--fx-blue-bg)', fg: 'var(--fx-blue)' },
@@ -25,7 +27,8 @@ function infoStatusEmpresa(empresa) {
     return { label: 'Excluída', bg: 'var(--fx-surface-2)', fg: 'var(--fx-muted)' };
   }
   if (empresa.status_assinatura === 'ativa' && empresa.cancelamento_agendado && empresa.proxima_cobranca_em) {
-    return { label: `Cancelamento agendado p/ ${formatarData(empresa.proxima_cobranca_em)}`, bg: 'var(--fx-amber-bg)', fg: 'var(--fx-amber)' };
+    const { data, dias } = acessoAteCancelamento(empresa.proxima_cobranca_em);
+    return { label: `Cancelando: plano até ${data} (${dias} ${dias === 1 ? 'dia' : 'dias'})`, bg: 'var(--fx-amber-bg)', fg: 'var(--fx-amber)' };
   }
   const mapa = {
     trial: { label: 'Em teste', bg: 'var(--fx-blue-bg)', fg: 'var(--fx-blue)' },
@@ -101,23 +104,14 @@ function paraInputData(iso) {
   return iso ? new Date(iso).toISOString().slice(0, 10) : '';
 }
 
-const FLAGS_PLANO = [
-  ['permite_paleta_customizada', 'Paleta customizada'],
-  ['permite_whatsapp_bot', 'Bot de WhatsApp'],
-  ['permite_remover_marca', 'Remover marca'],
-  ['permite_ia', 'Recursos com IA'],
-  ['permite_multi_unidade', 'Múltiplas unidades'],
-  ['permite_api_publica', 'API pública'],
-  ['permite_relatorios_avancados', 'Relatórios avançados'],
-  ['permite_dominio_customizado', 'Domínio próprio'],
-  ['permite_campanhas_assinatura', 'Campanhas promocionais de assinatura']
-];
+// Mesma lista dos cards de plano do site (ver utils/recursosPlano.js).
+const FLAGS_PLANO = RECURSOS_PLANO.map((r) => [r.chave, r.rotuloAdmin]);
 
 const PLANO_VAZIO = {
   nome: '', preco_mensal: '', limite_profissionais: '', limite_agendamentos_mes: '',
   permite_paleta_customizada: false, permite_whatsapp_bot: false, permite_remover_marca: false,
   permite_ia: false, permite_multi_unidade: false, permite_api_publica: false,
-  permite_relatorios_avancados: false, permite_dominio_customizado: false, permite_campanhas_assinatura: false,
+  permite_relatorios_avancados: false, permite_dominio_customizado: false, permite_campanhas_assinatura: false, permite_relatorio_produtos: false,
   ativo: true, publico: true, dias_teste: ''
 };
 
@@ -1494,54 +1488,87 @@ function AbaContas({ toast, confirmar }) {
   );
 }
 
-// Cadastro genérico de configurações da plataforma (ver GET/PUT /super-admin/configuracoes e
-// sql/2026_plataforma_configuracoes.sql) — hoje só o número de WhatsApp próprio da SchedNext
-// (pra cobrança/avisos às empresas), mas a tabela é chave/valor livre pra qualquer outro dado de
-// contato/serviço que surgir depois. Envio automático por WhatsApp ainda não existe — isso é só
-// o cadastro do número, pra quando essa instância for provisionada.
+// WhatsApp próprio da SchedNext (ver backend/src/services/whatsappPlataforma.js): é por ele que
+// as empresas recebem cobrança de plano e aviso de mensalidade. Conexão por código de pareamento,
+// igual à das empresas: digita o número, recebe o código e digita no WhatsApp do celular.
 function ConfiguracoesPlataforma({ toast }) {
-  const [valor, setValor] = useState('');
-  const [carregando, setCarregando] = useState(true);
-  const [salvando, setSalvando] = useState(false);
+  const [status, setStatus] = useState(null);
+  const [numero, setNumero] = useState('');
+  const [codigo, setCodigo] = useState('');
+  const [processando, setProcessando] = useState(false);
 
-  useEffect(() => {
-    fetch(`${API_URL}/super-admin/configuracoes`)
+  const carregar = useCallback(() => {
+    fetch(`${API_URL}/super-admin/whatsapp-plataforma`)
       .then((r) => r.json())
-      .then((data) => setValor(data.whatsapp_numero_cobranca || ''))
-      .catch(() => toast.error('Erro ao carregar configurações da plataforma.'))
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      .then(setStatus)
+      .catch(() => setStatus({ disponivel: false, conectado: false }));
   }, []);
+  useEffect(() => { carregar(); }, [carregar]);
 
-  const salvar = async () => {
-    setSalvando(true);
+  // Enquanto o código está na tela, confere a conexão a cada 5s.
+  useEffect(() => {
+    if (!codigo || status?.conectado) return undefined;
+    const t = setInterval(carregar, 5000);
+    return () => clearInterval(t);
+  }, [codigo, status?.conectado, carregar]);
+
+  const gerarCodigo = async () => {
+    setProcessando(true);
     try {
-      const res = await fetch(`${API_URL}/super-admin/configuracoes`, {
-        method: 'PUT',
+      const res = await fetch(`${API_URL}/super-admin/whatsapp-plataforma/codigo`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chave: 'whatsapp_numero_cobranca', valor })
+        body: JSON.stringify({ telefone: numero })
       });
       const data = await res.json();
-      if (res.ok) toast.success('Configuração salva.'); else toast.error(data.error || 'Não foi possível salvar.');
+      if (res.ok) setCodigo(data.codigo); else toast.error(data.error || 'Não foi possível gerar o código.');
     } catch (err) {
       toast.error('Erro de conexão.');
     } finally {
-      setSalvando(false);
+      setProcessando(false);
     }
   };
 
-  if (carregando) return null;
+  const desconectar = async () => {
+    setProcessando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/whatsapp-plataforma/desconectar`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) { toast.success(data.message); setCodigo(''); carregar(); } else toast.error(data.error || 'Não foi possível desconectar.');
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  if (!status) return null;
 
   return (
     <div style={{ ...s.card, marginBottom: '16px' }}>
-      <h3 style={s.cardTitulo}>Contato da SchedNext</h3>
+      <h3 style={s.cardTitulo}>WhatsApp da SchedNext</h3>
       <p style={{ ...s.subTexto, marginBottom: '10px' }}>
-        Número próprio da plataforma pra cobrança/avisos via WhatsApp às empresas — cadastro pra quando essa instância for provisionada (envio automático ainda não está ativo, só o e-mail está).
+        Número da plataforma que manda cobrança de plano e aviso de mensalidade pras empresas. Sem ele conectado, a cobrança vai só por e-mail e pelo aviso no painel.
       </p>
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <input style={{ ...s.input, maxWidth: '260px', marginTop: 0 }} placeholder="Ex: 5511999999999" value={valor} onChange={(e) => setValor(e.target.value)} />
-        <LoadingButton loading={salvando} onClick={salvar} style={s.btnPrimario}>Salvar</LoadingButton>
-      </div>
+      {!status.disponivel ? (
+        <p style={s.subTexto}>A integração de WhatsApp (Evolution) não está configurada no servidor.</p>
+      ) : status.conectado ? (
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ ...s.badgeRoxo, background: 'var(--fx-green-bg)', color: 'var(--fx-green)' }}>Conectado</span>
+          <LoadingButton loading={processando} onClick={desconectar} style={s.btnOutline}>Desconectar</LoadingButton>
+        </div>
+      ) : codigo ? (
+        <div>
+          <p style={{ ...s.subTexto, marginBottom: '8px' }}>No celular desse número: WhatsApp &gt; Aparelhos conectados &gt; Conectar com número de telefone, e digite:</p>
+          <div style={{ fontFamily: 'var(--oc-mono)', fontSize: '26px', letterSpacing: '0.2em', color: 'var(--fx-text)', marginBottom: '8px' }}>{codigo}</div>
+          <p style={s.subTexto}>Esta tela confirma sozinha quando conectar.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input style={{ ...s.input, maxWidth: '260px', marginTop: 0 }} placeholder="(11) 91234-5678" value={numero} onChange={(e) => setNumero(e.target.value)} />
+          <LoadingButton loading={processando} onClick={gerarCodigo} style={s.btnPrimario}>Gerar código de conexão</LoadingButton>
+        </div>
+      )}
     </div>
   );
 }
@@ -2401,7 +2428,7 @@ function AbaEmpresas({ toast, confirmar }) {
   const alternarSuspensao = async (empresa) => {
     const suspender = empresa.status_assinatura !== 'suspensa';
     const ok = await confirmar(`${suspender ? 'Suspender' : 'Reativar'} a empresa "${empresa.nome}"?`, {
-      detail: suspender ? 'O login do admin dessa empresa fica bloqueado e qualquer cobrança recorrente ativa é cancelada imediatamente.' : 'O login volta a funcionar normalmente. Se ela tinha cobrança recorrente, precisa ser reconfigurada.',
+      detail: suspender ? 'O painel da empresa (inclusive quem já está logado), o site de agendamento e o WhatsApp dela (bot, lembretes e mensagens automáticas) saem do ar, qualquer cobrança recorrente ativa é cancelada imediatamente e o plano volta pro Grátis.' : 'O painel, o site e o WhatsApp voltam a funcionar, no plano Grátis. O plano pago só volta quando ela assinar de novo e o pagamento for confirmado.',
       confirmText: suspender ? 'Suspender' : 'Reativar',
       danger: suspender
     });
@@ -2549,13 +2576,203 @@ function BarraUso({ label, usado, limite }) {
   );
 }
 
+// Plano exclusivo da empresa (ver backend/src/routes/superAdminPlataforma.js): mesmas regras de
+// um plano normal + campanha de preço por ciclo própria. Oculto do site; só essa empresa vê e
+// contrata na tela Conta dela, ou você aplica na hora.
+const vazioParaNull = (v) => (v === '' || v === undefined ? null : v);
+
+function PlanoExclusivoEmpresa({ empresaId, empresaNome, planoAtual, toast, confirmar, aoAtualizar }) {
+  const [dados, setDados] = useState(null);
+  const [editando, setEditando] = useState(null);
+  const [salvando, setSalvando] = useState(false);
+
+  const carregar = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/super-admin/empresas/${empresaId}/plano-exclusivo`);
+      if (res.ok) setDados(await res.json());
+    } catch (err) {
+      // seção opcional, falha não trava o detalhe da empresa
+    }
+  }, [empresaId]);
+  useEffect(() => { carregar(); }, [carregar]);
+
+  if (!dados) return null;
+  const plano = dados.plano && dados.plano.ativo !== false ? dados.plano : null;
+  const emUso = plano && String(planoAtual?.id) === String(plano.id);
+
+  const abrirEditor = () => {
+    const base = plano || planoAtual || {};
+    setEditando({
+      ...Object.fromEntries(FLAGS_PLANO.map(([chave]) => [chave, !!base[chave]])),
+      nome: plano ? plano.nome : `${base.nome || 'Plano'} - ${empresaNome}`,
+      preco_mensal: base.preco_mensal ?? '',
+      limite_profissionais: base.limite_profissionais ?? '',
+      limite_agendamentos_mes: base.limite_agendamentos_mes ?? '',
+      dias_teste: base.dias_teste ?? '',
+      taxa_marketplace_percentual: base.taxa_marketplace_percentual ?? 0,
+      precos_por_ciclo: plano ? dados.precos_por_ciclo.map((c) => ({ numero_ciclo: c.numero_ciclo, valor: c.valor })) : []
+    });
+  };
+
+  const alterarCiclo = (i, campo, valor) => setEditando((e) => ({ ...e, precos_por_ciclo: e.precos_por_ciclo.map((c, j) => (j === i ? { ...c, [campo]: valor } : c)) }));
+  const addCiclo = () => setEditando((e) => ({ ...e, precos_por_ciclo: [...e.precos_por_ciclo, { numero_ciclo: e.precos_por_ciclo.length + 1, valor: '' }] }));
+  const removerCiclo = (i) => setEditando((e) => ({ ...e, precos_por_ciclo: e.precos_por_ciclo.filter((_, j) => j !== i) }));
+
+  const salvar = async () => {
+    if (!editando.nome.trim()) { toast.error('Dê um nome pro plano.'); return; }
+    if (!(Number(editando.preco_mensal) > 0)) { toast.error('Defina o preço mensal do plano.'); return; }
+    if (editando.precos_por_ciclo.some((c) => c.valor === '' || c.numero_ciclo === '')) { toast.error('Preencha o número e o valor de cada ciclo da campanha.'); return; }
+    if (!emUso) {
+      const ok = await confirmar(`Salvar e cobrar "${empresaNome}"?`, {
+        detail: 'A empresa recebe a cobrança do 1º mês por e-mail, WhatsApp e no painel, e continua no plano atual até pagar. O plano exclusivo passa a valer assim que o pagamento for confirmado.',
+        confirmText: 'Salvar e enviar cobrança'
+      });
+      if (!ok) return;
+    }
+    setSalvando(true);
+    try {
+      const res = await fetch(`${API_URL}/super-admin/empresas/${empresaId}/plano-exclusivo`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editando,
+          preco_mensal: vazioParaNull(editando.preco_mensal),
+          limite_profissionais: vazioParaNull(editando.limite_profissionais),
+          limite_agendamentos_mes: vazioParaNull(editando.limite_agendamentos_mes),
+          dias_teste: vazioParaNull(editando.dias_teste),
+          taxa_marketplace_percentual: editando.taxa_marketplace_percentual === '' ? 0 : editando.taxa_marketplace_percentual,
+          precos_por_ciclo: editando.precos_por_ciclo.map((c) => ({ numero_ciclo: Number(c.numero_ciclo), valor: Number(c.valor) }))
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast.success(data.message || 'Plano exclusivo salvo.');
+        setEditando(null);
+        carregar();
+        aoAtualizar?.();
+      } else {
+        toast.error(data.detalhes?.[0] ? `${data.detalhes[0].campo}: ${data.detalhes[0].mensagem}` : (data.error || 'Não foi possível salvar.'));
+      }
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const remover = async () => {
+    const ok = await confirmar(`Remover o plano exclusivo de "${empresaNome}"?`, {
+      detail: 'A empresa deixa de ver essa oferta na tela Conta dela.',
+      confirmText: 'Remover',
+      danger: true
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch(`${API_URL}/super-admin/empresas/${empresaId}/plano-exclusivo`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) { toast.success(data.message); carregar(); aoAtualizar?.(); } else toast.error(data.error || 'Não foi possível remover.');
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    }
+  };
+
+  return (
+    <div style={{ gridColumn: '1 / -1' }}>
+      <div style={s.infoLabel}>Plano exclusivo</div>
+      {!plano ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13px', color: 'var(--fx-muted)' }}>Nenhum. Monte um plano com regras e campanha só pra esta empresa.</span>
+          <button onClick={abrirEditor} style={s.btnLink}>Criar plano exclusivo</button>
+        </div>
+      ) : (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '14px', color: 'var(--fx-text)' }}>{plano.nome} · {formatarPreco(plano.preco_mensal)}</span>
+            <span style={{ ...s.badgeRoxo, ...(emUso ? { background: 'var(--fx-green-bg)', color: 'var(--fx-green)' } : { background: 'var(--fx-amber-bg)', color: 'var(--fx-amber)' }) }}>{emUso ? 'Em uso' : 'Aguardando pagamento'}</span>
+            <button onClick={abrirEditor} style={s.btnLink}>Editar</button>
+            {!emUso && <button onClick={remover} style={{ ...s.btnLink, color: 'var(--fx-red)' }}>Remover</button>}
+          </div>
+          {dados.precos_por_ciclo.length > 0 && (
+            <div style={s.subTexto}>Campanha: {dados.precos_por_ciclo.map((c) => `${c.numero_ciclo}º mês ${formatarPreco(c.valor)}`).join(' · ')}, depois {formatarPreco(plano.preco_mensal)}</div>
+          )}
+        </div>
+      )}
+
+      {editando && (
+        <div className="sa-overlay" style={{ ...s.overlay, zIndex: 3100 }} onClick={() => setEditando(null)}>
+          <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
+            <div style={s.modalHeader}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--fx-text)' }}>Plano exclusivo</h3>
+                <div style={s.subTexto}>{empresaNome}</div>
+              </div>
+              <button onClick={() => setEditando(null)} style={s.btnFechar}><Icons.Close /></button>
+            </div>
+
+            <label style={s.label}>Nome</label>
+            <input style={s.input} value={editando.nome} onChange={(e) => setEditando({ ...editando, nome: e.target.value })} />
+
+            <label style={s.label}>Preço mensal cheio</label>
+            <input type="number" step="0.01" min="0" style={s.input} value={editando.preco_mensal} onChange={(e) => setEditando({ ...editando, preco_mensal: e.target.value })} />
+
+            <label style={s.label}>Limite de profissionais (vazio = ilimitado)</label>
+            <input type="number" min="1" style={s.input} value={editando.limite_profissionais} onChange={(e) => setEditando({ ...editando, limite_profissionais: e.target.value })} />
+
+            <label style={s.label}>Limite de agendamentos/mês (vazio = ilimitado)</label>
+            <input type="number" min="1" style={s.input} value={editando.limite_agendamentos_mes} onChange={(e) => setEditando({ ...editando, limite_agendamentos_mes: e.target.value })} />
+
+            <label style={s.label}>Dias de teste (vazio = sem limite de tempo)</label>
+            <input type="number" min="1" style={s.input} value={editando.dias_teste} onChange={(e) => setEditando({ ...editando, dias_teste: e.target.value })} />
+
+            <label style={s.label}>Taxa da SchedNext em cada Pix (%)</label>
+            <input type="number" step="0.01" min="0" max="100" style={s.input} value={editando.taxa_marketplace_percentual} onChange={(e) => setEditando({ ...editando, taxa_marketplace_percentual: e.target.value })} />
+
+            <label style={s.label}>Recursos</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {FLAGS_PLANO.map(([chave, rotulo]) => (
+                <label key={chave} style={s.checkboxLinha}>
+                  <input type="checkbox" checked={!!editando[chave]} onChange={(e) => setEditando({ ...editando, [chave]: e.target.checked })} />
+                  {rotulo}
+                </label>
+              ))}
+            </div>
+
+            <label style={s.label}>Campanha: preço por ciclo (opcional)</label>
+            <p style={{ ...s.subTexto, marginTop: 0 }}>Ex: 1º mês R$ 19,90, 2º mês R$ 29,90. Depois do último ciclo cobra o preço cheio. Vazio = sem campanha.</p>
+            {editando.precos_por_ciclo.map((c, i) => (
+              <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
+                <input type="number" min="1" style={{ ...s.input, width: '80px' }} value={c.numero_ciclo} onChange={(e) => alterarCiclo(i, 'numero_ciclo', e.target.value)} aria-label="Número do ciclo" />
+                <span style={{ fontSize: '13px', color: 'var(--fx-muted)' }}>º mês R$</span>
+                <input type="number" step="0.01" min="0" style={{ ...s.input, flex: 1 }} value={c.valor} onChange={(e) => alterarCiclo(i, 'valor', e.target.value)} aria-label="Valor do ciclo" />
+                <button onClick={() => removerCiclo(i)} style={s.btnOutline} aria-label="Remover ciclo">Remover</button>
+              </div>
+            ))}
+            <button onClick={addCiclo} style={{ ...s.btnLink, marginTop: '8px' }}>+ Adicionar ciclo</button>
+
+            {!emUso && (
+              <p style={{ ...s.subTexto, marginTop: '16px' }}>Ao salvar, a empresa é cobrada do 1º mês (e-mail, WhatsApp e aviso no painel). O plano passa a valer depois do pagamento.</p>
+            )}
+            {emUso && (
+              <p style={{ ...s.subTexto, marginTop: '16px' }}>A empresa já usa este plano: recursos e limites mudam na hora. Preço e campanha valem a partir do próximo ciclo (o preço cheio que ela contratou fica travado).</p>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button onClick={() => setEditando(null)} style={{ ...s.btnOutline, flex: 1 }}>Cancelar</button>
+              <LoadingButton loading={salvando} onClick={salvar} style={{ ...s.btnPrimario, flex: 2 }}>{emUso ? 'Salvar plano exclusivo' : 'Salvar e enviar cobrança'}</LoadingButton>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
   const [empresa, setEmpresa] = useState(null);
   const [planos, setPlanos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [editandoPlano, setEditandoPlano] = useState(false);
   const [novoPlanoId, setNovoPlanoId] = useState('');
-  const [gerarCobranca, setGerarCobranca] = useState(true);
   const [salvandoPlano, setSalvandoPlano] = useState(false);
   const [editandoVencimento, setEditandoVencimento] = useState(false);
   const [novoVencimento, setNovoVencimento] = useState('');
@@ -2590,12 +2807,12 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
     const planoEscolhido = planos.find((p) => String(p.id) === String(novoPlanoId));
     if (!planoEscolhido || String(novoPlanoId) === String(empresa.plano_plataforma_id)) { setEditandoPlano(false); return; }
 
-    const cobraraDeVerdade = gerarCobranca && Number(planoEscolhido.preco_mensal) > 0;
-    const ok = await confirmar(`Trocar o plano de "${empresa.nome}" para ${planoEscolhido.nome}?`, {
-      detail: cobraraDeVerdade
-        ? `Se havia uma cobrança recorrente ativa no Mercado Pago, ela é cancelada nessa troca. A empresa passa a valer o novo plano imediatamente, e uma cobrança de ${formatarPreco(planoEscolhido.preco_mensal)} é lançada em Contas a Receber.`
-        : 'Se havia uma cobrança recorrente ativa no Mercado Pago, ela é cancelada nessa troca. A empresa passa a valer o novo plano imediatamente, sem lançar nenhuma cobrança (cortesia).',
-      confirmText: 'Trocar plano'
+    const ehGratis = planoEscolhido.nome === 'Grátis';
+    const ok = await confirmar(ehGratis ? `Passar "${empresa.nome}" para o Grátis?` : `Cobrar "${empresa.nome}" pelo plano ${planoEscolhido.nome}?`, {
+      detail: ehGratis
+        ? 'Vale na hora. Se havia uma cobrança recorrente ativa no Mercado Pago, ela é cancelada.'
+        : 'A empresa recebe a cobrança por e-mail, WhatsApp e no painel, e continua no plano atual até pagar. O plano novo passa a valer assim que o pagamento for confirmado.',
+      confirmText: ehGratis ? 'Passar pro Grátis' : 'Enviar cobrança'
     });
     if (!ok) return;
 
@@ -2604,7 +2821,7 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
       const res = await fetch(`${API_URL}/super-admin/empresas/${id}/plano`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plano_plataforma_id: novoPlanoId, gerar_cobranca: gerarCobranca })
+        body: JSON.stringify({ plano_plataforma_id: novoPlanoId })
       });
       const data = await res.json();
       if (res.ok) {
@@ -2748,27 +2965,33 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '14px', color: 'var(--fx-text)' }}>{empresa.plano_plataforma?.nome || '-'} · {formatarPreco(empresa.plano_plataforma?.preco_mensal)}</span>
                     {!empresa.excluida_em && (
-                      <button onClick={() => { setNovoPlanoId(String(empresa.plano_plataforma_id || '')); setGerarCobranca(true); setEditandoPlano(true); }} style={s.btnLink}>Trocar</button>
+                      <button onClick={() => { setNovoPlanoId(String(empresa.plano_plataforma_id || '')); setEditandoPlano(true); }} style={s.btnLink}>Trocar</button>
                     )}
                   </div>
                 ) : (
                   <div>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                       <select style={s.selectFiltro} value={novoPlanoId} onChange={(e) => setNovoPlanoId(e.target.value)}>
-                        {planos.map((p) => <option key={p.id} value={p.id}>{p.nome} · {formatarPreco(p.preco_mensal)}</option>)}
+                        {planos.filter((p) => (!p.empresa_exclusiva_id || String(p.empresa_exclusiva_id) === String(id)) && p.ativo !== false && (p.nome === 'Grátis' || Number(p.preco_mensal) > 0 || String(p.id) === String(empresa.plano_plataforma_id))).map((p) => <option key={p.id} value={p.id}>{p.nome} · {formatarPreco(p.preco_mensal)}{p.empresa_exclusiva_id ? ' (exclusivo)' : ''}</option>)}
                       </select>
-                      <LoadingButton loading={salvandoPlano} onClick={salvarPlano} style={s.btnPrimario}>Salvar</LoadingButton>
+                      <LoadingButton loading={salvandoPlano} onClick={salvarPlano} style={s.btnPrimario}>Continuar</LoadingButton>
                       <button onClick={() => setEditandoPlano(false)} style={s.btnOutline}>Cancelar</button>
                     </div>
-                    {Number(planos.find((p) => String(p.id) === String(novoPlanoId))?.preco_mensal) > 0 && (
-                      <label style={{ ...s.checkboxLinha, marginTop: '8px' }}>
-                        <input type="checkbox" checked={gerarCobranca} onChange={(e) => setGerarCobranca(e.target.checked)} />
-                        Lançar cobrança em Contas a Receber (desmarque só pra cortesia)
-                      </label>
-                    )}
+                    <p style={{ ...s.subTexto, marginTop: '8px' }}>Plano pago: a empresa é cobrada e o plano vale depois de pago. Cortesia só em Testar planos ou chave de ativação.</p>
                   </div>
                 )}
               </div>
+
+              {!empresa.excluida_em && (
+                <PlanoExclusivoEmpresa
+                  empresaId={id}
+                  empresaNome={empresa.nome}
+                  planoAtual={empresa.plano_plataforma}
+                  toast={toast}
+                  confirmar={confirmar}
+                  aoAtualizar={() => { carregar(); aoAtualizar?.(); }}
+                />
+              )}
 
               <div>
                 <div style={s.infoLabel}>Forma de pagamento</div>
@@ -2801,7 +3024,7 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
                 <InfoItem label="Trocando para" valor={`${empresa.plano_plataforma_pendente?.nome} · ${formatarPreco(empresa.plano_plataforma_pendente?.preco_mensal)} (aguardando confirmação de pagamento)`} cor="var(--fx-amber)" />
               )}
               {empresa.cancelamento_agendado && (
-                <InfoItem label="Cancelamento" valor="Agendado, cai pro plano Grátis na próxima cobrança" cor="var(--fx-amber)" />
+                <InfoItem label="Cancelamento" valor={(() => { const { data, dias } = acessoAteCancelamento(empresa.proxima_cobranca_em); return `Usa o plano até ${data} (${dias === 1 ? 'falta 1 dia' : `faltam ${dias} dias`}), depois cai pro Grátis`; })()} cor="var(--fx-amber)" />
               )}
               {empresa.chave_ativacao_expira_em && (
                 <InfoItem label="Plano por chave promocional" valor={`expira em ${formatarData(empresa.chave_ativacao_expira_em)}`} cor="var(--fx-amber)" />
@@ -2945,7 +3168,9 @@ function AbaPlanos({ toast, confirmar }) {
                 <div>
                   <strong style={{ fontSize: '15px', color: 'var(--fx-text)' }}>{p.nome}</strong>
                   {p.ativo === false && <span style={{ ...s.badgeRoxo, background: 'var(--fx-red-bg)', color: 'var(--fx-red)', marginLeft: '8px' }}>Desligado</span>}
-                  {p.publico === false && <span style={{ ...s.badgeRoxo, background: 'var(--fx-amber-bg)', color: 'var(--fx-amber)', marginLeft: '8px' }}>Oculto do site</span>}
+                  {p.empresa_exclusiva
+                    ? <span style={{ ...s.badgeRoxo, background: 'var(--fx-violet-bg)', color: 'var(--fx-violet)', marginLeft: '8px' }}>Exclusivo: {p.empresa_exclusiva.nome}</span>
+                    : p.publico === false && <span style={{ ...s.badgeRoxo, background: 'var(--fx-amber-bg)', color: 'var(--fx-amber)', marginLeft: '8px' }}>Oculto do site</span>}
                   {p.dias_teste ? <span style={{ ...s.badgeRoxo, background: 'var(--fx-blue-bg)', color: 'var(--fx-blue)', marginLeft: '8px' }}>{p.dias_teste} dias de teste</span> : null}
                   <div style={s.subTexto}>
                     {formatarPreco(p.preco_mensal)} ·{' '}
@@ -3702,6 +3927,7 @@ function AbaChaves({ toast, confirmar }) {
 }
 
 function AbaLeads({ toast, confirmar }) {
+  const [empresaAberta, setEmpresaAberta] = useState(null);
   const [leads, setLeads] = useState([]);
   const [carregando, setCarregando] = useState(true);
 
@@ -3732,18 +3958,20 @@ function AbaLeads({ toast, confirmar }) {
     } catch (err) { toast.error('Erro de conexão. Tente novamente.'); }
   };
 
+  // Enterprise fecha como plano exclusivo com o valor negociado: a empresa é cobrada ao salvar e
+  // o plano só vale depois de pago (ver backend/src/routes/superAdmin.js).
   const ativarEmpresa = async (lead) => {
-    const ok = await confirmar(`Ativar o plano Enterprise pra "${lead.nome_empresa}"?`, {
-      detail: 'Isso muda o plano da empresa pra Enterprise imediatamente. A cobrança do valor combinado é feita manualmente, fora do sistema, por enquanto.',
-      confirmText: 'Ativar'
+    const ok = await confirmar(`Fechar o Enterprise de "${lead.nome_empresa}"?`, {
+      detail: 'O lead é marcado como fechado e a empresa abre pra você montar o plano exclusivo com o valor negociado. A cobrança vai pra empresa ao salvar, e o plano vale depois de pago.',
+      confirmText: 'Continuar'
     });
     if (!ok) return;
 
     try {
       const res = await fetch(`${API_URL}/super-admin/leads-enterprise/${lead.id}/ativar-empresa`, { method: 'POST' });
       const data = await res.json();
-      if (res.ok) { toast.success(data.message); carregarLeads(); }
-      else toast.error(data.error || 'Não foi possível ativar o plano.');
+      if (res.ok) { toast.success(data.message); carregarLeads(); setEmpresaAberta(data.empresa_id); }
+      else toast.error(data.error || 'Não foi possível fechar o lead.');
     } catch (err) { toast.error('Erro de conexão. Tente novamente.'); }
   };
 
@@ -3752,6 +3980,9 @@ function AbaLeads({ toast, confirmar }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {empresaAberta && (
+        <DetalheEmpresaModal id={empresaAberta} onFechar={() => setEmpresaAberta(null)} toast={toast} confirmar={confirmar} aoAtualizar={carregarLeads} />
+      )}
       {leads.map((lead) => {
         const status = STATUS_LEAD_INFO[lead.status] || { label: lead.status, bg: 'var(--fx-surface-2)', fg: 'var(--fx-muted)' };
         return (
@@ -3780,7 +4011,7 @@ function AbaLeads({ toast, confirmar }) {
                 <button onClick={() => atualizarStatus(lead.id, 'fechado')} style={s.btnOutline}>Marcar como fechado</button>
               )}
               {lead.empresa_id && lead.status !== 'fechado' && (
-                <button onClick={() => ativarEmpresa(lead)} style={s.btnPrimario}>Ativar plano Enterprise</button>
+                <button onClick={() => ativarEmpresa(lead)} style={s.btnPrimario}>Fechar Enterprise (plano exclusivo)</button>
               )}
             </div>
           </div>

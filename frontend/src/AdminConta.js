@@ -4,6 +4,8 @@ import { useConfirm } from './components/ConfirmDialog';
 import { obterTerminologia } from './utils/terminologia';
 import { API_URL } from './services/api';
 import { resumoCampanha } from './utils/campanhaPlano';
+import { acessoAteCancelamento, textoDiasRestantes } from './utils/cancelamentoPlano';
+import { PagamentoPendentePlataforma } from './components/CobrancaPlataforma';
 
 const HORARIOS_PADRAO = {
     0: { aberto: false, abre: '08:00', fecha: '18:00', label: 'Domingo' },
@@ -91,11 +93,16 @@ function AdminConta({ empresaId }) {
 
     useEffect(() => { carregarDados(); }, [carregarDados]);
 
+    // Planos do site + o plano exclusivo que o admin absoluto montou pra esta empresa (se houver),
+    // que aparece primeiro na lista.
     useEffect(() => {
-        fetch(`${API_URL}/planos-plataforma`)
-            .then(r => r.json())
-            .then(data => setPlanosDisponiveis(Array.isArray(data) ? data : []))
-            .catch(() => {});
+        Promise.all([
+            fetch(`${API_URL}/planos-plataforma`).then(r => r.json()).catch(() => []),
+            fetch(`${API_URL}/admin/assinatura-plataforma/plano-exclusivo`).then(r => (r.ok ? r.json() : null)).catch(() => null)
+        ]).then(([publicos, exclusivo]) => {
+            const lista = Array.isArray(publicos) ? publicos : [];
+            setPlanosDisponiveis(exclusivo ? [exclusivo, ...lista.filter(p => p.id !== exclusivo.id)] : lista);
+        });
     }, []);
 
     const planoSelecionado = planosDisponiveis.find(p => p.id === planoEscolhidoId);
@@ -216,7 +223,7 @@ function AdminConta({ empresaId }) {
 
     const cancelarPlanoAgora = async () => {
         const ok = await confirmar('Cancelar o plano agora?', {
-            detail: 'Os recursos pagos são encerrados imediatamente, sem reembolso do período restante. Diferente de "cancelar cobrança", que mantém o acesso até a próxima data de cobrança.',
+            detail: 'Os recursos pagos são encerrados imediatamente, sem reembolso do período restante. Diferente de "cancelar cobrança", que mantém o acesso até o dia anterior à próxima cobrança.',
             confirmText: 'Cancelar agora',
             danger: true
         });
@@ -416,6 +423,7 @@ function AdminConta({ empresaId }) {
 
                         {assinatura && (
                             <>
+                                <PagamentoPendentePlataforma planoAtualId={assinatura.plano?.id} aoPagar={carregarDados} />
                                 <div style={styles.linhaAssinatura}>
                                     <span style={styles.labelAssinatura}>Plano atual</span>
                                     <strong>{assinatura.plano?.nome || '—'}{assinatura.plano?.preco_mensal > 0 ? ` · R$ ${Number(assinatura.plano.preco_mensal).toFixed(2)}/mês` : assinatura.plano?.preco_mensal === 0 ? ' · Grátis' : ''}</strong>
@@ -428,14 +436,14 @@ function AdminConta({ empresaId }) {
                                 </div>
                                 {assinatura.proxima_cobranca_em && (
                                     <div style={styles.linhaAssinatura}>
-                                        <span style={styles.labelAssinatura}>{assinatura.cancelamento_agendado ? 'Encerra em' : 'Próxima cobrança'}</span>
-                                        <strong>{new Date(assinatura.proxima_cobranca_em).toLocaleDateString('pt-BR')}</strong>
+                                        <span style={styles.labelAssinatura}>{assinatura.cancelamento_agendado ? 'Acesso ao plano até' : 'Próxima cobrança'}</span>
+                                        <strong>{assinatura.cancelamento_agendado ? acessoAteCancelamento(assinatura.proxima_cobranca_em).data : new Date(assinatura.proxima_cobranca_em).toLocaleDateString('pt-BR')}</strong>
                                     </div>
                                 )}
 
                                 {assinatura.cancelamento_agendado && (
                                     <div style={styles.avisoCancelamento}>
-                                        Cobrança cancelada. Seu plano continua ativo até a data acima, depois cai automaticamente pro plano Grátis.
+                                        Cobrança cancelada. {textoDiasRestantes(acessoAteCancelamento(assinatura.proxima_cobranca_em).dias)} Depois disso a conta passa automaticamente pro plano Grátis.
                                         <button onClick={reativarCobranca} disabled={processandoAssinatura} style={styles.btnLinkReativar}>Reativar cobrança</button>
                                     </div>
                                 )}
@@ -463,7 +471,7 @@ function AdminConta({ empresaId }) {
                                         >
                                             {planosDisponiveis.map(p => (
                                                 <option key={p.id} value={p.id}>
-                                                    {p.nome}{p.dias_teste > 0 ? ` · ${p.dias_teste} dias de teste` : ''}{p.preco_mensal > 0 ? (resumoCampanha(p) ? ` · ${resumoCampanha(p)}` : ` · R$ ${Number(p.preco_mensal).toFixed(2)}/mês`) : p.preco_mensal === 0 ? ' · Grátis' : ' · sob consulta'}
+                                                    {p.exclusivo ? '★ ' : ''}{p.nome}{p.exclusivo ? ' (exclusivo pra você)' : ''}{p.dias_teste > 0 ? ` · ${p.dias_teste} dias de teste` : ''}{p.preco_mensal > 0 ? (resumoCampanha(p) ? ` · ${resumoCampanha(p)}` : ` · R$ ${Number(p.preco_mensal).toFixed(2)}/mês`) : p.preco_mensal === 0 ? ' · Grátis' : ' · sob consulta'}
                                                 </option>
                                             ))}
                                         </select>

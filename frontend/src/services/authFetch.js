@@ -115,9 +115,21 @@ window.fetch = (input, init = {}) => {
     }
     // Teste grátis acabou (ver backend/src/middleware/trialAuth.js): qualquer rota do painel
     // responde 403 TRIAL_EXPIRADO; leva o admin direto pra Assinatura, onde escolhe um plano.
-    if (res.status === 403 && isAdminRoute && !window.location.pathname.startsWith('/admin/conta')) {
+    // Conta suspensa pelo admin absoluto: mesma limpeza do 401 acima (sem ela o empresaId órfão
+    // prende o admin em loop), e o login mostra o motivo.
+    if (res.status === 403 && isAdminRoute) {
       res.clone().json().then((corpo) => {
-        if (corpo && corpo.code === 'TRIAL_EXPIRADO') window.location.href = '/admin/conta?trial=expirado';
+        if (corpo && corpo.code === 'CONTA_SUSPENSA') {
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('empresaId');
+          window.location.href = '/admin/login?suspensa=1';
+        } else if (corpo && corpo.code === 'TRIAL_EXPIRADO' && !window.location.pathname.startsWith('/admin/conta')) {
+          window.location.href = '/admin/conta?trial=expirado';
+        } else if (corpo && corpo.code === 'PAGAMENTO_PENDENTE' && !window.location.pathname.startsWith('/admin/conta')) {
+          // Mensalidade do plano pago em atraso (ver backend/src/middleware/trialAuth.js): só a
+          // Conta abre, com o quadro de pagamento.
+          window.location.href = '/admin/conta?pagamento=pendente';
+        }
       }).catch(() => {});
     }
     return res;

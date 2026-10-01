@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './Landing.css';
 import { API_URL } from '../services/api';
+import { recursosDoPlano } from '../utils/recursosPlano';
 import { observarSecoes } from '../utils/analytics';
 import reduzirMovimento from '../utils/prefersReducedMotion';
 import { formatarReal, precoPromocionalPrimeiroMes, continuacaoCampanha } from '../utils/campanhaPlano';
@@ -590,14 +591,7 @@ function Landing() {
                     {p.dias_teste > 0 && <li>{p.dias_teste} dias de teste grátis</li>}
                     <li>{p.limite_profissionais == null ? 'Profissionais ilimitados' : `Até ${p.limite_profissionais} profissional(is)`}</li>
                     <li>{p.limite_agendamentos_mes == null ? 'Agendamentos ilimitados/mês' : `Até ${p.limite_agendamentos_mes} agendamentos/mês`}</li>
-                    {p.permite_paleta_customizada && <li>Paleta de cores personalizada</li>}
-                    {p.permite_whatsapp_bot && <li>Bot de agendamento no WhatsApp</li>}
-                    {p.permite_remover_marca && <li>Sem marca "feito com SchedNext"</li>}
-                    {p.permite_relatorios_avancados && <li>Relatórios avançados</li>}
-                    {p.permite_ia && <li>Recursos com IA</li>}
-                    {p.permite_multi_unidade && <li>Múltiplas unidades</li>}
-                    {p.permite_api_publica && <li>API pública</li>}
-                    {p.permite_dominio_customizado && <li>Subdomínio personalizado</li>}
+                    {recursosDoPlano(p).map((r) => <li key={r}>{r}</li>)}
                   </ul>
                   <Link to="/cadastrar" data-track={`plano_comecar_${p.nome}`} className={`of-btn of-btn-bloco ${destaque ? 'of-btn-claro' : 'of-btn-contorno'}`}>Começar</Link>
                 </Revelar>

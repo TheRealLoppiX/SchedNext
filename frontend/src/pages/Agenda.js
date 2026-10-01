@@ -22,7 +22,8 @@ function Agenda() {
 
   const [servicos, setServicos] = useState([]);
   const [carrinho, setCarrinho] = useState([]);
-  const [isAssinante, setIsAssinante] = useState(false);
+  const [assinanteCadastro, setIsAssinante] = useState(false);
+  const [diasSemanaPlano, setDiasSemanaPlano] = useState(null); // dias em que o plano vale (0 = domingo; null = todos)
   const [servicosPlano, setServicosPlano] = useState([]); // ids dos servicos inclusos no plano
   const [restantesPlano, setRestantesPlano] = useState({}); // saldo por servico no ciclo atual (null = ilimitado)
   const [pendentesPlano, setPendentesPlano] = useState({}); // agendamentos ja marcados (pendente/confirmado) neste ciclo, por servico
@@ -62,6 +63,11 @@ function Agenda() {
   // atribuir o agendamento ao cliente de ID 1 (de qualquer tenant, já que IDs são globais).
   const userId = localStorage.getItem('usuario_id');
 
+  // Plano com dias da semana definidos: fora deles o atendimento é cobrado como cliente comum.
+  const planoValeNoDia = !diasSemanaPlano || diasSemanaPlano.length === 0 || diasSemanaPlano.includes(dataHora.getDay());
+  const isAssinante = assinanteCadastro && planoValeNoDia;
+  const NOMES_DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
   // Verifica se o usuario e assinante
   useEffect(() => {
     if (userId) {
@@ -70,6 +76,7 @@ function Agenda() {
         .then(d => {
           setIsAssinante(!!d.assinante);
           if (d.servicos_ids) setServicosPlano(d.servicos_ids);
+          setDiasSemanaPlano(d.dias_semana || null);
           if (d.restantes) setRestantesPlano(d.restantes);
           if (d.pendentes) setPendentesPlano(d.pendentes);
         })
@@ -586,6 +593,11 @@ function Agenda() {
             <strong>{moeda(isAssinante ? totalExtraPlano : totalCheio)}</strong>
           </div>
           {isAssinante && <p className="oc-dica oc-bilhete-plano">Serviços do seu plano de assinatura não são cobrados aqui.</p>}
+          {assinanteCadastro && !planoValeNoDia && (
+            <p className="oc-dica oc-bilhete-plano">
+              Seu plano vale só em {diasSemanaPlano.map(d => NOMES_DIAS[d]).join(', ')}. Neste dia o atendimento é cobrado normalmente.
+            </p>
+          )}
 
           {aceitaPix && valorAPagar > 0 && !confirmado && (
             <div className="oc-pagamento" role="radiogroup" aria-label="Forma de pagamento">
