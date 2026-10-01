@@ -3,6 +3,13 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import LoadingButton from '../../components/LoadingButton';
 import { obterTerminologia } from '../../utils/terminologia';
 import { API_URL } from '../../services/api';
+import ConfigVencimentoAssinatura from './ConfigVencimentoAssinatura';
+
+// Dias da semana do plano (0 = domingo, igual ao backend). Nenhum marcado = vale todos os dias.
+const DIAS_SEMANA = [['Dom', 0], ['Seg', 1], ['Ter', 2], ['Qua', 3], ['Qui', 4], ['Sex', 5], ['Sáb', 6]];
+const resumoDias = (dias) => (!dias || dias.length === 0 || dias.length === 7
+    ? 'Todos os dias'
+    : DIAS_SEMANA.filter(([, n]) => dias.includes(n)).map(([r]) => r).join(', '));
 
 function AdminAssinaturas({ empresaId }) {
     const confirmar = useConfirm();
@@ -15,7 +22,7 @@ function AdminAssinaturas({ empresaId }) {
     const [vertical, setVertical] = useState('barbearia');
     const termos = obterTerminologia(vertical);
 
-    const [form, setForm] = useState({ nome: '', preco: '', descricao: '', servicos: [] });
+    const [form, setForm] = useState({ nome: '', preco: '', descricao: '', servicos: [], dias_semana: [] });
 
     const [permiteCampanhas, setPermiteCampanhas] = useState(false);
     const [campanhas, setCampanhas] = useState([]);
@@ -57,6 +64,14 @@ function AdminAssinaturas({ empresaId }) {
         }));
     };
 
+    const toggleDiaSemana = (dia) => {
+        const alvo = editando ? setEditando : setForm;
+        alvo(prev => {
+            const atuais = prev.dias_semana || [];
+            return { ...prev, dias_semana: atuais.includes(dia) ? atuais.filter(d => d !== dia) : [...atuais, dia] };
+        });
+    };
+
     const alterarLimiteServico = (id, limite_mensal) => {
         const alvo = editando ? setEditando : setForm;
         alvo(prev => ({
@@ -79,7 +94,7 @@ function AdminAssinaturas({ empresaId }) {
             });
             if (res.ok) {
                 mostrarFeedback('Plano criado com sucesso.');
-                setForm({ nome: '', preco: '', descricao: '', servicos: [] });
+                setForm({ nome: '', preco: '', descricao: '', servicos: [], dias_semana: [] });
                 carregar();
             } else {
                 mostrarFeedback('Erro ao criar plano.', 'erro');
@@ -238,7 +253,7 @@ function AdminAssinaturas({ empresaId }) {
     };
 
     const abrirEdicao = (plano) => {
-        setEditando({ ...plano, servicos: (plano.servicos || []).map(s => ({ id: s.id, limite_mensal: s.limite_mensal ?? null })) });
+        setEditando({ ...plano, dias_semana: plano.dias_semana || [], servicos: (plano.servicos || []).map(s => ({ id: s.id, limite_mensal: s.limite_mensal ?? null })) });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -353,6 +368,29 @@ function AdminAssinaturas({ empresaId }) {
                     </div>
                 </div>
 
+                <div style={{ ...s.inputGroup, marginBottom: '16px' }}>
+                    <label style={s.label}>Dias em que o plano vale</label>
+                    <p style={{ fontSize: '12px', color: 'var(--fx-faint)', margin: '0 0 10px 0' }}>
+                        Fora desses dias o assinante agenda normalmente, pagando como cliente comum. Nenhum dia marcado = vale todos os dias.
+                    </p>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {DIAS_SEMANA.map(([rotulo, dia]) => {
+                            const marcado = (editando ? editando.dias_semana : form.dias_semana || []).includes(dia);
+                            return (
+                                <button
+                                    key={dia}
+                                    type="button"
+                                    aria-pressed={marcado}
+                                    onClick={() => toggleDiaSemana(dia)}
+                                    style={{ ...s.chipDia, ...(marcado ? s.chipDiaAtivo : {}) }}
+                                >
+                                    {rotulo}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 <div style={s.inputGroup}>
                     <label style={s.label}>Serviços Inclusos no Plano</label>
                     <p style={{ fontSize: '12px', color: 'var(--fx-faint)', margin: '0 0 10px 0' }}>
@@ -397,6 +435,7 @@ function AdminAssinaturas({ empresaId }) {
                                 <td style={s.td}>
                                     <strong style={{ color: 'var(--fx-text)', fontSize: '14px' }}>{p.nome}</strong>
                                     {p.descricao && <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>{p.descricao}</p>}
+                                    <p style={{ margin: '4px 0 0', fontSize: '11.5px', color: 'var(--fx-muted)', fontWeight: 600 }}>{resumoDias(p.dias_semana)}</p>
                                 </td>
                                 <td style={s.td}>
                                     <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
@@ -449,6 +488,8 @@ function AdminAssinaturas({ empresaId }) {
                 </table>
                 </div>
             </div>
+
+            <ConfigVencimentoAssinatura onFeedback={mostrarFeedback} />
 
             {/* CAMPANHAS PROMOCIONAIS DE PREÇO ESCALONADO */}
             <div style={{ marginTop: '30px' }}>
@@ -615,6 +656,8 @@ const s = {
     th: { padding: '13px 20px', background: 'var(--fx-surface-2)', color: 'var(--fx-muted)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--fx-line)', textAlign: 'left' },
     tr: { borderBottom: '1px solid var(--fx-line)' },
     td: { padding: '16px 20px', fontSize: '13px', verticalAlign: 'middle', color: 'var(--fx-text)' },
+    chipDia: { minWidth: '52px', padding: '8px 12px', borderRadius: '999px', border: '1px solid var(--fx-line-2)', background: 'var(--fx-card)', color: 'var(--fx-muted)', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
+    chipDiaAtivo: { background: 'var(--fx-strong)', color: '#fff', borderColor: 'var(--fx-strong)' },
     badgeServico: { background: 'var(--fx-violet-bg)', color: 'var(--fx-violet)', fontSize: '11px', fontWeight: '600', padding: '3px 8px', borderRadius: '4px' },
     btnIcone: { background: 'var(--fx-surface-2)', border: 'none', padding: '7px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' },
     upsell: { background: 'var(--fx-card)', padding: '24px', borderRadius: '12px', border: '1px dashed var(--fx-line-2)' },

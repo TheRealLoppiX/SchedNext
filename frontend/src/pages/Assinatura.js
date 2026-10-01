@@ -3,6 +3,9 @@ import { useToast } from '../components/Toast';
 import LoadingButton from '../components/LoadingButton';
 import { API_URL } from '../services/api';
 
+const NOMES_DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const dataBr = (iso) => (iso ? new Date(`${String(iso).slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR') : '');
+
 function Assinatura() {
   const toast = useToast();
   const userId = localStorage.getItem('usuario_id');
@@ -18,6 +21,11 @@ function Assinatura() {
   const [formaEscolhida, setFormaEscolhida] = useState('cartao');
   const [pixInfo, setPixInfo] = useState(null);
   const pixPollRef = useRef(null);
+  // Dias da semana do plano e vencimento configurado pela empresa (dias fixos: o cliente escolhe).
+  const [diasSemana, setDiasSemana] = useState(null);
+  const [vencimento, setVencimento] = useState({ modo: 'data_assinatura', dias: [] });
+  const [diaEscolhido, setDiaEscolhido] = useState(null);
+  const [proximaCobranca, setProximaCobranca] = useState(null);
 
   const carregar = useCallback(async () => {
     try {
@@ -33,6 +41,12 @@ function Assinatura() {
       setStatusAssinatura(dadosAssinante.status_assinatura || null);
       setFormaConfigurada(dadosAssinante.assinatura_forma_pagamento || null);
       setStatusCobranca(dadosCobranca.status || null);
+      setDiasSemana(dadosAssinante.dias_semana || null);
+      setProximaCobranca(dadosAssinante.proxima_cobranca || null);
+      if (dadosAssinante.vencimento) {
+        setVencimento(dadosAssinante.vencimento);
+        if ((dadosAssinante.vencimento.dias || []).length === 1) setDiaEscolhido(dadosAssinante.vencimento.dias[0]);
+      }
 
       if (dadosAssinante.plano_id) {
         const resPlano = await fetch(`${API_URL}/assinaturas/plano/${dadosAssinante.plano_id}`);
@@ -72,13 +86,19 @@ function Assinatura() {
     }, 4000);
   };
 
+  const diasFixos = vencimento.modo === 'dias_fixos' && vencimento.dias.length > 0;
+
   const assinar = async () => {
+    if (diasFixos && !diaEscolhido) {
+      toast.error('Escolha o dia do vencimento.');
+      return;
+    }
     setProcessando(true);
     try {
       const res = await fetch(`${API_URL}/usuario/${userId}/assinatura-cobranca/assinar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ forma_pagamento: formaEscolhida })
+        body: JSON.stringify({ forma_pagamento: formaEscolhida, ...(diasFixos ? { dia_vencimento: diaEscolhido } : {}) })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -87,11 +107,18 @@ function Assinatura() {
       }
 
       if (formaEscolhida === 'pix') {
-        setPixInfo({ qr_code: data.qr_code, qr_code_base64: data.qr_code_base64, pago: false, falhou: false });
+        if (data.sem_cobranca_agora) {
+          toast.success(`Pronto! Seu plano já vale. A primeira cobrança é no dia ${dataBr(data.primeira_cobranca_em)}.`);
+          carregar();
+          return;
+        }
+        setPixInfo({ qr_code: data.qr_code, qr_code_base64: data.qr_code_base64, valor: data.valor, primeiraCobrancaEm: data.primeira_cobranca_em, pago: false, falhou: false });
         iniciarPollingPix();
       } else {
         window.open(data.checkoutUrl, '_blank', 'noopener,noreferrer');
-        toast.success('Finalize a autorização na aba que abriu. A cobrança automática ativa assim que for confirmada.');
+        toast.success(diasFixos
+          ? `Finalize a autorização na aba que abriu. Seu plano vale assim que o cartão for autorizado, e a primeira cobrança é no dia ${diaEscolhido}.`
+          : 'Finalize a autorização na aba que abriu. A cobrança automática ativa assim que for confirmada.');
       }
     } catch (err) {
       toast.error('Erro de conexão. Tente novamente.');
@@ -159,6 +186,11 @@ function Assinatura() {
               {plano?.preco != null && (
                 <p style={{ margin: '8px 0 0', fontSize: '15px', color: 'var(--fx-text)' }}>R$ {Number(plano.preco).toFixed(2)}/mês</p>
               )}
+              {diasSemana && diasSemana.length > 0 && (
+                <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'var(--fx-muted)' }}>
+                  Vale em: {diasSemana.map(d => NOMES_DIAS[d]).join(', ')}. Nos outros dias o atendimento é cobrado normalmente.
+                </p>
+              )}
             </div>
 
             {inadimplente && (
@@ -183,6 +215,7 @@ function Assinatura() {
                 <>
                   <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#34d399', fontWeight: '600' }}>
                     Ativa por {formaConfigurada === 'pix' ? 'Pix' : 'cartão'}: {formaConfigurada === 'pix' ? 'você recebe um Pix novo por e-mail e WhatsApp todo mês.' : 'seu cartão é cobrado automaticamente todo mês.'}
+                    {proximaCobranca && ` Próxima cobrança: ${dataBr(proximaCobranca)}.`}
                   </p>
                   <LoadingButton loading={processando} onClick={cancelar} style={styles.btnCancelar}>Cancelar cobrança automática</LoadingButton>
                 </>
@@ -197,7 +230,12 @@ function Assinatura() {
                     </div>
                   ) : (
                     <div style={{ textAlign: 'center' }}>
-                      <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--fx-text)', fontWeight: '600' }}>Pague por Pix pra ativar sua mensalidade</p>
+                      <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--fx-text)', fontWeight: '600' }}>
+                        Pague por Pix pra ativar sua mensalidade{pixInfo.valor != null ? `: R$ ${Number(pixInfo.valor).toFixed(2).replace('.', ',')}` : ''}
+                      </p>
+                      {pixInfo.primeiraCobrancaEm && (
+                        <p style={{ margin: '-4px 0 10px', fontSize: '12px', color: 'var(--fx-muted)' }}>Próxima mensalidade no dia {dataBr(pixInfo.primeiraCobrancaEm)}.</p>
+                      )}
                       {pixInfo.qr_code_base64 && (
                         <img
                           src={`data:image/png;base64,${pixInfo.qr_code_base64}`}
@@ -219,6 +257,23 @@ function Assinatura() {
                       ? 'Regularize sua mensalidade por cartão ou Pix, ou combine o pagamento diretamente com o estabelecimento.'
                       : 'Ainda não tem cobrança automática configurada. Assine pra não precisar combinar o pagamento por fora todo mês. É opcional, a primeira mensalidade pode ser paga presencialmente.'}
                   </p>
+                  {diasFixos && (
+                    <div style={{ marginBottom: '14px' }}>
+                      <p style={{ margin: '0 0 8px', fontSize: '13px', color: 'var(--fx-text)', fontWeight: '600' }}>Em qual dia do mês você quer pagar?</p>
+                      <div style={styles.formaPagamentoRow}>
+                        {vencimento.dias.map(dia => (
+                          <button
+                            key={dia}
+                            type="button"
+                            onClick={() => setDiaEscolhido(dia)}
+                            style={{ ...styles.btnForma, ...(diaEscolhido === dia ? styles.btnFormaAtiva : {}) }}
+                          >
+                            Dia {dia}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div style={styles.formaPagamentoRow}>
                     <button
                       type="button"

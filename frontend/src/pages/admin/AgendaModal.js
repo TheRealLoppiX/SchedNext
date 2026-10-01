@@ -328,7 +328,7 @@ const toggleServico = (servico) => {
         fetch(`${API_URL}/admin/agendamento-usuario/${modalFinalizar.id}`)
             .then(r => r.json())
             .then(d => {
-                setAssinaturaCheckout({ assinante: !!d.assinante, servicos_ids: d.servicos_ids || [], servicos_agendados_ids: d.servicos_agendados_ids || [], restantes: d.restantes || {} });
+                setAssinaturaCheckout({ assinante: !!d.assinante, fora_do_dia_plano: !!d.fora_do_dia_plano, servicos_ids: d.servicos_ids || [], servicos_agendados_ids: d.servicos_agendados_ids || [], restantes: d.restantes || {} });
                 setPremio(d.premio_fidelidade || null);
             })
             .catch(() => setAssinaturaCheckout({ assinante: false, servicos_ids: [], servicos_agendados_ids: [], restantes: {} }));
@@ -806,6 +806,11 @@ const toggleServico = (servico) => {
                         </div>
 
                         <div style={{ marginBottom: '15px', borderTop: '2px solid var(--fx-line)', paddingTop: '15px' }}>
+                            {assinaturaCheckout.fora_do_dia_plano && (
+                                <div style={{ marginBottom: '8px', padding: '6px 10px', background: 'var(--fx-surface-2)', borderRadius: '6px', border: '1px solid var(--fx-line-2)', fontSize: '12px', color: 'var(--fx-muted)', fontWeight: 600 }}>
+                                    Cliente assinante, mas o plano dele não vale neste dia da semana: cobrado como cliente comum.
+                                </div>
+                            )}
                             {assinaturaCheckout.assinante && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '6px 10px', background: 'var(--fx-violet-bg)', borderRadius: '6px', border: '1px solid var(--fx-violet-line)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
