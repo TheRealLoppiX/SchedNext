@@ -3,7 +3,7 @@ import { useLocation, useOutletContext } from 'react-router-dom';
 import { formatarTelefone } from '../utils/telefone';
 import { useToast } from '../components/Toast';
 import LoadingButton from '../components/LoadingButton';
-import { obterTerminologia } from '../utils/terminologia';
+import { TERMOS } from '../utils/terminologia';
 import { formatarDataSemFuso } from '../utils/dataSemFuso';
 import { API_URL } from '../services/api';
 
@@ -795,13 +795,10 @@ function AgendamentosAdminView({ empresaId }) {
   const [barbeiros, setBarbeiros] = useState([]);
   const [filtroData, setFiltroData] = useState(new Date().toISOString().split('T')[0]);
   const [barbeirosSelecionados, setBarbeirosSelecionados] = useState([]);
-  const [vertical, setVertical] = useState('barbearia');
-  const termos = obterTerminologia(vertical);
 
   useEffect(() => {
     fetch(`${API_URL}/admin/agendamentos-geral/${empresaId}`).then(r => r.json()).then(setDados => setAgendamentos(setDados));
     fetch(`${API_URL}/barbeiros/${empresaId}`).then(r => r.json()).then(setBarbeiros);
-    fetch(`${API_URL}/admin/empresa/${empresaId}`).then(r => r.json()).then(d => d?.vertical && setVertical(d.vertical)).catch(() => {});
   }, [empresaId]);
 
   const toggleBarbeiro = (id) => {
@@ -830,7 +827,7 @@ function AgendamentosAdminView({ empresaId }) {
           <input type="date" value={filtroData} onChange={e => setFiltroData(e.target.value)} style={styles.input} />
         </div>
         <div>
-          <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>{termos.profissionalPlural}:</label>
+          <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>{TERMOS.profissionalPlural}:</label>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button onClick={() => setBarbeirosSelecionados([])} style={barbeirosSelecionados.length === 0 ? styles.btnFiltroAtivo : styles.btnFiltro}>Todos</button>
             {barbeiros.map(b => (
@@ -847,7 +844,7 @@ function AgendamentosAdminView({ empresaId }) {
             <tr style={{ background: 'var(--fx-surface-3)', color: 'var(--fx-text)', textAlign: 'left' }}>
               <th style={{ padding: '15px' }}>Hora</th>
               <th style={{ padding: '15px' }}>Cliente</th>
-              <th style={{ padding: '15px' }}>{termos.profissional}</th>
+              <th style={{ padding: '15px' }}>{TERMOS.profissional}</th>
               <th style={{ padding: '15px' }}>WhatsApp</th>
             </tr>
           </thead>

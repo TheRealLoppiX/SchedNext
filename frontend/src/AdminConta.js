@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from './components/Toast';
 import { useConfirm } from './components/ConfirmDialog';
-import { obterTerminologia } from './utils/terminologia';
+import { TERMOS } from './utils/terminologia';
 import { API_URL } from './services/api';
 import { resumoCampanha } from './utils/campanhaPlano';
 import { acessoAteCancelamento, textoDiasRestantes } from './utils/cancelamentoPlano';
@@ -27,8 +27,6 @@ function AdminConta({ empresaId }) {
     const [corPrincipal, setCorPrincipal] = useState('var(--fx-blue)');
     const [corDestaque, setCorDestaque] = useState('var(--fx-blue)');
     const [permitePaleta, setPermitePaleta] = useState(false);
-    const [vertical, setVertical] = useState('barbearia');
-    const termos = obterTerminologia(vertical);
     const [assinatura, setAssinatura] = useState(null);
     const [planosDisponiveis, setPlanosDisponiveis] = useState([]);
     const [planoEscolhidoId, setPlanoEscolhidoId] = useState(null);
@@ -67,7 +65,6 @@ function AdminConta({ empresaId }) {
                     setHorarios(JSON.parse(data.horarios_funcionamento));
                 }
                 setPermitePaleta(!!data.plano_plataforma?.permite_paleta_customizada);
-                if (data.vertical) setVertical(data.vertical);
                 if (data.cor_principal) setCorPrincipal(data.cor_principal);
                 if (data.cor_destaque) setCorDestaque(data.cor_destaque);
                 setSlug(data.slug || '');
@@ -314,7 +311,7 @@ function AdminConta({ empresaId }) {
         <div className="admin-page-container" style={styles.container}>
             <header style={styles.header}>
                 <div>
-                    <h2 style={styles.title}>Perfil {termos.artigoContraido} {termos.local}</h2>
+                    <h2 style={styles.title}>Perfil {TERMOS.artigoContraido} {TERMOS.local}</h2>
                     <p style={styles.subtitle}>Gerencie os detalhes visuais e horários do seu estabelecimento.</p>
                 </div>
                 <button onClick={salvarAlteracoes} disabled={salvando} style={styles.btnSalvarTopo}>
@@ -351,7 +348,7 @@ function AdminConta({ empresaId }) {
                                 {dados.logo_url ? <img src={dados.logo_url} alt="Logo" style={styles.img} /> : <Icons.Image color="var(--fx-faint)" />}
                             </div>
                             <div style={{flex: 1}}>
-                                <h4 style={{margin: '0 0 5px 0', fontSize: '14px', color: 'var(--fx-text)'}}>Logo {termos.artigoContraido} {termos.local}</h4>
+                                <h4 style={{margin: '0 0 5px 0', fontSize: '14px', color: 'var(--fx-text)'}}>Logo {TERMOS.artigoContraido} {TERMOS.local}</h4>
                                 <p style={{margin: '0 0 15px 0', fontSize: '12px', color: 'var(--fx-muted)'}}>Sua logo será exibida para os clientes no menu principal do sistema.</p>
                                 <label style={styles.btnUpload}>
                                     Escolher Imagem
@@ -367,7 +364,7 @@ function AdminConta({ empresaId }) {
                                 <input 
                                     style={styles.inputLimpo} value={dados.nome} 
                                     onChange={e => setDados({...dados, nome: e.target.value})}
-                                    placeholder={`Ex: ${termos.exemploNome}`}
+                                    placeholder={`Ex: ${TERMOS.exemploNome}`}
                                 />
                             </div>
                         </div>
@@ -375,7 +372,7 @@ function AdminConta({ empresaId }) {
 
                     <div style={{...styles.card, marginTop: '20px'}}>
                         <div style={styles.cardHeader}>
-                            <h3 style={styles.cardTitle}>Link de acesso {termos.artigoContraido} {termos.local}</h3>
+                            <h3 style={styles.cardTitle}>Link de acesso {TERMOS.artigoContraido} {TERMOS.local}</h3>
                         </div>
                         <p style={{ margin: '0 0 15px 0', fontSize: '13px', color: 'var(--fx-muted)' }}>
                             Compartilhe este link com seus clientes para eles fazerem login e agendar.

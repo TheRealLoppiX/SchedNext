@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useToast } from './Toast';
-import { obterTerminologia } from '../utils/terminologia';
+import { TERMOS } from '../utils/terminologia';
 import usePaletaTenant from '../hooks/usePaletaTenant';
 import MarcaPlataforma from './MarcaPlataforma';
 import BotaoTema from './BotaoTema';
@@ -67,8 +67,7 @@ function Layout({ setEmpresaId }) {
               setDados({
                 nome_completo: unidade?.nome || 'Painel da Unidade',
                 foto_url: null,
-                empresa_id: empresaId,
-                vertical: 'barbearia'
+                empresa_id: empresaId
               });
             } catch (err) {
               console.error('Erro ao buscar dados da unidade:', err);
@@ -77,15 +76,13 @@ function Layout({ setEmpresaId }) {
             try {
               const res = await fetch(`${API_URL}/admin/empresa/${empresaId}`);
               const data = await res.json();
-              // res.ok evita reintroduzir o bug de "vertical sempre vira barbearia": sem essa
-              // checagem, qualquer falha temporária da API (ex: cold start do Render) fazia
-              // `data` ser um objeto de erro sem `.vertical`, caindo sempre no fallback.
+              // res.ok: falha temporária da API (ex: cold start do Render) devolve um objeto de
+              // erro, que não deve sobrescrever o nome/logo do painel.
               if (res.ok && data) {
                 setDados({
                   nome_completo: data.nome || "Painel Administrativo",
                   foto_url: data.logo_url || null,
-                  empresa_id: empresaId,
-                  vertical: data.vertical || 'barbearia'
+                  empresa_id: empresaId
                 });
               }
             } catch (err) {
@@ -185,7 +182,6 @@ function Layout({ setEmpresaId }) {
 
   const isAtiva = (aba) => location.search.includes(`aba=${aba}`);
   const isRotaAdminAtiva = (rota) => location.pathname === rota;
-  const termos = obterTerminologia(dados?.vertical);
 
   // --- FUNÇÕES DE SEGURANÇA ---
   const solicitarCodigo = async () => {
@@ -268,8 +264,8 @@ function Layout({ setEmpresaId }) {
           item('Ações & Fidelidade', Icons.Star, '/admin/acoes', isRotaAdminAtiva('/admin/acoes'))
         ] },
         { titulo: 'Gestão', itens: [
-          item(`Gestão de ${termos.profissionalPlural}`, Icons.Users, '/admin/barbeiros', isRotaAdminAtiva('/admin/barbeiros')),
-          item('Gestão de Serviços', Icons.Scissors, '/admin/servicos', isRotaAdminAtiva('/admin/servicos')),
+          item(`Gestão de ${TERMOS.profissionalPlural}`, Icons.Users, '/admin/barbeiros', isRotaAdminAtiva('/admin/barbeiros')),
+          item('Gestão de Serviços', Icons.Tag, '/admin/servicos', isRotaAdminAtiva('/admin/servicos')),
           item('Gestão de Estoque', Icons.Package, '/admin/estoque', isRotaAdminAtiva('/admin/estoque')),
           item('Unidades', Icons.Store, '/admin/unidades', isRotaAdminAtiva('/admin/unidades'))
         ] },
@@ -467,7 +463,7 @@ const Icons = {
   Stats: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>,
   Calendar: ({color="currentColor"}) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
   Users: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
-  Scissors: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="10.48" x2="20" y2="16"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>,
+  Tag: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>,
   Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82.33l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33H15a1.65 1.65 0 0 0-1 1.51v.09a2 2 0 0 1-2 2 2 2 0 0 1-2-2"></path></svg>,
   Logout: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>,
   Home: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>,

@@ -164,7 +164,7 @@ function Docs() {
               <span className="doc-passo-num">1</span>
               <div>
                 <h3 style={{ margin: 0 }}>Crie sua conta</h3>
-                <p>Em <Link to="/cadastrar">schednext.com.br/cadastrar</Link>, escolha o nome do seu negócio e o tipo de serviço (barbearia, salão, estúdio de unhas ou genérico). Não pede cartão de crédito, o plano Grátis já é suficiente pra começar.</p>
+                <p>Em <Link to="/cadastrar">schednext.com.br/cadastrar</Link>, escolha o nome do seu negócio e o plano. Não pede cartão de crédito, o plano Grátis já é suficiente pra começar.</p>
               </div>
             </div>
             <div className="doc-passo">

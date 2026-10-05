@@ -40,18 +40,6 @@ function infoStatusEmpresa(empresa) {
   return mapa[empresa.status_assinatura] || { label: empresa.status_assinatura || 'Sem status', bg: 'var(--fx-surface-2)', fg: 'var(--fx-muted)' };
 }
 
-// Mesmo enum de backend/src/schemas/index.js (verticalEnum) — rótulo legível pro select de troca
-// de tipo de negócio no detalhe da empresa. Mesmas palavras do seletor de vertical no cadastro
-// self-service (ver utils/terminologia.js, usado em pages/CadastroEmpresa.js), pra não ter dois
-// nomes diferentes pro mesmo tipo de negócio dependendo de qual painel você está.
-const VERTICAL_LABELS = {
-  barbearia: 'Barbearia',
-  salao: 'Salão de beleza',
-  estudio_unhas: 'Estúdio de Unhas',
-  generico: 'Estabelecimento/Outro'
-};
-const VERTICAL_OPCOES = Object.entries(VERTICAL_LABELS);
-
 function formatarData(iso) {
   if (!iso) return '-';
   return new Date(iso).toLocaleDateString('pt-BR');
@@ -2777,9 +2765,6 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
   const [editandoVencimento, setEditandoVencimento] = useState(false);
   const [novoVencimento, setNovoVencimento] = useState('');
   const [salvandoVencimento, setSalvandoVencimento] = useState(false);
-  const [editandoVertical, setEditandoVertical] = useState(false);
-  const [novoVertical, setNovoVertical] = useState('');
-  const [salvandoVertical, setSalvandoVertical] = useState(false);
   const [alterandoExclusao, setAlterandoExclusao] = useState(false);
   useEscToClose(true, onFechar);
 
@@ -2860,29 +2845,6 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
     }
   };
 
-  const salvarVertical = async () => {
-    if (!novoVertical || novoVertical === empresa.vertical) { setEditandoVertical(false); return; }
-    setSalvandoVertical(true);
-    try {
-      const res = await fetch(`${API_URL}/super-admin/empresas/${id}/vertical`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vertical: novoVertical })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(data.message);
-        setEditandoVertical(false);
-        carregar();
-        aoAtualizar?.();
-      } else toast.error(data.error || 'Não foi possível trocar o tipo de negócio.');
-    } catch (err) {
-      toast.error('Erro de conexão.');
-    } finally {
-      setSalvandoVertical(false);
-    }
-  };
-
   const alternarExclusao = async () => {
     const excluir = !empresa.excluida_em;
     const ok = await confirmar(`${excluir ? 'Excluir' : 'Restaurar'} a empresa "${empresa.nome}"?`, {
@@ -2935,26 +2897,6 @@ function DetalheEmpresaModal({ id, onFechar, toast, confirmar, aoAtualizar }) {
 
             <div className="sa-grid-form" style={s.infoGrid}>
               <InfoItem label="Cadastrada em" valor={formatarData(empresa.criado_em)} />
-
-              <div>
-                <div style={s.infoLabel}>Tipo de negócio</div>
-                {!editandoVertical ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '14px', color: 'var(--fx-text)' }}>{VERTICAL_LABELS[empresa.vertical] || empresa.vertical || '-'}</span>
-                    {!empresa.excluida_em && (
-                      <button onClick={() => { setNovoVertical(empresa.vertical || ''); setEditandoVertical(true); }} style={s.btnLink}>Trocar</button>
-                    )}
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <select style={s.selectFiltro} value={novoVertical} onChange={(e) => setNovoVertical(e.target.value)}>
-                      {VERTICAL_OPCOES.map(([valor, label]) => <option key={valor} value={valor}>{label}</option>)}
-                    </select>
-                    <LoadingButton loading={salvandoVertical} onClick={salvarVertical} style={s.btnPrimario}>Salvar</LoadingButton>
-                    <button onClick={() => setEditandoVertical(false)} style={s.btnOutline}>Cancelar</button>
-                  </div>
-                )}
-              </div>
 
               <InfoItem label="CPF/CNPJ" valor={empresa.cpf_cnpj || '-'} />
               <InfoItem label="Status da assinatura" badge={status} />

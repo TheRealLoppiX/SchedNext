@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { obterTerminologia } from '../../utils/terminologia';
+import { TERMOS } from '../../utils/terminologia';
 import { API_URL } from '../../services/api';
 
 function GestaoServicos({ empresaId }) {
@@ -9,11 +9,9 @@ function GestaoServicos({ empresaId }) {
   const [editandoId, setEditandoId] = useState(null);
   const [formData, setFormData] = useState({ nome: '', valor: '', duracao: '30', descricao: '' });
   const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
-  const [vertical, setVertical] = useState('barbearia');
   const [permiteIA, setPermiteIA] = useState(false);
   const [gerandoDescricao, setGerandoDescricao] = useState(false);
   const [salvando, setSalvando] = useState(false);
-  const termos = obterTerminologia(vertical);
 
   const carregarServicos = () => {
     fetch(`${API_URL}/admin/servicos-gestao`)
@@ -31,7 +29,6 @@ function GestaoServicos({ empresaId }) {
     fetch(`${API_URL}/admin/empresa/${empresaId}`)
       .then(r => r.json())
       .then(d => {
-        if (d?.vertical) setVertical(d.vertical);
         setPermiteIA(!!d?.plano_plataforma?.permite_ia);
       })
       .catch(() => {});
@@ -44,7 +41,7 @@ function GestaoServicos({ empresaId }) {
       const res = await fetch(`${API_URL}/admin/ia/descricao-servico`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: formData.nome, vertical: termos.local })
+        body: JSON.stringify({ nome: formData.nome })
       });
       const data = await res.json();
       if (res.ok) {
@@ -145,7 +142,7 @@ function GestaoServicos({ empresaId }) {
       <header style={styles.header}>
         <div>
           <h2 style={styles.title}>Gestão de Serviços</h2>
-          <p style={styles.subtitle}>Cadastre, ative, inative ou edite os serviços oferecidos {termos.artigoContraido === 'da' ? 'pela sua' : 'pelo seu'} {termos.local.toLowerCase()}.</p>
+          <p style={styles.subtitle}>Cadastre, ative, inative ou edite os serviços oferecidos pela sua {TERMOS.local.toLowerCase()}.</p>
         </div>
       </header>
 
@@ -307,7 +304,7 @@ function GestaoServicos({ empresaId }) {
 }
 
 const Icons = {
-  Scissors: ({color}) => <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '8px', verticalAlign: 'bottom'}}><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="10.48" x2="20" y2="16"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>,
+  Tag: ({color}) => <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '8px', verticalAlign: 'bottom'}}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>,
   Edit: ({color}) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>,
   Plus: ({color}) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
   Trash: ({color}) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>,

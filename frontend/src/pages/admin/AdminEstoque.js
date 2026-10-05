@@ -4,7 +4,7 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import useEscToClose from '../../hooks/useEscToClose';
 import LoadingButton from '../../components/LoadingButton';
 import EmptyState from '../../components/EmptyState';
-import { obterTerminologia } from '../../utils/terminologia';
+import { TERMOS } from '../../utils/terminologia';
 import { API_URL } from '../../services/api';
 import LeitorCodigoBarras, { desbloquearBip } from '../../components/LeitorCodigoBarras';
 
@@ -58,8 +58,6 @@ function AdminEstoque({ empresaId }) {
   const [dadosRelatorio, setDadosRelatorio] = useState([]);
 
   const idEfetivo = empresaId || localStorage.getItem('empresaId');
-  const [vertical, setVertical] = useState('barbearia');
-  const termos = obterTerminologia(vertical);
 
   // --- BUSCA USUÁRIOS PARA O DROPDOWN ---
   useEffect(() => {
@@ -70,15 +68,6 @@ function AdminEstoque({ empresaId }) {
             .catch(err => console.error(err));
     }
   }, [autorizado, idEfetivo]);
-
-  useEffect(() => {
-    if (!idEfetivo) return;
-    fetch(`${API_URL}/admin/empresa/${idEfetivo}`)
-      .then(r => r.json())
-      .then(d => d?.vertical && setVertical(d.vertical))
-      .catch(() => {});
-  }, [idEfetivo]);
-
   // --- FUNÇÕES DE LOGIN E ACESSO ---
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -710,7 +699,7 @@ function AdminEstoque({ empresaId }) {
       {modalSublogin && (
         <div style={styles.overlay}>
           <div style={styles.modalCard}>
-            <h3 style={{marginTop: 0, color: 'var(--fx-text)', fontSize: '18px'}}>Acesso para {termos.profissionalPlural}</h3>
+            <h3 style={{marginTop: 0, color: 'var(--fx-text)', fontSize: '18px'}}>Acesso para {TERMOS.profissionalPlural}</h3>
             <p style={{fontSize: '13px', color: 'var(--fx-muted)', marginBottom: '20px', lineHeight: '1.4'}}>Crie uma senha para o seu colaborador. As movimentações que ele fizer ficarão registradas no relatório.</p>
             <form onSubmit={criarSublogin}>
               <div style={styles.inputGroup}>
@@ -718,7 +707,7 @@ function AdminEstoque({ empresaId }) {
                 <input style={styles.input} type="password" required value={formSublogin.senha_admin} onChange={e => setFormSublogin({...formSublogin, senha_admin: e.target.value})} />
               </div>
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Nome do {termos.profissional}/Operador</label>
+                <label style={styles.label}>Nome do {TERMOS.profissional}/Operador</label>
                 <input style={styles.input} placeholder="Ex: Carlos" required value={formSublogin.novo_nome} onChange={e => setFormSublogin({...formSublogin, novo_nome: e.target.value})} />
               </div>
               <div style={styles.inputGroup}>

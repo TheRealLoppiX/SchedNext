@@ -4,7 +4,7 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import useEscToClose from '../../hooks/useEscToClose';
 import LoadingButton from '../../components/LoadingButton';
 import EmptyState from '../../components/EmptyState';
-import { obterTerminologia } from '../../utils/terminologia';
+import { TERMOS } from '../../utils/terminologia';
 import { API_URL } from '../../services/api';
 
 function AdminBarbeiros({ empresaId }) {
@@ -28,7 +28,6 @@ function AdminBarbeiros({ empresaId }) {
     const [barbeiroSelecionado, setBarbeiroSelecionado] = useState(null);
     const [listaServicos, setListaServicos] = useState([]);
     const [servicosMarcados, setServicosMarcados] = useState([]);
-    const [vertical, setVertical] = useState('barbearia');
     const [permiteMultiUnidade, setPermiteMultiUnidade] = useState(false);
     const [unidades, setUnidades] = useState([]);
     const [novaUnidadeId, setNovaUnidadeId] = useState('');
@@ -94,7 +93,6 @@ function AdminBarbeiros({ empresaId }) {
         fetch(`${API_URL}/admin/empresa/${idEfetivo}`)
             .then(r => r.json())
             .then(d => {
-                if (d?.vertical) setVertical(d.vertical);
                 setPermiteMultiUnidade(!!d?.plano_plataforma?.permite_multi_unidade);
             })
             .catch(() => {});
@@ -108,7 +106,6 @@ function AdminBarbeiros({ empresaId }) {
             .catch(() => {});
     }, [idEfetivo, permiteMultiUnidade]);
 
-    const termos = obterTerminologia(vertical);
 
     const aoMudarFoto = (e, tipo = 'cadastro') => {
         const arquivo = e.target.files[0];
@@ -165,8 +162,8 @@ function AdminBarbeiros({ empresaId }) {
         const acao = statusAtual ? 'desativar' : 'reativar';
         const ok = await confirmar(`Deseja ${acao} ${nome}?`, {
             detail: statusAtual
-                ? `${termos.profissionalPlural} desativados somem imediatamente da tela de agendamento dos clientes.`
-                : `O ${termos.profissional.toLowerCase()} volta a aparecer para os clientes agendarem.`,
+                ? `${TERMOS.profissionalPlural} desativados somem imediatamente da tela de agendamento dos clientes.`
+                : `O ${TERMOS.profissional.toLowerCase()} volta a aparecer para os clientes agendarem.`,
             confirmText: acao === 'desativar' ? 'Desativar' : 'Reativar',
             danger: statusAtual
         });
@@ -180,7 +177,7 @@ function AdminBarbeiros({ empresaId }) {
             });
             if (res.ok) {
                 carregarEquipe();
-                toast.success(statusAtual ? `${termos.profissional} desativado.` : `${termos.profissional} reativado.`);
+                toast.success(statusAtual ? `${TERMOS.profissional} desativado.` : `${TERMOS.profissional} reativado.`);
             } else {
                 toast.error('Não foi possível atualizar o status. Tente novamente.');
             }
@@ -200,7 +197,7 @@ function AdminBarbeiros({ empresaId }) {
             if (res.ok) {
                 setEditando(null);
                 carregarEquipe();
-                toast.success(`Dados do ${termos.profissional.toLowerCase()} atualizados!`);
+                toast.success(`Dados do ${TERMOS.profissional.toLowerCase()} atualizados!`);
             } else {
                 toast.error('Não foi possível salvar as alterações. Tente novamente.');
             }
@@ -212,7 +209,7 @@ function AdminBarbeiros({ empresaId }) {
     };
 
     const deletarBarbeiro = async (id, nome) => {
-        const ok = await confirmar(`Excluir ${termos.profissional.toLowerCase()} ${nome} definitivamente?`, {
+        const ok = await confirmar(`Excluir ${TERMOS.profissional.toLowerCase()} ${nome} definitivamente?`, {
             detail: 'Essa ação não pode ser desfeita.',
             confirmText: 'Excluir',
             danger: true
@@ -225,7 +222,7 @@ function AdminBarbeiros({ empresaId }) {
 
             if (res.ok) {
                 carregarEquipe();
-                toast.success(data.message || `${termos.profissional} excluído.`);
+                toast.success(data.message || `${TERMOS.profissional} excluído.`);
             } else {
                 toast.error(data.error || 'Não foi possível excluir o barbeiro.');
             }
@@ -347,7 +344,7 @@ function AdminBarbeiros({ empresaId }) {
         <div className="admin-page-container" style={styles.container}>
             <header style={styles.header}>
                 <div>
-                    <h2 style={styles.title}>Gestão de {termos.profissionalPlural}</h2>
+                    <h2 style={styles.title}>Gestão de {TERMOS.profissionalPlural}</h2>
                     <p style={styles.subtitle}>Gerencie sua equipe, horários e vínculos de serviços.</p>
                 </div>
             </header>
@@ -356,7 +353,7 @@ function AdminBarbeiros({ empresaId }) {
                 <h4 style={styles.cardTitle}><Icons.UserPlus color="var(--fx-muted)" /> Cadastrar Novo Profissional</h4>
                 <form onSubmit={handleCadastrar} style={styles.form}>
                     <div style={styles.inputGroup}>
-                        <label style={styles.label}>Nome do {termos.profissional}</label>
+                        <label style={styles.label}>Nome do {TERMOS.profissional}</label>
                         <input 
                             placeholder="Ex: Carlos Silva" 
                             value={novoNome} 
@@ -402,7 +399,7 @@ function AdminBarbeiros({ empresaId }) {
             <div style={styles.grid}>
                 {barbeiros.length > 0 ? barbeiros.map(b => (
                     <div key={b.id} style={{...styles.card, borderTop: b.ativo ? '4px solid #059669' : '4px solid #dc2626'}}>
-                        <button onClick={() => deletarBarbeiro(b.id, b.nome)} style={styles.btnXCard} title={`Excluir ${termos.profissional}`}><Icons.Trash color="var(--fx-red)" /></button>
+                        <button onClick={() => deletarBarbeiro(b.id, b.nome)} style={styles.btnXCard} title={`Excluir ${TERMOS.profissional}`}><Icons.Trash color="var(--fx-red)" /></button>
                         
                         <div style={styles.info}>
                             <div style={styles.avatar}>
@@ -467,14 +464,14 @@ function AdminBarbeiros({ empresaId }) {
                             
                             <button onClick={() => alternarStatus(b.id, b.ativo, b.nome)} style={{...styles.btnStatus, backgroundColor: b.ativo ? 'var(--fx-red-bg)' : 'var(--fx-green-bg)', color: b.ativo ? 'var(--fx-red)' : 'var(--fx-green)', border: `1px solid ${b.ativo ? 'var(--fx-red-line)' : 'var(--fx-green-line)'}`}}>
                                 <Icons.Power color={b.ativo ? "var(--fx-red)" : "var(--fx-green)"} /> 
-                                {b.ativo ? `Desativar ${termos.profissional}` : `Reativar ${termos.profissional}`}
+                                {b.ativo ? `Desativar ${TERMOS.profissional}` : `Reativar ${TERMOS.profissional}`}
                             </button>
                         </div>
                     </div>
                 )) : (
                     <div style={{ gridColumn: '1 / -1', backgroundColor: 'var(--fx-card)', borderRadius: '12px', border: '1px dashed var(--fx-line-2)' }}>
                         <EmptyState
-                            title={`Nenhum ${termos.profissional.toLowerCase()} cadastrado nesta unidade ainda.`}
+                            title={`Nenhum ${TERMOS.profissional.toLowerCase()} cadastrado nesta unidade ainda.`}
                             hint="Use o formulário acima para cadastrar o primeiro profissional da equipe."
                         />
                     </div>
@@ -497,7 +494,7 @@ function AdminBarbeiros({ empresaId }) {
                                         <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => aoMudarFoto(e, 'edicao')} />
                                     </label>
                                 </div>
-                                <label style={styles.label}>Nome do {termos.profissional}:</label>
+                                <label style={styles.label}>Nome do {TERMOS.profissional}:</label>
                                 <input style={styles.inputModal} value={editando.nome} onChange={e => setEditando({...editando, nome: e.target.value})} />
                                 <label style={styles.label}>Telefone (WhatsApp):</label>
                                 <input

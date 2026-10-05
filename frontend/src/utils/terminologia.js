@@ -1,40 +1,13 @@
-// Dicionário de terminologia por vertical de negócio. O schema e as rotas continuam
-// genéricos (barbeiro/serviço); só o texto exibido muda conforme o tipo de negócio
-// da empresa (empresas.vertical). Ver §6 do plano de plataforma.
+// Termos exibidos na interface pra equipe e pro negócio. São neutros de propósito: a mesma
+// empresa pode atender mais de um ramo (ex: barbearia + tatuagem), então nada aqui assume um
+// segmento. O schema e as rotas continuam com os nomes antigos (barbeiros/barbeiro_id) — só o
+// texto exibido sai daqui. A coluna empresas.vertical ficou no banco, mas não é mais usada.
 //
-// artigo/artigoContraido existem porque "Barbearia" é feminino e "Salão"/"Estúdio"/
-// "Estabelecimento" são masculinos, sem isso frases como "Perfil da/do X" saem erradas
-// pra metade das verticais.
-const TERMINOLOGIA = {
-  barbearia: {
-    profissional: 'Barbeiro', profissionalPlural: 'Barbeiros',
-    local: 'Barbearia', artigo: 'a', artigoContraido: 'da',
-    exemploNome: 'Barbearia do João'
-  },
-  salao: {
-    // Neutro de propósito: "Cabeleireiro(s)" soava masculino num segmento em que a maioria da
-    // equipe é de mulheres, e "Profissional" serve pros dois gêneros.
-    profissional: 'Profissional', profissionalPlural: 'Profissionais',
-    local: 'Salão', artigo: 'o', artigoContraido: 'do',
-    exemploNome: 'Salão da Maria'
-  },
-  estudio_unhas: {
-    profissional: 'Nail Designer', profissionalPlural: 'Nail Designers',
-    // "Estúdio" sozinho é ambíguo (tatuagem, foto, gravação...) — em todo lugar que usa
-    // termos.local (título de página, seletor de vertical no cadastro, etc.) precisa deixar
-    // claro que é de unhas.
-    local: 'Estúdio de Unhas', artigo: 'o', artigoContraido: 'do',
-    exemploNome: 'Nail Studio da Ana'
-  },
-  generico: {
-    profissional: 'Profissional', profissionalPlural: 'Profissionais',
-    local: 'Estabelecimento/Outro', artigo: 'o', artigoContraido: 'do',
-    exemploNome: 'Meu Negócio'
-  }
+// "Empresa" é feminino, por isso o artigo contraído "da" ("Perfil da Empresa").
+const TERMOS = {
+  profissional: 'Profissional', profissionalPlural: 'Profissionais',
+  local: 'Empresa', artigoContraido: 'da',
+  exemploNome: 'Studio Aurora'
 };
 
-function obterTerminologia(vertical) {
-  return TERMINOLOGIA[vertical] || TERMINOLOGIA.generico;
-}
-
-export { TERMINOLOGIA, obterTerminologia };
+export { TERMOS };

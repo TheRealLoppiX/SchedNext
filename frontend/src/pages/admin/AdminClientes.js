@@ -1076,7 +1076,7 @@ function AdminClientes({ empresaId }) {
                                             <label style={s.label}>Forma de pagamento</label>
                                             <select style={{ ...s.inputModal, cursor: 'pointer' }} value={baixaFormaPagamento} onChange={e => setBaixaFormaPagamento(e.target.value)}>
                                                 <option value='dinheiro'>Dinheiro</option>
-                                                <option value='pix'>Pix (chave da barbearia)</option>
+                                                <option value='pix'>Pix (chave da empresa)</option>
                                                 <option value='credito'>Cartão de crédito (fora do Mercado Pago)</option>
                                                 <option value='debito'>Cartão de débito (fora do Mercado Pago)</option>
                                             </select>

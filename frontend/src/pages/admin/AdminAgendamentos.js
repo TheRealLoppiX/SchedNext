@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../components/Toast';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
-import { obterTerminologia } from '../../utils/terminologia';
+import { TERMOS } from '../../utils/terminologia';
 import { API_URL } from '../../services/api';
 
 function AdminAgendamentos({ empresaId }) {
   const toast = useToast();
   const [agendamentos, setAgendamentos] = useState([]);
   const [barbeiros, setBarbeiros] = useState([]);
-  const [vertical, setVertical] = useState('barbearia');
-  const termos = obterTerminologia(vertical);
 
   // Estados dos Filtros
   const [filtroNome, setFiltroNome] = useState('');
@@ -31,11 +29,6 @@ function AdminAgendamentos({ empresaId }) {
         .then(res => res.json())
         .then(data => setBarbeiros(Array.isArray(data) ? data : []))
         .catch(err => console.error("Erro ao carregar equipe:", err));
-
-      fetch(`${API_URL}/admin/empresa/${idEfetivo}`)
-        .then(res => res.json())
-        .then(d => d?.vertical && setVertical(d.vertical))
-        .catch(() => {});
     }
   }, [idEfetivo]);
 
@@ -149,7 +142,7 @@ function AdminAgendamentos({ empresaId }) {
 
         {/* FILTRO DE BARBEIROS (Multi-seleção) */}
         <div style={{ marginTop: '25px' }}>
-          <label style={styles.label}>Filtrar por {termos.profissionalPlural}:</label>
+          <label style={styles.label}>Filtrar por {TERMOS.profissionalPlural}:</label>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '10px' }}>
             <button
               onClick={() => setBarbeirosSelecionados([])}

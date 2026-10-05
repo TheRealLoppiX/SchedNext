@@ -79,7 +79,7 @@ function RecuperarSenhaAdmin() {
       <div className="bb-card">
         <img src="/icon-schednext.png" alt="SchedNext" className="bb-logo-img" />
         <h2 className="bb-title">Recuperação de Senha</h2>
-        <p className="bb-subtitle">Painel administrativo da sua barbearia</p>
+        <p className="bb-subtitle">Painel administrativo da sua empresa</p>
 
         {etapa === 1 && (
           <form onSubmit={handleEnviarEmail}>

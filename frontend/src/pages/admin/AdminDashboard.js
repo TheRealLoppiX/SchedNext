@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import AgendaModal from './AgendaModal';
 import './AdminDashboard.css';
-import { obterTerminologia } from '../../utils/terminologia';
+import { TERMOS } from '../../utils/terminologia';
 import { API_URL } from '../../services/api';
 import { useToast } from '../../components/Toast';
 
@@ -38,19 +38,16 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
   const [movendo, setMovendo] = useState(false);
 
   const empresaIdEfetivo = propEmpresaId || localStorage.getItem('empresaId');
-  const [vertical, setVertical] = useState('barbearia');
   const [nomeEmpresa, setNomeEmpresa] = useState('');
   const [permiteIA, setPermiteIA] = useState(false);
   const [resumoIA, setResumoIA] = useState('');
   const [gerandoResumo, setGerandoResumo] = useState(false);
-  const termos = obterTerminologia(vertical);
 
   useEffect(() => {
     if (!empresaIdEfetivo) return;
     fetch(`${API_URL}/admin/empresa/${empresaIdEfetivo}`)
       .then(r => r.json())
       .then(d => {
-        if (d?.vertical) setVertical(d.vertical);
         if (d?.nome) setNomeEmpresa(d.nome);
         setPermiteIA(!!d?.plano_plataforma?.permite_ia);
       })
@@ -298,7 +295,7 @@ function AdminDashboard({ empresaId: propEmpresaId }) {
       <header className="oa-cabeca">
         <div>
           <h2 className="oa-titulo">Visão geral</h2>
-          <p className="oa-sub">Resumo do desempenho {termos.artigoContraido} {termos.local.toLowerCase()}</p>
+          <p className="oa-sub">Resumo do desempenho {TERMOS.artigoContraido} {TERMOS.local.toLowerCase()}</p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>

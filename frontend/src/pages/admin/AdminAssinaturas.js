@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useConfirm } from '../../components/ConfirmDialog';
 import LoadingButton from '../../components/LoadingButton';
-import { obterTerminologia } from '../../utils/terminologia';
+import { TERMOS } from '../../utils/terminologia';
 import { API_URL } from '../../services/api';
 import ConfigVencimentoAssinatura from './ConfigVencimentoAssinatura';
 
@@ -19,8 +19,6 @@ function AdminAssinaturas({ empresaId }) {
     const [servicos, setServicos] = useState([]);
     const [editando, setEditando] = useState(null);
     const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
-    const [vertical, setVertical] = useState('barbearia');
-    const termos = obterTerminologia(vertical);
 
     const [form, setForm] = useState({ nome: '', preco: '', descricao: '', servicos: [], dias_semana: [] });
 
@@ -41,7 +39,6 @@ function AdminAssinaturas({ empresaId }) {
             setPlanos(await resPlanos.json() || []);
             setServicos(await resServicos.json() || []);
             const dadosEmpresa = await resEmpresa.json();
-            if (dadosEmpresa?.vertical) setVertical(dadosEmpresa.vertical);
             setPermiteCampanhas(!!dadosEmpresa?.plano_plataforma?.permite_campanhas_assinatura);
             setCampanhas(await resCampanhas.json() || []);
         } catch (err) { console.error(err); }
@@ -313,7 +310,7 @@ function AdminAssinaturas({ empresaId }) {
             <header style={s.header}>
                 <div>
                     <h2 style={s.title}>Planos de Assinatura</h2>
-                    <p style={s.subtitle}>Crie e gerencie os planos de assinatura {termos.artigoContraido} {termos.local.toLowerCase()}.</p>
+                    <p style={s.subtitle}>Crie e gerencie os planos de assinatura {TERMOS.artigoContraido} {TERMOS.local.toLowerCase()}.</p>
                 </div>
             </header>
 

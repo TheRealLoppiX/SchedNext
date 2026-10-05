@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from '../components/Toast';
 import LoadingButton from '../components/LoadingButton';
 import useDebouncedValue from '../hooks/useDebouncedValue';
-import { obterTerminologia } from '../utils/terminologia';
 import { emailValido, formatarDocumento, documentoTemTamanhoValido } from '../utils/validacao';
 import { formatarTelefone } from '../utils/telefone';
 import { API_URL } from '../services/api';
@@ -20,8 +19,6 @@ function gerarSlug(nome) {
     .replace(/-+/g, '-');
 }
 
-const VERTICAIS = ['barbearia', 'salao', 'estudio_unhas', 'generico'];
-
 function CadastroEmpresa({ setEmpresaLogada }) {
   const navigate = useNavigate();
   const toast = useToast();
@@ -34,7 +31,6 @@ function CadastroEmpresa({ setEmpresaLogada }) {
   const [senha, setSenha] = useState('');
   const [telefone, setTelefone] = useState('');
   const [documento, setDocumento] = useState('');
-  const [vertical, setVertical] = useState('barbearia');
   const [planos, setPlanos] = useState([]);
   const [planoId, setPlanoId] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -106,7 +102,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
     if (!documentoTemTamanhoValido(documento)) return recusar('documento', 'Informe um CPF ou CNPJ válido.');
     if (statusSlug.disponivel === false) return recusar('slug', statusSlug.motivo || 'Esse endereço já está em uso.');
     rastrearEvento('cadastro_continuar', { ok: true });
-    setEtapa(2);
+    setEtapa(3);
   };
 
   const enviarContatoEnterprise = async () => {
@@ -138,7 +134,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
       const resCadastro = await fetch(`${API_URL}/empresas/registrar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, slug, email, senha, vertical, plano_plataforma_id: planoId, telefone, documento })
+        body: JSON.stringify({ nome, slug, email, senha, plano_plataforma_id: planoId, telefone, documento })
       });
       const dataCadastro = await resCadastro.json();
 
@@ -148,7 +144,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
         return;
       }
 
-      rastrearEvento('cadastro_enviado', { ok: true, plano: planos.find((p) => p.id === planoId)?.nome || null, vertical });
+      rastrearEvento('cadastro_enviado', { ok: true, plano: planos.find((p) => p.id === planoId)?.nome || null });
       toast.success(dataCadastro.message || 'Enviamos um código de confirmação pro seu e-mail.');
       setEtapa(4);
     } catch (err) {
@@ -175,7 +171,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
         return;
       }
 
-      rastrearEvento('cadastro_concluido', { plano: planos.find((p) => p.id === planoId)?.nome || null, vertical });
+      rastrearEvento('cadastro_concluido', { plano: planos.find((p) => p.id === planoId)?.nome || null });
       localStorage.setItem('adminToken', JSON.stringify({ ...data.admin, token: data.token }));
       setEmpresaLogada(data.admin.empresa_id);
       toast.success(data.message || `Conta criada! Bem-vindo(a), ${nome}.`);
@@ -195,7 +191,9 @@ function CadastroEmpresa({ setEmpresaLogada }) {
         {etapa === 4 ? (
           <p className="bb-subtitle">Enviamos um código para <b>{email}</b></p>
         ) : (
-          <p className="bb-subtitle">Etapa {etapa} de 3</p>
+          // Etapa 2 (tipo de negócio) saiu: os termos agora são neutros pra todo mundo. Os números
+          // internos ficaram 1/3/4 pra não embaralhar o funil de cadastro_etapa no analytics.
+          <p className="bb-subtitle">Etapa {etapa === 1 ? 1 : 2} de 2</p>
         )}
 
         {etapa === 1 && (
@@ -267,38 +265,6 @@ function CadastroEmpresa({ setEmpresaLogada }) {
             />
             <button type="submit" data-track="cadastro_continuar" className="bb-btn">Continuar</button>
           </form>
-        )}
-
-        {etapa === 2 && (
-          <div>
-            <p style={{ fontSize: '14px', color: 'var(--bb-text-muted)', marginBottom: '14px' }}>Qual o seu tipo de negócio? Isso ajusta os termos usados no sistema.</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
-              {VERTICAIS.map((v) => {
-                const t = obterTerminologia(v);
-                const selecionado = vertical === v;
-                return (
-                  <button
-                    key={v}
-                    type="button"
-                    data-track={`cadastro_tipo_${v}`}
-                    onClick={() => setVertical(v)}
-                    style={{
-                      padding: '14px 10px', borderRadius: '10px', cursor: 'pointer', textAlign: 'center',
-                      border: selecionado ? '2px solid var(--bb-gold)' : '1px solid var(--bb-border)',
-                      background: selecionado ? 'rgba(37,84,235,0.08)' : 'var(--fx-surface)',
-                      fontWeight: selecionado ? 700 : 500
-                    }}
-                  >
-                    {t.local}
-                  </button>
-                );
-              })}
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="button" data-track="cadastro_etapa2_voltar" className="bb-btn-secondary" onClick={() => setEtapa(1)}>Voltar</button>
-              <button type="button" data-track="cadastro_etapa2_continuar" className="bb-btn" onClick={() => setEtapa(3)}>Continuar</button>
-            </div>
-          </div>
         )}
 
         {etapa === 3 && (
@@ -383,7 +349,7 @@ function CadastroEmpresa({ setEmpresaLogada }) {
               {' '}da SchedNext.
             </p>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="button" data-track="cadastro_etapa3_voltar" className="bb-btn-secondary" onClick={() => setEtapa(2)} disabled={enviando}>Voltar</button>
+              <button type="button" data-track="cadastro_etapa3_voltar" className="bb-btn-secondary" onClick={() => setEtapa(1)} disabled={enviando}>Voltar</button>
               <LoadingButton type="button" data-track="cadastro_criar_conta" loading={enviando} className="bb-btn" onClick={finalizarCadastro}>Criar conta</LoadingButton>
             </div>
           </div>
