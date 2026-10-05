@@ -10,6 +10,11 @@ import LeitorCodigoBarras, { desbloquearBip } from '../../components/LeitorCodig
 
 const rotuloMovimentacao = (tipo) => ({ ADICIONAR: 'Entrada', VENDA: 'Venda', EXCLUSAO: 'Exclusão do produto' }[tipo] || 'Saída');
 const formatarReal = (v) => `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
+// Mesma normalização do backend (routes/estoque.js): maiúscula, acento e espaço extra não
+// diferenciam um produto do outro na trava de duplicidade.
+const normalizarNome = (nome) => String(nome || '')
+  .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+  .trim().replace(/\s+/g, ' ').toLowerCase();
 
 function AdminEstoque({ empresaId }) {
   const toast = useToast();
@@ -124,17 +129,52 @@ function AdminEstoque({ empresaId }) {
     setFormData({ nome: '', tipo: abaTipo, codigo_barras: '', valor: '', custo: '', data_compra: '', quantidade: '0' });
   };
 
-  // Troca de aba limpa o formulário pra não cadastrar no tipo errado.
+  // Troca de aba limpa o formulário pra não cadastrar no tipo errado — exceto quando a troca foi
+  // pra abrir um produto já cadastrado de outra aba (abrirProdutoExistente).
+  const manterFormNaTrocaDeAba = useRef(false);
   useEffect(() => {
+    if (manterFormNaTrocaDeAba.current) { manterFormNaTrocaDeAba.current = false; return; }
     setEditandoId(null);
     setFormData({ nome: '', tipo: abaTipo, codigo_barras: '', valor: '', custo: '', data_compra: '', quantidade: '0' });
   }, [abaTipo]);
 
-  // Código lido na busca: acha o produto (e troca pra aba dele) ou oferece cadastrar com o código.
+  // --- TRAVA DE DUPLICIDADE ---
+  // Código de barras ou nome que já existe nunca vira um segundo produto: no cadastro, abre o
+  // produto existente pra edição; editando outro produto, só avisa (abrir descartaria a edição).
+  const acharPorCodigo = (codigo) => (codigo ? produtos.find(p => p.codigo_barras === codigo && p.id !== editandoId) : null);
+  const acharPorNome = (nome) => {
+    const alvo = normalizarNome(nome);
+    return alvo ? produtos.find(p => normalizarNome(p.nome) === alvo && p.id !== editandoId) : null;
+  };
+
+  const abrirProdutoExistente = (produto, motivo) => {
+    const tipo = produto.tipo || 'venda';
+    if (tipo !== abaTipo) { manterFormNaTrocaDeAba.current = true; setAbaTipo(tipo); }
+    setBusca('');
+    prepararEdicao(produto);
+    toast.info(`"${produto.nome}" já está cadastrado com esse ${motivo}. Abrimos o cadastro dele.`);
+  };
+
+  // true = era duplicado e já foi tratado (aberto ou avisado).
+  const tratarDuplicado = (produto, motivo, campo) => {
+    if (!produto) return false;
+    if (editandoId) {
+      toast.error(`Esse ${motivo} já pertence a "${produto.nome}".`);
+      setFormData(f => ({ ...f, [campo]: '' }));
+    } else {
+      abrirProdutoExistente(produto, motivo);
+    }
+    return true;
+  };
+
+  const verificarCodigo = (codigo) => tratarDuplicado(acharPorCodigo(codigo), 'código de barras', 'codigo_barras');
+  const verificarNome = (nome) => tratarDuplicado(acharPorNome(nome), 'nome', 'nome');
+
+  // Código lido na busca: abre o produto (trocando pra aba dele) ou oferece cadastrar com o código.
   const procurarPorCodigo = (codigo) => {
     const achado = produtos.find(p => p.codigo_barras === codigo);
     if (achado) {
-      if ((achado.tipo || 'venda') !== abaTipo) setAbaTipo(achado.tipo || 'venda');
+      abrirProdutoExistente(achado, 'código de barras');
       setBusca(codigo);
       return;
     }
@@ -148,19 +188,21 @@ function AdminEstoque({ empresaId }) {
     const destino = leitorPara;
     setLeitorPara(null);
     if (destino === 'cadastro') {
+      if (verificarCodigo(codigo)) return;
       setFormData(f => ({ ...f, codigo_barras: codigo }));
       setTimeout(() => campoPrecoRef.current?.focus(), 0);
     } else {
       procurarPorCodigo(codigo);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leitorPara, produtos, abaTipo]);
+  }, [leitorPara, produtos, abaTipo, editandoId]);
 
   // Leitor USB/Bluetooth digita o código e manda Enter: no campo de código, o Enter só pula pro
-  // próximo campo em vez de enviar o formulário pela metade.
+  // próximo campo em vez de enviar o formulário pela metade (ou abre o produto, se já existir).
   const enterDoLeitorNoCadastro = (e) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
+    if (verificarCodigo(e.target.value.trim())) return;
     campoPrecoRef.current?.focus();
   };
 
@@ -196,6 +238,7 @@ function AdminEstoque({ empresaId }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (verificarCodigo(formData.codigo_barras) || verificarNome(formData.nome)) return;
     const url = editandoId ? `${API_URL}/admin/estoque/${editandoId}` : `${API_URL}/admin/estoque`;
     setSalvandoProduto(true);
     try {
@@ -218,6 +261,15 @@ function AdminEstoque({ empresaId }) {
         toast.success(editandoId ? "Produto atualizado." : `Produto cadastrado. Código: ${data.codigo_barras}`);
         limparFormulario();
         carregarProdutos();
+      } else if (res.status === 409 && data.produto_existente_id && !editandoId) {
+        // Duplicado que a lista local ainda não tinha (ex: cadastrado em outro aparelho agora há
+        // pouco): recarrega e abre o produto que já existe.
+        const resLista = await fetch(`${API_URL}/admin/estoque/${idEfetivo}`);
+        const lista = await resLista.json().catch(() => []);
+        if (Array.isArray(lista)) setProdutos(lista);
+        const existente = Array.isArray(lista) && lista.find(p => p.id === data.produto_existente_id);
+        if (existente) abrirProdutoExistente(existente, data.error.includes('nome') ? 'nome' : 'código de barras');
+        else toast.error(data.error);
       } else { toast.error(data.error || "Não foi possível processar a requisição."); }
     } catch (err) { toast.error("Não foi possível conectar ao servidor. Tente novamente em instantes."); }
     finally { setSalvandoProduto(false); }
@@ -497,7 +549,7 @@ function AdminEstoque({ empresaId }) {
         <form onSubmit={handleSubmit} style={styles.formGrid}>
           <div style={styles.inputGroup}>
             <label style={styles.label}>Nome do Produto</label>
-            <input placeholder="Ex: Pomada Modeladora" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} required style={styles.input} />
+            <input placeholder="Ex: Pomada Modeladora" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} onBlur={e => verificarNome(e.target.value)} required style={styles.input} />
           </div>
           {editandoId && (
             <div style={styles.inputGroup}>
@@ -516,6 +568,7 @@ function AdminEstoque({ empresaId }) {
                 value={formData.codigo_barras}
                 onChange={e => setFormData({...formData, codigo_barras: e.target.value.trim()})}
                 onKeyDown={enterDoLeitorNoCadastro}
+                onBlur={e => verificarCodigo(e.target.value.trim())}
                 style={{ ...styles.input, flex: 1, minWidth: 0 }}
               />
               <button type="button" onClick={() => { desbloquearBip(); setLeitorPara('cadastro'); }} style={styles.btnCamera} title="Ler com a câmera" aria-label="Ler código com a câmera"><Icons.Camera color="var(--fx-text)" /></button>
