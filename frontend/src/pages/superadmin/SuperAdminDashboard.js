@@ -10,6 +10,7 @@ import { formatarDataSemFuso, partesDataSemFuso } from '../../utils/dataSemFuso'
 import { formatarDocumento } from '../../utils/validacao';
 import { acessoAteCancelamento } from '../../utils/cancelamentoPlano';
 import { RECURSOS_PLANO } from '../../utils/recursosPlano';
+import AbaProspeccao from './AbaProspeccao';
 
 const STATUS_LEAD_INFO = {
   novo: { label: 'Novo', bg: 'var(--fx-blue-bg)', fg: 'var(--fx-blue)' },
@@ -127,6 +128,7 @@ const GRUPOS_MENU = [
     { valor: 'chaves', label: 'Chaves de Ativação', icon: 'Key' }
   ] },
   { titulo: 'Relacionamento', itens: [
+    { valor: 'prospeccao', label: 'Prospecção WhatsApp', icon: 'MessageCircle' },
     { valor: 'leads', label: 'Leads Enterprise', icon: 'Mail' },
     { valor: 'suporte', label: 'Suporte', icon: 'MessageCircle' }
   ] },
@@ -383,6 +385,7 @@ function SuperAdminDashboard() {
           {aba === 'testes' && <AbaTestesPlano toast={toast} confirmar={confirmar} />}
           {aba === 'antifraude' && <AbaAntifraude toast={toast} confirmar={confirmar} />}
           {aba === 'chaves' && <AbaChaves toast={toast} confirmar={confirmar} />}
+          {aba === 'prospeccao' && <AbaProspeccao toast={toast} confirmar={confirmar} s={s} />}
           {aba === 'leads' && <AbaLeads toast={toast} confirmar={confirmar} />}
           {aba === 'suporte' && <AbaSuporte toast={toast} confirmar={confirmar} pendencias={pendenciasSuporte} onAlterou={carregarPendenciasSuporte} />}
           {aba === 'superadmins' && <AbaSuperAdmins toast={toast} confirmar={confirmar} />}
