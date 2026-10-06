@@ -147,12 +147,20 @@ function AdminEstoque({ empresaId }) {
     return alvo ? produtos.find(p => normalizarNome(p.nome) === alvo && p.id !== editandoId) : null;
   };
 
+  // estoque_atual separado de quantidade: no modal, `quantidade` é o quanto vai entrar/sair.
+  const abrirMovimentacao = (produto, justificativa = '') => setModalAjuste({
+    ...produto, estoque_atual: produto.quantidade, tipo: 'ADICIONAR', quantidade: '', justificativa, custo_unitario: produto.custo ?? '', data_compra: ''
+  });
+
+  // Produto já cadastrado: em vez de um cadastro novo, abre direto a entrada de estoque dele
+  // (mostra o estoque atual e pede a quantidade) e filtra a lista pra ele aparecer.
   const abrirProdutoExistente = (produto, motivo) => {
     const tipo = produto.tipo || 'venda';
     if (tipo !== abaTipo) { manterFormNaTrocaDeAba.current = true; setAbaTipo(tipo); }
-    setBusca('');
-    prepararEdicao(produto);
-    toast.info(`"${produto.nome}" já está cadastrado com esse ${motivo}. Abrimos o cadastro dele.`);
+    limparFormulario();
+    setBusca(produto.codigo_barras || produto.nome);
+    abrirMovimentacao(produto, 'Entrada de mercadoria');
+    toast.info(`"${produto.nome}" já está cadastrado com esse ${motivo}. Registre a entrada no estoque.`);
   };
 
   // true = era duplicado e já foi tratado (aberto ou avisado).
@@ -544,6 +552,15 @@ function AdminEstoque({ empresaId }) {
             <h4 style={styles.cardTitle}>
             {editandoId ? <><Icons.Edit color="var(--fx-muted)" /> Editando: {formData.nome}</> : <><Icons.Plus color="var(--fx-muted)" /> {abaTipo === 'venda' ? 'Cadastrar produto de venda' : 'Cadastrar produto de uso'}</>}
             </h4>
+            {editandoId && (() => {
+              const produtoEditado = produtos.find(p => p.id === editandoId);
+              return produtoEditado ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '13px', color: 'var(--fx-muted)' }}>
+                  Estoque atual: <strong style={{ color: 'var(--fx-text)' }}>{Number(produtoEditado.quantidade) || 0} un.</strong>
+                  <button type="button" onClick={() => abrirMovimentacao(produtoEditado)} style={styles.btnAcaoClaro}>Movimentar estoque</button>
+                </div>
+              ) : null;
+            })()}
         </div>
         
         <form onSubmit={handleSubmit} style={styles.formGrid}>
@@ -658,7 +675,7 @@ function AdminEstoque({ empresaId }) {
                     </td>
                     <td style={{...styles.td, textAlign: 'right', paddingRight: '25px'}}>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                            <button onClick={() => setModalAjuste({ ...p, tipo: 'ADICIONAR', quantidade: '', justificativa: '', custo_unitario: p.custo ?? '', data_compra: '' })} style={{...styles.btnIcon, backgroundColor: 'var(--fx-violet-bg)', color: 'var(--fx-violet)'}} title="Ajustar Estoque"><Icons.Trending color="var(--fx-violet)" /></button>
+                            <button onClick={() => abrirMovimentacao(p)} style={{...styles.btnIcon, backgroundColor: 'var(--fx-violet-bg)', color: 'var(--fx-violet)'}} title="Ajustar Estoque"><Icons.Trending color="var(--fx-violet)" /></button>
                             <button onClick={() => alternarStatus(p.id, p.ativo, p.nome)} style={styles.btnIcon} title={isAtivo ? "Inativar" : "Ativar"}><Icons.Power color={isAtivo ? "var(--fx-green)" : "var(--fx-faint)"} /></button>
                             <button onClick={() => prepararEdicao(p)} style={styles.btnIcon} title="Editar Cadastro"><Icons.Edit color="var(--fx-muted)" /></button>
                             <button onClick={() => deletar(p)} style={{...styles.btnIcon, backgroundColor: 'var(--fx-red-bg)'}} title="Excluir"><Icons.Trash color="var(--fx-red)" /></button>
@@ -685,7 +702,15 @@ function AdminEstoque({ empresaId }) {
       {modalAjuste && (
         <div style={styles.overlay}>
           <div style={styles.modalCard}>
-            <h3 style={{marginTop: 0, color: 'var(--fx-text)', fontSize: '18px'}}>Ajuste: {modalAjuste.nome}</h3>
+            <h3 style={{marginTop: 0, marginBottom: '6px', color: 'var(--fx-text)', fontSize: '18px'}}>Ajuste: {modalAjuste.nome}</h3>
+            <p style={{ margin: '0 0 16px', fontSize: '14px', color: 'var(--fx-muted)' }}>
+              Estoque atual: <strong style={{ color: 'var(--fx-text)' }}>{Number(modalAjuste.estoque_atual) || 0} un.</strong>
+              {Number(modalAjuste.quantidade) > 0 && (
+                <> · Depois {modalAjuste.tipo === 'ADICIONAR' ? 'da entrada' : 'da saída'}: <strong style={{ color: modalAjuste.tipo === 'ADICIONAR' ? '#10b981' : '#ef4444' }}>
+                  {(Number(modalAjuste.estoque_atual) || 0) + (modalAjuste.tipo === 'ADICIONAR' ? 1 : -1) * Number(modalAjuste.quantidade)} un.
+                </strong></>
+              )}
+            </p>
             <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
               <button onClick={() => setModalAjuste({...modalAjuste, tipo: 'ADICIONAR'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', backgroundColor: modalAjuste.tipo === 'ADICIONAR' ? '#10b981' : 'var(--fx-surface-2)', color: modalAjuste.tipo === 'ADICIONAR' ? '#fff' : 'var(--fx-muted)' }}>Adicionar (+)</button>
               <button onClick={() => setModalAjuste({...modalAjuste, tipo: 'REMOVER'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', backgroundColor: modalAjuste.tipo === 'REMOVER' ? '#ef4444' : 'var(--fx-surface-2)', color: modalAjuste.tipo === 'REMOVER' ? '#fff' : 'var(--fx-muted)' }}>Retirar (-)</button>
@@ -693,7 +718,7 @@ function AdminEstoque({ empresaId }) {
             <form onSubmit={realizarMovimentacao}>
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Quantidade a {modalAjuste.tipo === 'ADICIONAR' ? 'Entrar' : 'Sair'}</label>
-                <input type="number" min="1" required style={styles.input} value={modalAjuste.quantidade} onChange={e => setModalAjuste({...modalAjuste, quantidade: e.target.value})} placeholder="Ex: 5" />
+                <input type="number" min="1" required autoFocus style={styles.input} value={modalAjuste.quantidade} onChange={e => setModalAjuste({...modalAjuste, quantidade: e.target.value})} placeholder="Ex: 5" />
               </div>
               {modalAjuste.tipo === 'ADICIONAR' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginTop: '12px' }}>
