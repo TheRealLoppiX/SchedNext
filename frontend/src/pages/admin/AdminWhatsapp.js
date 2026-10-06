@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import LoadingButton from '../../components/LoadingButton';
+import EditorMensagensBot from '../../components/EditorMensagensBot';
 import { API_URL } from '../../services/api';
 import { formatarTelefone } from '../../utils/telefone';
 
@@ -379,6 +380,9 @@ function AdminWhatsapp() {
           onChange={(e) => setBotConfig((c) => ({ ...c, boasVindas: e.target.value }))}
           style={styles.inputTexto}
         />
+        <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>
+          Aparece no começo do menu principal (no lugar de {'{saudacao}'}, em Mensagens do bot).
+        </p>
 
         {!botConfig.permiteIa ? (
           <div style={{ ...styles.upsell, marginTop: '16px' }}>
@@ -476,6 +480,19 @@ function AdminWhatsapp() {
         <div style={{ marginTop: '20px' }}>
           <LoadingButton loading={salvandoBot} onClick={salvarBotConfig} style={styles.btnCadastrar}>Salvar</LoadingButton>
         </div>
+      </div>
+
+      <div style={{ ...styles.cardForm, marginTop: '20px' }}>
+        <h3 style={styles.tituloSecao}>Mensagens do bot</h3>
+        <p style={{ margin: '0 0 16px', fontSize: '13px', color: 'var(--fx-muted)' }}>
+          Escolha o que o bot responde em cada etapa da conversa. O que você não mudar segue a mensagem padrão do SchedNext.
+        </p>
+        <EditorMensagensBot
+          endpoint="/admin/whatsapp/mensagens"
+          toast={toast}
+          rotuloPadrao="a mensagem padrão do SchedNext"
+          estiloBotao={styles.btnCadastrar}
+        />
       </div>
 
       <div style={{ ...styles.cardForm, marginTop: '20px' }}>

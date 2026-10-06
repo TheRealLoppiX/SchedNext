@@ -11,6 +11,7 @@ import { formatarDocumento } from '../../utils/validacao';
 import { acessoAteCancelamento } from '../../utils/cancelamentoPlano';
 import { RECURSOS_PLANO } from '../../utils/recursosPlano';
 import AbaProspeccao from './AbaProspeccao';
+import EditorMensagensBot from '../../components/EditorMensagensBot';
 
 const STATUS_LEAD_INFO = {
   novo: { label: 'Novo', bg: 'var(--fx-blue-bg)', fg: 'var(--fx-blue)' },
@@ -119,7 +120,8 @@ const GRUPOS_MENU = [
   ] },
   { titulo: 'Empresas', itens: [
     { valor: 'empresas', label: 'Empresas', icon: 'Building' },
-    { valor: 'antifraude', label: 'Antifraude', icon: 'Shield' }
+    { valor: 'antifraude', label: 'Antifraude', icon: 'Shield' },
+    { valor: 'mensagens-bot', label: 'Mensagens do bot', icon: 'MessageCircle' }
   ] },
   { titulo: 'Planos', itens: [
     { valor: 'planos', label: 'Planos', icon: 'Tag' },
@@ -385,6 +387,16 @@ function SuperAdminDashboard() {
           {aba === 'testes' && <AbaTestesPlano toast={toast} confirmar={confirmar} />}
           {aba === 'antifraude' && <AbaAntifraude toast={toast} confirmar={confirmar} />}
           {aba === 'chaves' && <AbaChaves toast={toast} confirmar={confirmar} />}
+          {aba === 'mensagens-bot' && (
+            <div style={s.card}>
+              <h3 style={s.cardTitulo}>Mensagens padrão do bot de WhatsApp</h3>
+              <p style={{ ...s.subTexto, margin: '0 0 16px' }}>
+                Valem pra toda empresa que não personalizou a mensagem no próprio painel (WhatsApp → Mensagens do bot).
+                Mudar aqui atualiza na hora o bot de quem usa o padrão.
+              </p>
+              <EditorMensagensBot endpoint="/super-admin/whatsapp-mensagens" toast={toast} rotuloPadrao="o texto original do sistema" estiloBotao={s.btnPrimario} />
+            </div>
+          )}
           {aba === 'prospeccao' && <AbaProspeccao toast={toast} confirmar={confirmar} s={s} />}
           {aba === 'leads' && <AbaLeads toast={toast} confirmar={confirmar} />}
           {aba === 'suporte' && <AbaSuporte toast={toast} confirmar={confirmar} pendencias={pendenciasSuporte} onAlterou={carregarPendenciasSuporte} />}
