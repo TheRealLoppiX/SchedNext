@@ -139,22 +139,56 @@ function AdminEstoque({ empresaId }) {
   }, [abaTipo]);
 
   // --- TRAVA DE DUPLICIDADE ---
-  // Código de barras ou nome que já existe nunca vira um segundo produto: no cadastro, abre o
-  // produto existente pra edição; editando outro produto, só avisa (abrir descartaria a edição).
-  const acharPorCodigo = (codigo) => (codigo ? produtos.find(p => p.codigo_barras === codigo && p.id !== editandoId) : null);
+  // Um mesmo produto pode ter dois saldos: um de revenda (tipo 'venda') e um de uso do
+  // estabelecimento (tipo 'uso'), cada um numa linha própria com o mesmo nome/código. O que não
+  // pode é repetir dentro do mesmo tipo. No cadastro, produto que já existe abre a entrada de
+  // estoque dele; editando outro produto, só avisa (abrir descartaria a edição).
+  const acharPorCodigo = (codigo) => (codigo ? produtos.filter(p => p.codigo_barras === codigo && p.id !== editandoId) : []);
   const acharPorNome = (nome) => {
     const alvo = normalizarNome(nome);
-    return alvo ? produtos.find(p => normalizarNome(p.nome) === alvo && p.id !== editandoId) : null;
+    return alvo ? produtos.filter(p => normalizarNome(p.nome) === alvo && p.id !== editandoId) : [];
   };
 
+  // O "mesmo produto" no outro tipo: mesmo código de barras ou mesmo nome.
+  const acharIrmao = (produto, tipo) => produtos.find(p => p.id !== produto.id && (p.tipo || 'venda') === tipo &&
+    ((produto.codigo_barras && p.codigo_barras === produto.codigo_barras) || normalizarNome(p.nome) === normalizarNome(produto.nome)));
+
+  // Modal de movimentação. `destino` é o saldo (venda/uso) que recebe a movimentação; `base` é o
+  // produto de referência pra criar o saldo do outro tipo quando ele ainda não existe (id null).
   // estoque_atual separado de quantidade: no modal, `quantidade` é o quanto vai entrar/sair.
-  const abrirMovimentacao = (produto, justificativa = '') => setModalAjuste({
-    ...produto, estoque_atual: produto.quantidade, tipo: 'ADICIONAR', quantidade: '', justificativa, custo_unitario: produto.custo ?? '', data_compra: ''
-  });
+  const montarModalAjuste = (produto, destino, extras = {}) => {
+    const existente = (produto.tipo || 'venda') === destino ? produto : acharIrmao(produto, destino);
+    return {
+      base: produto,
+      destino,
+      id: existente?.id ?? null,
+      nome: produto.nome,
+      estoque_atual: existente ? existente.quantidade : 0,
+      tipo: 'ADICIONAR',
+      quantidade: '',
+      justificativa: '',
+      custo_unitario: existente?.custo ?? produto.custo ?? '',
+      valor: existente?.valor ?? produto.valor ?? '',
+      data_compra: '',
+      ...extras
+    };
+  };
+
+  const abrirMovimentacao = (produto, justificativa = '') => setModalAjuste(montarModalAjuste(produto, produto.tipo || 'venda', { justificativa }));
+
+  // Troca o saldo (revenda/uso) do modal aberto mantendo o que já foi digitado.
+  const trocarDestinoAjuste = (destino) => setModalAjuste(m => ({
+    ...montarModalAjuste(m.base, destino),
+    quantidade: m.quantidade, justificativa: m.justificativa, data_compra: m.data_compra,
+    custo_unitario: m.custo_unitario,
+    // Saldo novo só aceita entrada (não há o que retirar).
+    tipo: acharIrmao(m.base, destino) || (m.base.tipo || 'venda') === destino ? m.tipo : 'ADICIONAR'
+  }));
 
   // Produto já cadastrado: em vez de um cadastro novo, abre direto a entrada de estoque dele
-  // (mostra o estoque atual e pede a quantidade) e filtra a lista pra ele aparecer.
-  const abrirProdutoExistente = (produto, motivo) => {
+  // (mostra o estoque atual e pede a quantidade), no saldo da aba aberta quando ele existir.
+  const abrirProdutoExistente = (encontrados, motivo) => {
+    const produto = encontrados.find(p => (p.tipo || 'venda') === abaTipo) || encontrados[0];
     const tipo = produto.tipo || 'venda';
     if (tipo !== abaTipo) { manterFormNaTrocaDeAba.current = true; setAbaTipo(tipo); }
     limparFormulario();
@@ -164,13 +198,16 @@ function AdminEstoque({ empresaId }) {
   };
 
   // true = era duplicado e já foi tratado (aberto ou avisado).
-  const tratarDuplicado = (produto, motivo, campo) => {
-    if (!produto) return false;
+  const tratarDuplicado = (encontrados, motivo, campo) => {
+    if (!encontrados.length) return false;
     if (editandoId) {
-      toast.error(`Esse ${motivo} já pertence a "${produto.nome}".`);
+      // Editando: só conflita com produto do mesmo tipo (revenda e uso podem ter o mesmo nome/código).
+      const conflito = encontrados.find(p => (p.tipo || 'venda') === formData.tipo);
+      if (!conflito) return false;
+      toast.error(`Esse ${motivo} já pertence a "${conflito.nome}" (${formData.tipo === 'uso' ? 'uso do estabelecimento' : 'revenda'}).`);
       setFormData(f => ({ ...f, [campo]: '' }));
     } else {
-      abrirProdutoExistente(produto, motivo);
+      abrirProdutoExistente(encontrados, motivo);
     }
     return true;
   };
@@ -180,9 +217,9 @@ function AdminEstoque({ empresaId }) {
 
   // Código lido na busca: abre o produto (trocando pra aba dele) ou oferece cadastrar com o código.
   const procurarPorCodigo = (codigo) => {
-    const achado = produtos.find(p => p.codigo_barras === codigo);
-    if (achado) {
-      abrirProdutoExistente(achado, 'código de barras');
+    const achados = produtos.filter(p => p.codigo_barras === codigo);
+    if (achados.length) {
+      abrirProdutoExistente(achados, 'código de barras');
       setBusca(codigo);
       return;
     }
@@ -276,7 +313,7 @@ function AdminEstoque({ empresaId }) {
         const lista = await resLista.json().catch(() => []);
         if (Array.isArray(lista)) setProdutos(lista);
         const existente = Array.isArray(lista) && lista.find(p => p.id === data.produto_existente_id);
-        if (existente) abrirProdutoExistente(existente, data.error.includes('nome') ? 'nome' : 'código de barras');
+        if (existente) abrirProdutoExistente([existente], data.error.includes('nome') ? 'nome' : 'código de barras');
         else toast.error(data.error);
       } else { toast.error(data.error || "Não foi possível processar a requisição."); }
     } catch (err) { toast.error("Não foi possível conectar ao servidor. Tente novamente em instantes."); }
@@ -354,6 +391,40 @@ function AdminEstoque({ empresaId }) {
   const realizarMovimentacao = async (e) => {
     e.preventDefault();
     if (!modalAjuste.quantidade || !modalAjuste.justificativa) return toast.error("Preencha a quantidade e a justificativa.");
+
+    // Saldo que ainda não existe (ex: primeira entrada de uso de um produto que só era de
+    // revenda): cria a linha do outro tipo, com o mesmo nome e código, já com a quantidade.
+    if (!modalAjuste.id) {
+      if (modalAjuste.destino === 'venda' && (modalAjuste.valor === '' || modalAjuste.valor === null)) return toast.error("Informe o preço de venda.");
+      setMovimentando(true);
+      try {
+        const res = await fetch(`${API_URL}/admin/estoque`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome: modalAjuste.base.nome,
+            tipo: modalAjuste.destino,
+            codigo_barras: modalAjuste.base.codigo_barras || '',
+            valor: modalAjuste.destino === 'uso' ? '' : modalAjuste.valor,
+            custo: modalAjuste.custo_unitario,
+            data_compra: modalAjuste.data_compra,
+            quantidade: modalAjuste.quantidade,
+            usuario_nome: autorizado.nome
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          toast.success(`Entrada registrada no estoque de ${modalAjuste.destino === 'uso' ? 'uso do estabelecimento' : 'revenda'}.`);
+          setModalAjuste(null);
+          carregarProdutos();
+        } else toast.error(data.error || "Não foi possível registrar a entrada.");
+      } catch (err) {
+        toast.error('Não foi possível conectar ao servidor. Tente novamente em instantes.');
+      } finally {
+        setMovimentando(false);
+      }
+      return;
+    }
 
     setMovimentando(true);
     try {
@@ -711,15 +782,38 @@ function AdminEstoque({ empresaId }) {
                 </strong></>
               )}
             </p>
+            <label style={styles.label}>Estoque de</label>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+              {[['venda', 'Revenda'], ['uso', 'Uso do estabelecimento']].map(([valor, rotulo]) => (
+                <button key={valor} type="button" onClick={() => trocarDestinoAjuste(valor)}
+                  style={{ flex: 1, padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
+                    border: modalAjuste.destino === valor ? '2px solid var(--fx-violet)' : '1px solid var(--fx-line-2)',
+                    background: modalAjuste.destino === valor ? 'var(--fx-violet-bg)' : 'var(--fx-surface-2)',
+                    color: modalAjuste.destino === valor ? 'var(--fx-violet)' : 'var(--fx-muted)' }}>
+                  {rotulo}
+                </button>
+              ))}
+            </div>
+            {!modalAjuste.id && (
+              <p style={{ margin: '-6px 0 14px', fontSize: '12.5px', color: 'var(--fx-muted)' }}>
+                Este produto ainda não tem estoque de {modalAjuste.destino === 'uso' ? 'uso do estabelecimento' : 'revenda'}. A entrada cria esse saldo, com o mesmo nome e código.
+              </p>
+            )}
             <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
               <button onClick={() => setModalAjuste({...modalAjuste, tipo: 'ADICIONAR'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', backgroundColor: modalAjuste.tipo === 'ADICIONAR' ? '#10b981' : 'var(--fx-surface-2)', color: modalAjuste.tipo === 'ADICIONAR' ? '#fff' : 'var(--fx-muted)' }}>Adicionar (+)</button>
-              <button onClick={() => setModalAjuste({...modalAjuste, tipo: 'REMOVER'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', backgroundColor: modalAjuste.tipo === 'REMOVER' ? '#ef4444' : 'var(--fx-surface-2)', color: modalAjuste.tipo === 'REMOVER' ? '#fff' : 'var(--fx-muted)' }}>Retirar (-)</button>
+              <button disabled={!modalAjuste.id} title={!modalAjuste.id ? 'Sem estoque desse tipo pra retirar' : undefined} onClick={() => setModalAjuste({...modalAjuste, tipo: 'REMOVER'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', backgroundColor: modalAjuste.tipo === 'REMOVER' ? '#ef4444' : 'var(--fx-surface-2)', color: modalAjuste.tipo === 'REMOVER' ? '#fff' : 'var(--fx-muted)' }}>Retirar (-)</button>
             </div>
             <form onSubmit={realizarMovimentacao}>
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Quantidade a {modalAjuste.tipo === 'ADICIONAR' ? 'Entrar' : 'Sair'}</label>
                 <input type="number" min="1" required autoFocus style={styles.input} value={modalAjuste.quantidade} onChange={e => setModalAjuste({...modalAjuste, quantidade: e.target.value})} placeholder="Ex: 5" />
               </div>
+              {!modalAjuste.id && modalAjuste.destino === 'venda' && (
+                <div style={{ ...styles.inputGroup, marginTop: '12px' }}>
+                  <label style={styles.label}>Preço de venda (R$)</label>
+                  <input type="number" step="0.01" min="0" required style={styles.input} value={modalAjuste.valor ?? ''} onChange={e => setModalAjuste({...modalAjuste, valor: e.target.value})} placeholder="0,00" />
+                </div>
+              )}
               {modalAjuste.tipo === 'ADICIONAR' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginTop: '12px' }}>
                   <div style={styles.inputGroup}>
