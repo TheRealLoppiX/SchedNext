@@ -419,3 +419,58 @@
    borrava, principalmente no tema claro */
 .oa-legenda span::before { box-shadow: none; }
 .oa-cartao::before { box-shadow: none; }
+
+/* ============================ Visual comercial (sobrepõe o "ofício") ============================
+   Painel com cara de produto: a fonte condensada (Anton) e a técnica (mono) viram a Inter dentro
+   do painel, sem maiúsculas espaçadas nem brilhos neon. Fica no fim do arquivo de propósito, pra
+   valer sobre as regras de mesmo seletor acima. */
+
+.oa-admin { --oc-display: var(--oc-corpo); --oc-mono: var(--oc-corpo); }
+.oa-admin .oc-fundo {
+  background:
+    radial-gradient(ellipse at 90% 0%, rgba(37, 84, 235, 0.12), transparent 50%),
+    radial-gradient(ellipse at 0% 100%, rgba(14, 165, 198, 0.06), transparent 45%);
+}
+.oa-admin code, .oa-absoluto code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+.oa-marca-nome { font-size: 15px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; text-transform: none; }
+.oa-marca-sub { font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--oc-fraco); }
+.oa-grupo-titulo { font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em; text-transform: none; opacity: 1; }
+.oa-grupo-titulo i { display: none; }
+.oa-item.ativo { background: rgba(37, 84, 235, 0.16); }
+.oa-item.ativo svg { color: var(--bb-link); }
+.oa-item.ativo::before { background: #2554eb; box-shadow: none; }
+:root[data-tema='claro'] .oa-item.ativo { background: rgba(37, 84, 235, 0.08); color: #173fb0; }
+
+.oa-topo { font-size: 13px; letter-spacing: 0; text-transform: none; }
+.oa-trilha b { color: var(--oc-texto); font-weight: 600; }
+.oa-ao-vivo::before { box-shadow: none; animation: none; }
+
+.oa-titulo { font-weight: 700; font-size: clamp(26px, 2.6vw, 32px); line-height: 1.2; letter-spacing: -0.02em; text-transform: none; margin: 0 0 6px; }
+.oa-segmento button { font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+
+.oa-placar, .oa-coluna { background: var(--fx-card); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.oa-placa-rotulo { font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.oa-placa-numero { font-size: 34px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+.oa-placa-taxa { font-size: 13px; letter-spacing: 0; }
+.oa-placa-barra i { box-shadow: none; }
+
+.oa-secao h3 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; text-transform: none; }
+.oa-dia small { font-size: 11px; letter-spacing: 0; text-transform: capitalize; }
+.oa-dia strong { font-size: 18px; font-weight: 700; }
+.oa-coluna-nome small { font-size: 12px; letter-spacing: 0; text-transform: none; }
+.oa-contador { font-size: 13px; font-weight: 700; }
+.oa-livre span:first-child { font-size: 13px; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.oa-cartao::before { box-shadow: none; }
+.oa-cartao-hora { font-size: 15px; font-weight: 700; letter-spacing: 0; }
+.oa-cartao-hora small { font-size: 12px; letter-spacing: 0; }
+.oa-status { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.oa-carregando { font-size: 14px; letter-spacing: 0; text-transform: none; }
+.oa-legenda { font-size: 12px; letter-spacing: 0; text-transform: none; }
+.oa-cortesia-texto small { font-size: 12px; letter-spacing: 0; text-transform: none; }
+
+.oa-absoluto .sa-tabela th { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+@media (max-width: 768px) {
+  .oa-absoluto .sa-header h1 { font-size: 26px !important; }
+  .oa-absoluto table.sa-tabela td::before { font-size: 12px; font-weight: 600; letter-spacing: 0; }
+}

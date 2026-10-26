@@ -121,6 +121,7 @@ function PreviaProduto() {
 
 function Landing() {
   const [planos, setPlanos] = useState([]);
+  const [depoimentos, setDepoimentos] = useState([]);
   const [faqAberto, setFaqAberto] = useState(0);
   const [menuAberto, setMenuAberto] = useState(false);
   const [rolou, setRolou] = useState(false);
@@ -133,6 +134,12 @@ function Landing() {
       .then((r) => r.json())
       .then((d) => setPlanos(Array.isArray(d) ? d : []))
       .catch(() => setPlanos([]));
+    // Relatos reais cadastrados no admin absoluto (backend routes/depoimentos.js). Sem nenhum, a
+    // seção nem aparece.
+    fetch(`${API_URL}/depoimentos`)
+      .then((r) => r.json())
+      .then((d) => setDepoimentos(Array.isArray(d) ? d : []))
+      .catch(() => setDepoimentos([]));
   }, []);
   useEffect(() => {
     const aoRolar = () => setRolou(window.scrollY > 8);
@@ -263,7 +270,38 @@ function Landing() {
           </div>
         </section>
 
-        <section id="planos" data-track-secao="5_planos" className="lp-secao lp-secao-cinza">
+        {depoimentos.length > 0 && (
+          <section id="depoimentos" className="lp-secao lp-secao-cinza">
+            <div className="lp-container">
+              <div className="lp-cabeca">
+                <span className="lp-sobretitulo">Depoimentos</span>
+                <h2>Quem usa, recomenda</h2>
+                <p>O que dizem os negócios que já organizam a agenda com o SchedNext.</p>
+              </div>
+              <div className="lp-depoimentos">
+                {depoimentos.map((d) => (
+                  <figure key={d.id} className="lp-depoimento">
+                    <div className="lp-estrelas" aria-label={`Nota ${d.nota || 5} de 5`}>
+                      {[1, 2, 3, 4, 5].map((n) => <span key={n} className={n <= (d.nota || 5) ? 'cheia' : ''}>★</span>)}
+                    </div>
+                    <blockquote>“{d.texto}”</blockquote>
+                    <figcaption>
+                      {d.foto_url
+                        ? <img src={d.foto_url} alt="" className="lp-depoimento-foto" loading="lazy" />
+                        : <span className="lp-depoimento-inicial" aria-hidden="true">{(d.nome || '?').trim().charAt(0).toUpperCase()}</span>}
+                      <span>
+                        <b>{d.nome}</b>
+                        <small>{[d.negocio, d.cidade].filter(Boolean).join(' · ')}</small>
+                      </span>
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section id="planos" data-track-secao="5_planos" className={`lp-secao${depoimentos.length > 0 ? '' : ' lp-secao-cinza'}`}>
           <div className="lp-container">
             <div className="lp-cabeca">
               <span className="lp-sobretitulo">Planos</span>

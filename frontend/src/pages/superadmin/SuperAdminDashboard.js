@@ -11,6 +11,7 @@ import { formatarDocumento } from '../../utils/validacao';
 import { acessoAteCancelamento } from '../../utils/cancelamentoPlano';
 import { RECURSOS_PLANO } from '../../utils/recursosPlano';
 import AbaProspeccao from './AbaProspeccao';
+import AbaDepoimentos from './AbaDepoimentos';
 import EditorMensagensBot from '../../components/EditorMensagensBot';
 
 const STATUS_LEAD_INFO = {
@@ -132,6 +133,7 @@ const GRUPOS_MENU = [
   { titulo: 'Relacionamento', itens: [
     { valor: 'prospeccao', label: 'Prospecção WhatsApp', icon: 'MessageCircle' },
     { valor: 'leads', label: 'Leads Enterprise', icon: 'Mail' },
+    { valor: 'depoimentos', label: 'Depoimentos', icon: 'MessageCircle' },
     { valor: 'suporte', label: 'Suporte', icon: 'MessageCircle' }
   ] },
   { titulo: 'Conta', itens: [
@@ -399,6 +401,7 @@ function SuperAdminDashboard() {
           )}
           {aba === 'prospeccao' && <AbaProspeccao toast={toast} confirmar={confirmar} s={s} />}
           {aba === 'leads' && <AbaLeads toast={toast} confirmar={confirmar} />}
+          {aba === 'depoimentos' && <AbaDepoimentos toast={toast} confirmar={confirmar} s={s} />}
           {aba === 'suporte' && <AbaSuporte toast={toast} confirmar={confirmar} pendencias={pendenciasSuporte} onAlterou={carregarPendenciasSuporte} />}
           {aba === 'superadmins' && <AbaSuperAdmins toast={toast} confirmar={confirmar} />}
         </div>
@@ -4580,7 +4583,7 @@ const s = {
   pagina: { minHeight: '100vh' },
   container: { maxWidth: '1240px', margin: '0 auto' },
   header: { marginBottom: '28px' },
-  titulo: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  titulo: { fontWeight: 700, fontSize: 'clamp(26px, 2.6vw, 32px)', lineHeight: 1.2, letterSpacing: '-0.02em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
   subtitulo: { color: 'var(--fx-muted)', fontSize: '14px', margin: 0 },
 
 
@@ -4589,12 +4592,12 @@ const s = {
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' },
   statCard: { background: 'var(--oc-vidro)', backdropFilter: 'blur(14px)', padding: '18px 20px 20px', borderRadius: '18px', border: '1px solid var(--fx-line)', borderTop: '2px solid var(--fx-line)' },
   statCardTopo: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' },
-  statLabel: { fontFamily: 'var(--oc-mono)', fontSize: '10.5px', color: 'var(--fx-muted)', fontWeight: 400, textTransform: 'uppercase', letterSpacing: '0.16em', lineHeight: 1.5 },
-  statNumero: { fontFamily: 'var(--oc-display)', fontSize: 'clamp(30px, 2.5vw, 42px)', fontWeight: 400, lineHeight: 1, letterSpacing: '0.01em' },
+  statLabel: { fontSize: '13px', color: 'var(--fx-muted)', fontWeight: 500, lineHeight: 1.5 },
+  statNumero: { fontSize: 'clamp(26px, 2.2vw, 34px)', fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.02em' },
 
   gridDuasColunas: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' },
   card: { background: 'var(--oc-vidro)', backdropFilter: 'blur(14px)', borderRadius: '18px', border: '1px solid var(--fx-line)', padding: '22px 24px', marginBottom: '0' },
-  cardTitulo: { margin: '0 0 14px', fontFamily: 'var(--oc-mono)', fontSize: '11px', fontWeight: 400, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--fx-acento)' },
+  cardTitulo: { margin: '0 0 14px', fontSize: '16px', fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--fx-text)' },
   linhaLista: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--fx-text)', padding: '7px 0', borderBottom: '1px solid var(--fx-line)' },
   subTexto: { fontSize: '12px', color: 'var(--fx-muted)', marginTop: '2px' },
 
@@ -4604,7 +4607,7 @@ const s = {
 
   cardTabela: { background: 'var(--oc-vidro)', backdropFilter: 'blur(14px)', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--fx-line)' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: '820px' },
-  th: { padding: '13px 18px', background: 'transparent', color: 'var(--fx-muted)', fontFamily: 'var(--oc-mono)', fontSize: '10px', fontWeight: 400, textTransform: 'uppercase', letterSpacing: '0.16em', borderBottom: '1px solid var(--fx-line)', textAlign: 'left' },
+  th: { padding: '13px 18px', background: 'transparent', color: 'var(--fx-muted)', fontSize: '12px', fontWeight: 600, borderBottom: '1px solid var(--fx-line)', textAlign: 'left' },
   tr: { borderBottom: '1px solid var(--fx-line)' },
   td: { padding: '14px 18px', fontSize: '13px', verticalAlign: 'middle', color: 'var(--fx-text)' },
 
@@ -4627,9 +4630,9 @@ const s = {
   btnFechar: { background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1, padding: '2px' },
 
   infoGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' },
-  infoLabel: { fontFamily: 'var(--oc-mono)', fontSize: '10px', color: 'var(--fx-faint)', textTransform: 'uppercase', letterSpacing: '0.16em', fontWeight: 400, marginBottom: '4px' },
+  infoLabel: { fontSize: '12px', color: 'var(--fx-faint)', fontWeight: 600, marginBottom: '4px' },
 
-  label: { display: 'block', fontFamily: 'var(--oc-mono)', fontSize: '10.5px', fontWeight: 400, color: 'var(--fx-muted)', marginBottom: '6px', marginTop: '14px', textTransform: 'uppercase', letterSpacing: '0.16em' },
+  label: { display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--fx-muted)', marginBottom: '6px', marginTop: '14px' },
   input: { width: '100%', boxSizing: 'border-box', background: 'var(--fx-surface-2)', border: '1px solid var(--fx-line-2)', color: 'var(--fx-text)', borderRadius: '10px', padding: '10px 12px', fontSize: '14px', outline: 'none' },
   checkboxLinha: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--fx-text)' },
 

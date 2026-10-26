@@ -317,7 +317,7 @@ function AdminAcoes() {
 const s = {
     container: { padding: '40px', maxWidth: '1000px', margin: '0 auto', fontFamily: "'Inter', sans-serif" },
     header: { marginBottom: '30px' },
-    title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+    title: { fontWeight: 700, fontSize: 'clamp(26px, 2.6vw, 32px)', lineHeight: 1.2, letterSpacing: '-0.02em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
     subtitle: { color: 'var(--fx-muted)', margin: 0 },
     card: { background: 'var(--fx-card)', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid var(--fx-line)' },
     cardTitle: { margin: '0 0 20px 0', fontSize: '18px' },

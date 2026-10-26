@@ -1001,7 +1001,7 @@ const styles = {
   container: { padding: '40px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', paddingBottom: '4px' },
   headerAcoes: { display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap', justifyContent: 'flex-end' },
-  title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  title: { fontWeight: 700, fontSize: 'clamp(26px, 2.6vw, 32px)', lineHeight: 1.2, letterSpacing: '-0.02em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
   subtitle: { color: 'var(--fx-muted)', fontSize: '15px', margin: 0 },
   
   badgeOperador: { background: 'var(--fx-strong)', color: '#fff', padding: '8px 16px', borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '8px' },

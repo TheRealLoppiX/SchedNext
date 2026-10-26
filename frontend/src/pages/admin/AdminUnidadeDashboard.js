@@ -148,7 +148,7 @@ function corStatus(status) {
 
 const styles = {
   container: { padding: '40px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },
-  title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  title: { fontWeight: 700, fontSize: 'clamp(26px, 2.6vw, 32px)', lineHeight: 1.2, letterSpacing: '-0.02em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
   label: { display: 'block', marginBottom: '6px', fontWeight: '700', fontSize: '12px', color: 'var(--fx-muted)', textTransform: 'uppercase' },
   select: { padding: '10px', borderRadius: '8px', border: '1px solid var(--fx-line-2)', fontSize: '14px', minWidth: '220px' },
   abas: { display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid var(--fx-line)', paddingBottom: '10px' },

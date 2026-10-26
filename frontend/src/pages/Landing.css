@@ -165,6 +165,18 @@
 .lp-outros { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; margin-top: 32px; font-size: 15px; color: var(--lp-texto-2); }
 .lp-chip { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--lp-linha); background: #fff; font-size: 14px; color: var(--lp-texto); }
 
+/* ---------- depoimentos ---------- */
+.lp-depoimentos { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.lp-depoimento { margin: 0; background: #fff; border: 1px solid var(--lp-linha); border-radius: var(--lp-raio); padding: 26px; display: flex; flex-direction: column; gap: 16px; }
+.lp-estrelas { color: #cbd5e1; font-size: 16px; letter-spacing: 2px; }
+.lp-estrelas .cheia { color: #f59e0b; }
+.lp-depoimento blockquote { margin: 0; font-size: 15.5px; color: var(--lp-texto); line-height: 1.6; flex: 1; }
+.lp-depoimento figcaption { display: flex; align-items: center; gap: 12px; }
+.lp-depoimento figcaption b { display: block; font-size: 14.5px; }
+.lp-depoimento figcaption small { font-size: 13px; color: var(--lp-texto-3); }
+.lp-depoimento-foto, .lp-depoimento-inicial { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; object-fit: cover; }
+.lp-depoimento-inicial { display: flex; align-items: center; justify-content: center; background: var(--lp-azul-claro); color: var(--lp-azul); font-weight: 700; }
+
 /* ---------- planos ---------- */
 .lp-planos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; align-items: start; }
 .lp-plano { position: relative; background: #fff; border: 1px solid var(--lp-linha); border-radius: 16px; padding: 28px 24px; }

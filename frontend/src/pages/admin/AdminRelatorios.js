@@ -932,7 +932,7 @@ const Icons = {
 
 const styles = {
   container: { padding: '40px', maxWidth: '1100px', margin: '0 auto', fontFamily: "'Inter', -apple-system, sans-serif" },
-  title: { fontFamily: 'var(--oc-display)', fontWeight: 400, fontSize: 'clamp(44px, 5.4vw, 76px)', lineHeight: 0.92, textTransform: 'uppercase', letterSpacing: '0.005em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
+  title: { fontWeight: 700, fontSize: 'clamp(26px, 2.6vw, 32px)', lineHeight: 1.2, letterSpacing: '-0.02em', color: 'var(--fx-text)', margin: '0 0 10px 0' },
   subtitle: { color: 'var(--fx-muted)', fontSize: '15px', marginBottom: '25px' },
   upsell: { padding: '20px', backgroundColor: 'var(--fx-surface-2)', borderRadius: '10px', border: '1px dashed var(--fx-line-2)' },
   // alignItems 'flex-start' de propósito — com 'flex-end' o campo "Serviços" (mais alto que os
