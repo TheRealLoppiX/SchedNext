@@ -25,6 +25,11 @@ function AgendaModal({ barbeiro, empresaId, dataSelecionada, horaPreSelecionada,
     
     // Formulário de cliente completo com os 5 campos exigidos
     const [novoCliente, setNovoCliente] = useState({ nome: '', email: '', senha: '', tel: '', nasc: '' });
+    // Atendimento avulso: cliente que chegou sem horário e não quer (ou não precisa) de cadastro.
+    // O agendamento sai sem usuario_id, só com o nome (opcional) — o backend já trata esse caso
+    // em todo o fluxo (caixa, assinatura, fidelidade e avisos simplesmente não se aplicam).
+    const [avulso, setAvulso] = useState(false);
+    const [nomeAvulso, setNomeAvulso] = useState('');
 
     const [modalFinalizar, setModalFinalizar] = useState(null);
     const [modalCancelamento, setModalCancelamento] = useState(null);
@@ -135,22 +140,34 @@ const toggleServico = (servico) => {
         return { bg: 'var(--fx-amber-bg)', cor: 'var(--fx-amber)', label: ag.status };
     };
 
-    const handleConfirmar = async () => {
+    const limparFormularioEncaixe = () => {
+        setModo('lista');
+        setHoraAtiva(null);
+        setServicosSelecionados([]);
+        setClienteSelecionado(null);
+        setNovoCliente({ nome: '', email: '', senha: '', tel: '', nasc: '' });
+        setAvulso(false);
+        setNomeAvulso('');
+    };
+
+    // finalizarAgora: depois de criar, já abre o caixa (PDV) desse atendimento — o fluxo do
+    // cliente que chegou, foi atendido e vai pagar na hora.
+    const handleConfirmar = async (finalizarAgora = false) => {
         if (!horaAtiva) return toast.error("Selecione um horário.");
         if (servicosSelecionados.length === 0) return toast.error("Selecione ao menos um serviço.");
-        if (!clienteSelecionado && !novoCliente.nome) return toast.error("Selecione ou crie um cliente.");
+        if (!avulso && !clienteSelecionado && !novoCliente.nome) return toast.error("Selecione ou crie um cliente.");
 
-        if (!clienteSelecionado && (!novoCliente.nome || !novoCliente.tel || !novoCliente.senha || !novoCliente.email || !novoCliente.nasc)) {
+        if (!avulso && !clienteSelecionado && (!novoCliente.nome || !novoCliente.tel || !novoCliente.senha || !novoCliente.email || !novoCliente.nasc)) {
             return toast.error("Preencha todos os campos para registrar o novo cliente.");
         }
-        if (!clienteSelecionado && !emailValido(novoCliente.email)) {
+        if (!avulso && !clienteSelecionado && !emailValido(novoCliente.email)) {
             return toast.error("Insira um e-mail válido para o novo cliente.");
         }
 
         setConfirmando(true);
-        let clienteIdFinal = clienteSelecionado?.id;
+        let clienteIdFinal = avulso ? null : clienteSelecionado?.id;
 
-        if (!clienteSelecionado) {
+        if (!avulso && !clienteSelecionado) {
             try {
                 const resCriar = await fetch(`${API_URL}/admin/clientes/rapido`, {
                     method: 'POST',
@@ -186,21 +203,34 @@ const toggleServico = (servico) => {
                     empresa_id: empresaId,
                     barbeiro_id: barbeiro.id,
                     usuario_id: clienteIdFinal,
-                    cliente_nome: clienteSelecionado
-                        ? (clienteSelecionado.nome || clienteSelecionado.nome_completo)
-                        : novoCliente.nome,
+                    cliente_nome: avulso
+                        ? (nomeAvulso.trim() || 'Cliente avulso')
+                        : clienteSelecionado
+                            ? (clienteSelecionado.nome || clienteSelecionado.nome_completo)
+                            : novoCliente.nome,
                     data_hora: `${dataSelecionada} ${horaAtiva}:00`,
                     servicos: servicosSelecionados
                 })
             });
             const dataAgendar = await resAgendar.json();
             if (resAgendar.ok && dataAgendar.success) {
+                if (finalizarAgora) {
+                    // Recarrega a agenda do dia pra pegar o atendimento no mesmo formato que o
+                    // botão "Finalizar / PDV" da lista usa, e abre o caixa direto.
+                    const resAgs = await fetch(`${API_URL}/admin/agendamentos/${empresaId}?dataInicio=${dataSelecionada}&dataFim=${dataSelecionada}`);
+                    const ags = resAgs.ok ? await resAgs.json() : [];
+                    const criado = Array.isArray(ags) ? ags.find(a => String(a.id) === String(dataAgendar.id)) : null;
+                    limparFormularioEncaixe();
+                    carregarDados();
+                    if (criado) {
+                        setModalFinalizar({ ...criado, servicos: criado.servicos || criado.servico_nome || '' });
+                        return;
+                    }
+                    toast.success('Atendimento registrado. Finalize pelo botão "Finalizar / PDV" na agenda.');
+                    return;
+                }
                 toast.success('Encaixe concluído com sucesso!');
-                setModo('lista');
-                setHoraAtiva(null);
-                setServicosSelecionados([]);
-                setClienteSelecionado(null);
-                setNovoCliente({ nome: '', email: '', senha: '', tel: '', nasc: '' });
+                limparFormularioEncaixe();
                 onClose();
             } else {
                 toast.error('Erro ao agendar: ' + (dataAgendar.error || 'Tente novamente.'));
@@ -625,9 +655,27 @@ const toggleServico = (servico) => {
                                 </div>
                             )}
 
-                            <label style={styles.label}>1. Busque o Cliente</label>
+                            <label style={styles.label}>1. Cliente</label>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                {[[false, 'Cadastrado / novo'], [true, 'Avulso (sem cadastro)']].map(([valor, rotulo]) => (
+                                    <button key={rotulo} type="button" onClick={() => setAvulso(valor)}
+                                        style={{ flex: 1, padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
+                                            border: avulso === valor ? '2px solid var(--fx-strong)' : '1px solid var(--fx-line)',
+                                            background: avulso === valor ? 'var(--fx-strong)' : 'var(--fx-surface-2)',
+                                            color: avulso === valor ? '#fff' : 'var(--fx-text)' }}>
+                                        {rotulo}
+                                    </button>
+                                ))}
+                            </div>
                             
-                            {clienteSelecionado ? (
+                            {avulso ? (
+                                <div style={{ marginBottom: '20px' }}>
+                                    <input style={styles.input} placeholder="Nome do cliente (opcional)" value={nomeAvulso} onChange={e => setNomeAvulso(e.target.value)} />
+                                    <small style={{ display: 'block', color: 'var(--fx-faint)', fontSize: '11px', marginTop: '6px' }}>
+                                        Sem cadastro, o atendimento não conta pra fidelidade nem assinatura e o cliente não recebe avisos.
+                                    </small>
+                                </div>
+                            ) : clienteSelecionado ? (
                                 <div style={{ background: 'var(--fx-green-bg)', padding: '12px', borderRadius: '8px', border: '1px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                     <div>
                                         <strong style={{ display: 'block', color: 'var(--fx-green)' }}>{clienteSelecionado.nome || clienteSelecionado.nome_completo}</strong>
@@ -693,9 +741,20 @@ const toggleServico = (servico) => {
                                 })}
                             </div>
 
-                            <LoadingButton onClick={handleConfirmar} loading={confirmando} style={{...styles.btnSalvar, width: '100%', padding: '15px', fontSize: '16px' }} disabled={!horaAtiva}>
-                                Concluir Agendamento
-                            </LoadingButton>
+                            {avulso ? (
+                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                    <LoadingButton onClick={() => handleConfirmar(true)} loading={confirmando} style={{...styles.btnSalvar, flex: '1 1 200px', padding: '15px', fontSize: '16px' }} disabled={!horaAtiva}>
+                                        Atender e finalizar agora
+                                    </LoadingButton>
+                                    <LoadingButton onClick={() => handleConfirmar(false)} loading={confirmando} style={{...styles.btnSalvar, flex: '1 1 160px', padding: '15px', fontSize: '14px', background: 'var(--fx-surface-2)', color: 'var(--fx-text)' }} disabled={!horaAtiva}>
+                                        Só agendar
+                                    </LoadingButton>
+                                </div>
+                            ) : (
+                                <LoadingButton onClick={() => handleConfirmar(false)} loading={confirmando} style={{...styles.btnSalvar, width: '100%', padding: '15px', fontSize: '16px' }} disabled={!horaAtiva}>
+                                    Concluir Agendamento
+                                </LoadingButton>
+                            )}
                         </div>
                     )}
 
