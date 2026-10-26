@@ -267,7 +267,7 @@ function lerEmpresaIdInicial() {
 function TelaCarregando() {
   return (
     <div className="sn-preload" role="status" aria-label="Carregando">
-      <div className="sn-preload-marca">SCHEDNEXT</div>
+      <img className="sn-preload-marca" src="/logo-schednext.png" alt="SchedNext" />
       <div className="sn-preload-linha"><span /></div>
     </div>
   );

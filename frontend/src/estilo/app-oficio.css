@@ -38,9 +38,12 @@
   --fx-text: #eef4ff;
   --fx-muted: rgba(214, 228, 255, 0.62);
   --fx-accent-text: #67e8f9;
+  --bb-link: #7aa2ff;
 }
 
-/* ============================ Telas de acesso (.bb-page) ============================ */
+/* ============================ Telas de acesso (.bb-page) ============================
+   Login, cadastro e recuperação de senha com cara de produto: cartão sólido, Inter, campos em
+   caixa e botão azul da marca. Funciona nos dois temas pelos tokens --oc-* (modo claro mais abaixo). */
 
 .bb-page {
   background: var(--oc-fundo);
@@ -54,98 +57,65 @@
   inset: 0;
   z-index: 0;
   background:
-    radial-gradient(ellipse at 20% 10%, rgba(37, 84, 235, 0.35), transparent 55%),
-    radial-gradient(ellipse at 85% 90%, rgba(34, 211, 238, 0.22), transparent 50%),
-    linear-gradient(rgba(var(--oc-rgb-linha), 0.05) 1px, transparent 1px) 0 0 / 56px 56px,
-    linear-gradient(90deg, rgba(var(--oc-rgb-linha), 0.05) 1px, transparent 1px) 0 0 / 56px 56px;
-  -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 85%);
-  mask-image: radial-gradient(ellipse at center, #000 30%, transparent 85%);
-}
-.bb-page::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 120px;
-  top: -120px;
-  z-index: 0;
-  background: linear-gradient(180deg, transparent, rgba(34, 211, 238, 0.08), transparent);
-  animation: oc-varredura 7s linear infinite;
+    radial-gradient(800px 420px at 15% 0%, rgba(37, 84, 235, 0.16), transparent 70%),
+    radial-gradient(700px 380px at 90% 100%, rgba(14, 165, 198, 0.10), transparent 70%);
   pointer-events: none;
 }
-@keyframes oc-varredura { to { transform: translateY(calc(100vh + 240px)); } }
 
 .bb-card {
-  max-width: 400px;
-  background: var(--oc-vidro);
+  max-width: 420px;
+  background: var(--oc-solido);
   border: 1px solid var(--oc-linha);
-  border-radius: 4px;
-  padding: 44px 34px 34px;
+  border-radius: 16px;
+  padding: 40px 36px 34px;
   text-align: left;
-  box-shadow: 0 40px 90px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  animation: oc-surge 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  /* cantos de mira */
-  background-image:
-    linear-gradient(var(--oc-acento), var(--oc-acento)), linear-gradient(var(--oc-acento), var(--oc-acento)),
-    linear-gradient(var(--oc-acento), var(--oc-acento)), linear-gradient(var(--oc-acento), var(--oc-acento)),
-    linear-gradient(var(--oc-acento), var(--oc-acento)), linear-gradient(var(--oc-acento), var(--oc-acento)),
-    linear-gradient(var(--oc-acento), var(--oc-acento)), linear-gradient(var(--oc-acento), var(--oc-acento));
-  background-repeat: no-repeat;
-  background-size: 18px 1.5px, 1.5px 18px, 18px 1.5px, 1.5px 18px, 18px 1.5px, 1.5px 18px, 18px 1.5px, 1.5px 18px;
-  background-position: 0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 24px 60px rgba(0, 0, 0, 0.28);
+  animation: oc-surge 0.35s ease-out both;
 }
-@keyframes oc-surge { from { opacity: 0; transform: translateY(24px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes oc-surge { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .bb-card > div:first-child { justify-content: flex-start !important; }
-.bb-logo-img { height: 36px; margin-bottom: 26px; }
+.bb-logo-img { height: 34px; margin-bottom: 24px; }
 .bb-title {
-  font-family: var(--oc-display);
-  font-weight: 400;
-  font-size: 44px;
-  line-height: 1;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
+  font-family: var(--oc-corpo);
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-transform: none;
   color: var(--oc-texto);
-  margin: 0 0 10px;
+  margin: 0 0 6px;
 }
-.bb-subtitle { color: var(--oc-fraco); font-size: 14px; margin: 0 0 30px; }
+.bb-subtitle { color: var(--oc-fraco); font-size: 15px; margin: 0 0 26px; }
 .bb-input {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(var(--oc-rgb-linha), 0.28);
-  border-radius: 0;
+  background: var(--oc-solido-2);
+  border: 1px solid rgba(var(--oc-rgb-linha), 0.28);
+  border-radius: 10px;
   color: var(--oc-texto);
-  padding: 14px 2px;
-  margin-bottom: 18px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
   font-size: 15px;
-  background-image: linear-gradient(90deg, var(--oc-azul), var(--oc-ciano), var(--oc-agua));
-  background-repeat: no-repeat;
-  background-size: 0% 2px;
-  background-position: 0 100%;
-  transition: background-size 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-.bb-input::placeholder { color: rgba(var(--oc-rgb-texto), 0.4); font-family: var(--oc-mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; }
-.bb-input:focus { box-shadow: none; border-color: transparent; background-size: 100% 2px; }
-.bb-input:-webkit-autofill { -webkit-text-fill-color: var(--oc-texto); -webkit-box-shadow: 0 0 0 40px var(--oc-solido) inset; }
+.bb-input::placeholder { color: rgba(var(--oc-rgb-texto), 0.45); font-family: var(--oc-corpo); font-size: 14.5px; letter-spacing: 0; text-transform: none; }
+.bb-input:focus { border-color: var(--bb-link); box-shadow: 0 0 0 3px rgba(37, 84, 235, 0.18); }
+.bb-input:-webkit-autofill { -webkit-text-fill-color: var(--oc-texto); -webkit-box-shadow: 0 0 0 40px var(--oc-solido-2) inset; }
 .bb-btn {
-  position: relative;
-  overflow: hidden;
-  margin-top: 8px;
-  padding: 15px;
-  border-radius: 999px;
-  background: var(--oc-texto);
-  color: var(--oc-fundo);
+  margin-top: 6px;
+  padding: 13px;
+  border-radius: 10px;
+  background: #2554eb;
+  color: #fff;
   font-family: var(--oc-corpo);
   font-weight: 600;
   letter-spacing: 0;
+  box-shadow: 0 6px 16px rgba(37, 84, 235, 0.28);
 }
-.bb-btn:hover { background: var(--oc-acento); box-shadow: 0 12px 40px rgba(34, 211, 238, 0.35); transform: translateY(-2px); filter: none; }
-.bb-btn-secondary { border-radius: 999px; color: var(--oc-texto); border-color: rgba(var(--oc-rgb-linha), 0.3); }
-.bb-btn-secondary:hover { background: rgba(var(--oc-rgb-linha), 0.08); border-color: var(--oc-texto); }
-.bb-link { color: var(--oc-acento); font-size: 13px; }
-.bb-text-muted { color: var(--oc-fraco); font-size: 13px; }
-.bb-erro { color: var(--oc-vermelho); font-family: var(--oc-mono); font-size: 12px; letter-spacing: 0.04em; }
+.bb-btn:hover { background: #173fb0; box-shadow: 0 8px 20px rgba(37, 84, 235, 0.32); transform: translateY(-1px); filter: none; }
+.bb-btn-secondary { border-radius: 10px; color: var(--oc-texto); border-color: rgba(var(--oc-rgb-linha), 0.3); font-family: var(--oc-corpo); }
+.bb-btn-secondary:hover { background: rgba(var(--oc-rgb-linha), 0.06); border-color: rgba(var(--oc-rgb-linha), 0.5); }
+.bb-link { color: var(--bb-link); font-size: 14px; font-weight: 500; }
+.bb-text-muted { color: var(--oc-fraco); font-size: 14px; }
+.bb-erro { color: var(--oc-vermelho); font-family: var(--oc-corpo); font-size: 14px; letter-spacing: 0; }
 .bb-card p, .bb-card span { font-family: var(--oc-corpo); }
 
 /* toasts e confirmação no tema escuro */
@@ -807,8 +777,9 @@
   --fx-text: #0b1430;
   --fx-muted: rgba(11, 20, 48, 0.62);
   --fx-accent-text: #0e7490;
+  --bb-link: #2554eb;
 }
-:root[data-tema='claro'] .bb-card,
+:root[data-tema='claro'] .bb-card { box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 18px 48px rgba(20, 45, 110, 0.10); }
 :root[data-tema='claro'] .oc-painel,
 :root[data-tema='claro'] .oc-pro,
 :root[data-tema='claro'] .oc-bilhete,

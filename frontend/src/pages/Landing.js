@@ -1,672 +1,380 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './Landing.css';
 import { API_URL } from '../services/api';
 import { recursosDoPlano } from '../utils/recursosPlano';
 import { observarSecoes } from '../utils/analytics';
-import reduzirMovimento from '../utils/prefersReducedMotion';
 import { formatarReal, precoPromocionalPrimeiroMes, continuacaoCampanha } from '../utils/campanhaPlano';
 
-// Landing "ofício": capítulos em tela cheia (um por tipo de negócio) controlados pela rolagem,
-// com foto/vídeo do ofício ao fundo e partículas (oficio/particulasOficio.js) que viram o símbolo
-// de cada um.
+// Landing comercial: fundo claro, tipografia de produto (Inter) e uma prévia do painel desenhada
+// em HTML/CSS no lugar das partículas e do vídeo da versão anterior — carrega rápido em qualquer
+// celular. Os data-track e data-track-secao mantêm os mesmos nomes de antes pra o funil de
+// conversão (utils/analytics.js) continuar comparável.
 
-const CAPITULOS = [
-  {
-    id: 'abertura', tom: '#22d3ee', midia: 'video', rotulo: 'Abertura',
-    kicker: 'Agenda online pra barbearias, salões, unhas e estética',
-    titulo: ['O CLIENTE MARCA.', 'VOCÊ ATENDE.'],
-    texto: 'Profissional, serviço e horário escolhidos pelo próprio cliente, a qualquer hora. Sem ligação, sem caderninho.'
-  },
-  {
-    id: 'barbearia', tom: '#4c7dff', midia: '/images/casos/barbearia.jpg', rotulo: 'Barbearias',
-    kicker: '01 · Barbearias', titulo: ['NA', 'RÉGUA.'],
-    texto: 'Agenda por barbeiro, fila organizada e cliente fiel com plano de assinatura. Do degradê à barba, cada horário no lugar.',
-    tags: ['Agenda por barbeiro', 'Assinatura mensal', 'Fidelidade']
-  },
-  {
-    id: 'salao', tom: '#22d3ee', midia: '/images/casos/salao.jpg', rotulo: 'Salões',
-    kicker: '02 · Salões de beleza', titulo: ['FIO', 'A FIO.'],
-    texto: 'Vários profissionais, serviços combinados e a duração certa pra cada um: corte, escova, coloração. Sem encavalar horário.',
-    tags: ['Serviços combinados', 'Duração por serviço', 'Equipe inteira']
-  },
-  {
-    id: 'unhas', tom: '#38bdf8', midia: '/images/casos/estudio.jpg', rotulo: 'Unhas',
-    kicker: '03 · Estúdios de unhas', titulo: ['UNHA', 'FEITA.'],
-    texto: 'Horários enxutos, confirmação automática e lembrete no WhatsApp pra cliente nunca esquecer da manutenção.',
-    tags: ['Lembrete no WhatsApp', 'Confirmação automática', 'Horários curtos']
-  },
-  {
-    id: 'estetica', tom: '#2ee6d0', midia: '/images/casos/estetica.jpg', midiaMobile: '/images/casos/estetica-mobile.jpg', rotulo: 'Estética',
-    kicker: '04 · Estética', titulo: ['PELE', 'EM DIA.'],
-    texto: 'Planos de assinatura pra sessões recorrentes, histórico de cada cliente e lembrete antes de cada retorno.',
-    tags: ['Sessões recorrentes', 'Histórico do cliente', 'Retorno lembrado']
-  },
-  {
-    id: 'como-funciona', tom: '#5b8cff', midia: 'poste', rotulo: 'Como funciona',
-    kicker: '05 · Como funciona', titulo: ['PRIMEIRO,', 'UMA BASE', 'SÓLIDA.'],
-    passos: [
-      { n: '01', t: 'Crie sua conta', d: 'Nome do negócio e tipo de serviço.' },
-      { n: '02', t: 'Monte sua agenda', d: 'Profissionais, serviços e horários em menos de 5 minutos.' },
-      { n: '03', t: 'Compartilhe seu link', d: 'O cliente marca sozinho, sem ligação.' }
-    ]
-  },
-  {
-    id: 'agenda', tom: '#22d3ee', midia: 'grade', rotulo: 'Na prática',
-    kicker: '06 · Na prática', titulo: ['HORÁRIO', 'A HORÁRIO.'],
-    texto: 'Pelo seu link, pelo site ou pelo WhatsApp: a agenda de cada profissional se preenche sozinha, sem conflito de horário.',
-    tags: ['Tempo real', 'Sem overbooking', 'Bot de WhatsApp']
-  }
+const ICONES = {
+  calendario: <><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>,
+  sino: <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></>,
+  conversa: <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />,
+  coracao: <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />,
+  grafico: <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></>,
+  caixa: <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" /></>,
+  pincel: <><circle cx="13.5" cy="6.5" r="2.5" /><path d="M17 2l4 4-9.5 9.5L7 17l1.5-4.5z" /><path d="M7 17c-1.5 0-3 1-3 3 0 .5 0 1 .5 1.5" /></>,
+  predio: <><path d="M6 22V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v18" /><path d="M2 22h20" /><path d="M10 7h1M13 7h1M10 11h1M13 11h1M10 15h1M13 15h1" /></>,
+  escudo: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
+  cadeado: <><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>,
+  nuvem: <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />,
+  check: <polyline points="20 6 9 17 4 12" />,
+  seta: <><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></>,
+  menu: <><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></>,
+  fechar: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>
+};
+
+function Icone({ nome, tamanho = 20 }) {
+  return (
+    <svg width={tamanho} height={tamanho} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {ICONES[nome]}
+    </svg>
+  );
+}
+
+const PASSOS = [
+  { t: 'Crie sua conta', d: 'Cadastre seu negócio, seus profissionais e serviços em poucos minutos. Sem cartão de crédito.' },
+  { t: 'Compartilhe seu link', d: 'Seu negócio ganha um endereço próprio. Coloque na bio do Instagram, no Google e no WhatsApp.' },
+  { t: 'Receba agendamentos', d: 'O cliente escolhe profissional, serviço e horário sozinho, e você acompanha a agenda se preenchendo.' }
 ];
 
 const RECURSOS = [
-  { t: 'Agenda em tempo real', d: 'Cada profissional só aparece disponível quando realmente está.' },
-  { t: 'Lembretes automáticos', d: 'E-mail e WhatsApp antes do horário, pra reduzir falta.' },
-  { t: 'Fidelidade e assinatura', d: 'Campanhas e planos mensais pra quem volta sempre.' },
-  { t: 'Sua marca, suas cores', d: 'Paleta personalizada na tela dos seus clientes.' },
-  { t: 'Bot de WhatsApp', d: 'O cliente agenda direto na conversa.' },
-  { t: 'Relatórios e estoque', d: 'Faturamento e produtos num só painel.' },
-  { t: 'Recursos com IA', d: 'Resumo do dia e mensagens sugeridas.' },
-  { t: 'Várias unidades', d: 'Todas as filiais num painel só.' }
+  { icone: 'calendario', t: 'Agenda online 24h', d: 'Cada profissional só aparece disponível quando realmente está. Sem conflito de horário.' },
+  { icone: 'conversa', t: 'Agendamento pelo WhatsApp', d: 'Um assistente atende no seu WhatsApp e marca o horário direto na conversa.' },
+  { icone: 'sino', t: 'Lembretes automáticos', d: 'E-mail e WhatsApp antes do horário, pra reduzir faltas e atrasos.' },
+  { icone: 'coracao', t: 'Fidelidade e assinaturas', d: 'Planos mensais e campanhas de fidelidade pra quem volta sempre.' },
+  { icone: 'grafico', t: 'Relatórios e financeiro', d: 'Faturamento, serviços mais vendidos e desempenho da equipe num só painel.' },
+  { icone: 'caixa', t: 'Caixa e estoque', d: 'Finalize o atendimento, venda produtos e controle o estoque sem planilha.' },
+  { icone: 'pincel', t: 'Sua marca, suas cores', d: 'Logo e cores do seu negócio na tela de agendamento dos seus clientes.' },
+  { icone: 'predio', t: 'Várias unidades', d: 'Todas as filiais e equipes num painel só, cada uma com sua agenda.' }
 ];
 
+const SEGMENTOS = [
+  { nome: 'Barbearias', foto: '/images/casos/barbearia.jpg', d: 'Agenda por barbeiro, encaixes e plano de assinatura.' },
+  { nome: 'Salões de beleza', foto: '/images/casos/salao.jpg', d: 'Vários profissionais e serviços combinados sem encavalar horário.' },
+  { nome: 'Unhas, cílios e sobrancelha', foto: '/images/casos/estudio.jpg', d: 'Manutenções e retornos lembrados automaticamente.' },
+  { nome: 'Estética e bem-estar', foto: '/images/casos/estetica.jpg', d: 'Histórico do cliente e sessões organizadas.' }
+];
+const OUTROS_SEGMENTOS = ['Estúdios de tatuagem', 'Clínicas e consultórios', 'Personal e aulas', 'Pet shops', 'Negócios com mais de um serviço'];
+
 const FAQ = [
-  { p: 'Preciso de cartão de crédito para começar?', r: 'Não. O plano Grátis não pede pagamento, cadastre e comece a usar na hora.' },
-  { p: 'Posso trocar de plano depois?', r: 'Sim, a qualquer momento direto pelo painel administrativo.' },
-  { p: 'Meus clientes precisam instalar algo?', r: 'Não, o agendamento é feito direto pelo navegador, sem instalação.' },
+  { p: 'Preciso de cartão de crédito para começar?', r: 'Não. O plano Grátis não pede pagamento: você cadastra e começa a usar na hora.' },
+  { p: 'Meus clientes precisam instalar algum aplicativo?', r: 'Não. O agendamento é feito pelo navegador, pelo seu link, ou direto no WhatsApp.' },
+  { p: 'Serve para o meu tipo de negócio?', r: 'Serve para qualquer negócio que atende com hora marcada, inclusive quem oferece mais de um tipo de serviço no mesmo lugar.' },
+  { p: 'Posso trocar de plano depois?', r: 'Sim, a qualquer momento, direto pelo painel administrativo.' },
   { p: 'Posso cancelar quando quiser?', r: 'Sim, sem multa e sem burocracia.' }
 ];
 
-const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&*';
+const NAV = [['#como-funciona', 'Como funciona'], ['#recursos', 'Recursos'], ['#para-quem', 'Para quem é'], ['#planos', 'Planos'], ['#faq', 'Dúvidas']];
 
-// Celular/tablet: em vez do palco fixo (vídeo + three.js + loop de rolagem a cada frame, que trava
-// Android mais fraco), os capítulos viram "quadros" empilhados, com foto estática e entrada por
-// keyframes de CSS (Landing.css, bloco "quadros").
-const QUERY_QUADROS = '(max-width: 760px), (pointer: coarse) and (max-width: 1100px)';
-// Palco (desktop): versões das fotos e do vídeo com os filtros de CSS (cinza, contraste, brilho,
-// blur) já aplicados no arquivo. Filtro em camada que escala a cada quadro pesa em GPU integrada.
-const fotoPalco = (src) => src.replace(/\.jpg$/, '-palco.jpg');
-const MARCOS_QUADROS = { 0: '1_topo', 1: '4_casos_de_uso', 5: '2_como_funciona' };
-
-// Título que "decodifica": letras embaralhadas que vão assentando, contorno virando sólido.
-function TituloDecodificado({ linhas, ativo, className = '' }) {
-  const alvo = linhas.join('\n');
-  const [texto, setTexto] = useState(alvo);
-  const [assentado, setAssentado] = useState(false);
-  useEffect(() => {
-    if (!ativo) { setAssentado(false); return undefined; }
-    let quadro = 0;
-    const total = 22;
-    const t = setInterval(() => {
-      quadro++;
-      const revelados = Math.floor((quadro / total) * alvo.length);
-      setTexto(alvo.split('').map((ch, i) => {
-        if (ch === '\n' || ch === ' ' || i < revelados) return ch;
-        return ALFABETO[Math.floor(Math.random() * ALFABETO.length)];
-      }).join(''));
-      if (quadro >= total) {
-        clearInterval(t);
-        setTexto(alvo);
-        setAssentado(true);
-      }
-    }, 34);
-    return () => clearInterval(t);
-  }, [ativo, alvo]);
-  return (
-    <h2 className={`of-titulo ${assentado ? 'of-titulo-cheio' : ''} ${className}`} aria-label={linhas.join(' ')}>
-      {texto.split('\n').map((l, i) => <span key={i} aria-hidden="true">{l}</span>)}
-    </h2>
-  );
-}
-
-function Intro({ aoTerminar }) {
-  const [valor, setValor] = useState(0);
-  const [saindo, setSaindo] = useState(false);
-  useEffect(() => {
-    const inicio = performance.now();
-    let raf;
-    const passo = (t) => {
-      const k = Math.min(1, (t - inicio) / 1400);
-      setValor(Math.round((1 - Math.pow(1 - k, 3)) * 100));
-      if (k < 1) raf = requestAnimationFrame(passo);
-      else { setSaindo(true); setTimeout(aoTerminar, 800); }
-    };
-    raf = requestAnimationFrame(passo);
-    return () => cancelAnimationFrame(raf);
-  }, [aoTerminar]);
-  return (
-    <div className={`of-intro ${saindo ? 'of-intro-saindo' : ''}`} aria-hidden="true">
-      <div className="of-intro-marca">SCHEDNEXT</div>
-      <div className="of-intro-linha"><span style={{ transform: `scaleX(${valor / 100})` }} /></div>
-      <div className="of-intro-rodape"><span>Barbearia · Salão · Unhas · Estética</span><span>{String(valor).padStart(3, '0')}</span></div>
-    </div>
-  );
-}
-
-function Menu({ aberto, fechar }) {
-  const itens = [
-    { rotulo: 'Recursos', href: '#recursos', track: 'menu_recursos' },
-    { rotulo: 'Planos', href: '#planos', track: 'menu_planos' },
-    { rotulo: 'Dúvidas', href: '#faq', track: 'menu_faq' },
-    { rotulo: 'Docs', to: '/docs', track: 'menu_docs' },
-    { rotulo: 'Entrar', to: '/admin/login', track: 'menu_entrar' },
-    { rotulo: 'Criar conta grátis', to: '/cadastrar', track: 'menu_criar_conta', destaque: true }
+// Prévia do produto: agenda do dia no painel + confirmação que o cliente recebe. Dados fictícios.
+function PreviaProduto() {
+  const linhas = [
+    ['09:00', 'Lucas M.', 'Corte + barba', 'concluido', 'Concluído'],
+    ['10:30', 'Ana P.', 'Escova', 'confirmado', 'Confirmado'],
+    ['11:15', 'Rafa S.', 'Design de sobrancelha', 'confirmado', 'Confirmado'],
+    ['14:00', 'Bruno C.', 'Corte', 'pendente', 'Aguardando'],
+    ['15:30', 'Carla T.', 'Manicure', 'confirmado', 'Confirmado']
   ];
   return (
-    <div className={`of-menu ${aberto ? 'aberto' : ''}`} aria-hidden={!aberto}>
-      <div className="of-menu-foto" style={{ backgroundImage: "linear-gradient(90deg, #060b18 35%, rgba(6, 11, 24, 0.4)), url(/videos/hero-barbearia-poster.jpg)" }} />
-      <nav className="of-menu-lista">
-        {itens.map((it, i) => {
-          const props = { className: `of-menu-item ${it.destaque ? 'destaque' : ''}`, style: { transitionDelay: aberto ? `${0.15 + i * 0.06}s` : '0s' }, 'data-track': it.track, onClick: fechar, tabIndex: aberto ? 0 : -1 };
-          const conteudo = (<><span className="of-menu-num">{String(i + 1).padStart(2, '0')}</span>{it.rotulo}</>);
-          return it.to ? <Link key={it.rotulo} to={it.to} {...props}>{conteudo}</Link> : <a key={it.rotulo} href={it.href} {...props}>{conteudo}</a>;
-        })}
-      </nav>
-      <div className="of-menu-rodape">
-        <a href="/legal/termos-de-uso.pdf" target="_blank" rel="noopener noreferrer" tabIndex={aberto ? 0 : -1}>Termos de uso</a>
-        <a href="/legal/politica-de-privacidade.pdf" target="_blank" rel="noopener noreferrer" tabIndex={aberto ? 0 : -1}>Privacidade</a>
+    <div className="lp-previa" aria-hidden="true">
+      <div className="lp-janela">
+        <div className="lp-janela-topo"><span /><span /><span /></div>
+        <div className="lp-janela-corpo">
+          <div className="lp-previa-cabeca">
+            <div>
+              <small>Agenda de hoje</small>
+              <strong>Sexta, 14 de março</strong>
+            </div>
+            <div className="lp-previa-kpis">
+              <div><b>12</b><small>agendados</small></div>
+              <div><b>R$ 840</b><small>previsto</small></div>
+            </div>
+          </div>
+          <ul className="lp-previa-lista">
+            {linhas.map(([hora, nome, servico, status, rotulo]) => (
+              <li key={hora}>
+                <span className="lp-previa-hora">{hora}</span>
+                <span className="lp-previa-cliente"><b>{nome}</b><small>{servico}</small></span>
+                <span className={`lp-status lp-status-${status}`}>{rotulo}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <div className="lp-flutuante lp-flutuante-confirma">
+        <span className="lp-flutuante-icone"><Icone nome="check" tamanho={16} /></span>
+        <div><b>Horário confirmado</b><small>Corte + barba · Sex, 16:30</small></div>
+      </div>
+      <div className="lp-flutuante lp-flutuante-whats">
+        <small>WhatsApp · lembrete automático</small>
+        <p>Oi, Ana! Passando pra lembrar do seu horário amanhã às 10h30. Até lá!</p>
       </div>
     </div>
   );
 }
 
-function Revelar({ children, className = '', ...resto }) {
-  const ref = useRef(null);
-  const [visivel, setVisivel] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof IntersectionObserver === 'undefined') { setVisivel(true); return undefined; }
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisivel(true); obs.disconnect(); } }, { threshold: 0.15 });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-  return <div ref={ref} className={`of-revelar ${visivel ? 'visivel' : ''} ${className}`} {...resto}>{children}</div>;
-}
-
-function Seta({ tamanho = 18 }) {
-  return <svg width={tamanho} height={tamanho} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="13 6 19 12 13 18" /></svg>;
-}
-
 function Landing() {
   const [planos, setPlanos] = useState([]);
-  const [introFeita, setIntroFeita] = useState(false);
-  const [menuAberto, setMenuAberto] = useState(false);
-  const [capAtivo, setCapAtivo] = useState(0);
   const [faqAberto, setFaqAberto] = useState(0);
-  const [modoQuadros, setModoQuadros] = useState(() => typeof window !== 'undefined' && window.matchMedia(QUERY_QUADROS).matches);
-  const [vistos, setVistos] = useState(() => new Set([0]));
-  // modo leve: o renderizador das partículas detectou máquina fraca (ou FPS caindo) e a página
-  // corta os efeitos de CSS mais caros (backdrop-filter, grão animado)
-  const [leve, setLeve] = useState(false);
-  const [palcoVisivel, setPalcoVisivel] = useState(true);
-  const refQuadros = useRef([]);
+  const [menuAberto, setMenuAberto] = useState(false);
+  const [rolou, setRolou] = useState(false);
 
-  const refCanvas = useRef(null);
-  const refExp = useRef(null);
-  const refFundos = useRef([]);
-  const refTextos = useRef([]);
-  const refAnel = useRef(null);
-  const refVideo = useRef(null);
-  const capRef = useRef(0);
-  const refPart = useRef(null);
-  const refDeveTocar = useRef(true);
-  const refPalcoVisivel = useRef(true);
-
-  const diasTesteGratis = planos.find((pl) => pl.nome === 'Grátis')?.dias_teste || 0;
-  // Reserva a linha da promoção em todos os cards (vazia nos sem campanha) pra as listas
-  // continuarem alinhadas entre si.
   const algumaCampanha = planos.some((pl) => continuacaoCampanha(pl));
 
   useEffect(() => observarSecoes(), []);
-  useEffect(() => { if (reduzirMovimento) setIntroFeita(true); }, []);
   useEffect(() => {
     fetch(`${API_URL}/planos-plataforma`)
       .then((r) => r.json())
       .then((d) => setPlanos(Array.isArray(d) ? d : []))
       .catch(() => setPlanos([]));
   }, []);
-
   useEffect(() => {
-    // Autoplay declarativo (autoPlay+muted+playsInline) às vezes não "pega" no Safari iOS: com o
-    // vídeo ainda bufferizando em dados móveis, ou com o Modo de Baixo Consumo ligado (aí o Safari
-    // só libera depois de um gesto real na página). Tenta de novo quando o navegador já tem dados
-    // (canplay) e no primeiro toque/rolagem/clique (once, pra não ficar escutando pra sempre).
-    const v = refVideo.current;
-    if (!v) return undefined;
-    const tentarTocar = () => {
-      if (!refDeveTocar.current) return;
-      // React nem sempre reflete a prop `muted` no elemento a tempo do Safari avaliar o autoplay.
-      v.muted = true;
-      v.defaultMuted = true;
-      // Encadeamento opcional: no JSDOM (testes) play() devolve undefined em vez de Promise.
-      v.play()?.catch(() => {});
-    };
-    tentarTocar();
-    v.addEventListener('canplay', tentarTocar);
-    const eventosGesto = ['touchstart', 'touchend', 'scroll', 'click'];
-    eventosGesto.forEach((ev) => window.addEventListener(ev, tentarTocar, { once: true, passive: true }));
-    return () => {
-      v.removeEventListener('canplay', tentarTocar);
-      eventosGesto.forEach((ev) => window.removeEventListener(ev, tentarTocar));
-    };
-  }, [modoQuadros]);
-
-  useEffect(() => {
-    // Vídeo só decodifica enquanto aparece: da abertura até o corte do capítulo 2 (depois fica
-    // coberto pelos outros fundos) e com o palco na tela.
-    const v = refVideo.current;
-    const deve = palcoVisivel && capAtivo <= 1;
-    refDeveTocar.current = deve;
-    if (!v) return;
-    if (deve) { v.muted = true; v.play()?.catch(() => {}); } else v.pause();
-  }, [capAtivo, palcoVisivel, modoQuadros]);
-
-  useEffect(() => {
-    // Palco fora da tela (lendo recursos/planos): partículas param de desenhar e o vídeo pausa.
-    const el = refExp.current;
-    if (modoQuadros || !el || typeof IntersectionObserver === 'undefined') return undefined;
-    const obs = new IntersectionObserver(([e]) => {
-      refPalcoVisivel.current = e.isIntersecting;
-      setPalcoVisivel(e.isIntersecting);
-      if (refPart.current) refPart.current.setAtivo(e.isIntersecting);
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [modoQuadros]);
-
-  useEffect(() => {
-    const mq = window.matchMedia(QUERY_QUADROS);
-    const aoMudar = (e) => setModoQuadros(e.matches);
-    if (mq.addEventListener) mq.addEventListener('change', aoMudar);
-    else mq.addListener(aoMudar);
-    return () => {
-      if (mq.removeEventListener) mq.removeEventListener('change', aoMudar);
-      else mq.removeListener(aoMudar);
-    };
+    const aoRolar = () => setRolou(window.scrollY > 8);
+    aoRolar();
+    window.addEventListener('scroll', aoRolar, { passive: true });
+    return () => window.removeEventListener('scroll', aoRolar);
   }, []);
 
-  useEffect(() => {
-    // Modo quadros: o quadro que ocupa metade da tela vira o ativo (tom, HUD do título) e fica
-    // marcado como visto, o que dispara os keyframes de entrada só uma vez.
-    if (!modoQuadros || typeof IntersectionObserver === 'undefined') return undefined;
-    const obs = new IntersectionObserver((entradas) => {
-      entradas.forEach((e) => {
-        if (!e.isIntersecting) return;
-        const k = Number(e.target.dataset.k);
-        setCapAtivo(k);
-        setVistos((v) => (v.has(k) ? v : new Set(v).add(k)));
-      });
-    }, { threshold: 0.5 });
-    refQuadros.current.forEach((el) => el && obs.observe(el));
-    return () => obs.disconnect();
-  }, [modoQuadros]);
-
-  useEffect(() => {
-    document.body.style.overflow = menuAberto ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [menuAberto]);
-
-  useEffect(() => {
-    if (modoQuadros) return undefined;
-    const canvas = refCanvas.current;
-    const mobile = window.matchMedia('(max-width: 760px)').matches;
-    let part = null;
-    let desmontado = false;
-    // three.js (~140 KB gzip) vem num chunk separado, carregado só aqui: o resto da página
-    // aparece sem esperar por ele. Sem WebGL, a landing segue funcionando sem as partículas.
-    import('../oficio/particulasOficio')
-      .then(({ criarParticulas }) => {
-        if (desmontado) return;
-        part = criarParticulas(canvas, { mobile, reduzirMovimento, aoMudarNivel: (nv) => setLeve(nv >= 1) });
-        refPart.current = part;
-        part.setAtivo(refPalcoVisivel.current);
-      })
-      .catch((err) => console.warn('Partículas indisponíveis:', err));
-
-    const n = CAPITULOS.length;
-    let raf = null;
-    let suave = 0;
-    let ultimo = 0;
-    // Só escreve no estilo quando o valor muda: com a página parada nada é repintado.
-    const definir = (el, prop, valor) => {
-      const cache = el.__of || (el.__of = {});
-      if (cache[prop] === valor) return;
-      cache[prop] = valor;
-      el.style[prop] = valor;
-    };
-    const agendar = () => { if (raf == null) raf = requestAnimationFrame(loop); };
-    const loop = (agora) => {
-      raf = null;
-      const el = refExp.current;
-      if (el) {
-        const r = el.getBoundingClientRect();
-        const total = r.height - window.innerHeight;
-        const p = Math.min(1, Math.max(0, -r.top / (total || 1)));
-        // mesma suavização (0.14 por quadro a 60 fps) em qualquer taxa de atualização da tela
-        const dt = ultimo ? Math.min(agora - ultimo, 100) : 16.7;
-        ultimo = agora;
-        suave += (p - suave) * (1 - Math.pow(0.86, dt / 16.7));
-        if (Math.abs(p - suave) < 0.0002) suave = p;
-        const g = Math.min(n - 0.0001, suave * n);
-        const i = Math.floor(g);
-        const local = g - i; // 0..1 dentro do capítulo
-
-        // partículas: transforma nos primeiros 40% do capítulo e segura a forma
-        const morph = Math.min(1, local / 0.4);
-        if (part) part.setForma(i === 0 ? 0 : i - 1 + morph);
-
-        // fundos: o capítulo que entra "corta" na diagonal por cima do anterior
-        CAPITULOS.forEach((c, k) => {
-          const f = refFundos.current[k];
-          if (!f) return;
-          let rev;
-          if (k < i) rev = 1;
-          else if (k === i) rev = k === 0 ? 1 : Math.min(1, local / 0.3);
-          else rev = 0;
-          const e = 1 - Math.pow(1 - rev, 3);
-          const topo = 100 - e * 150;
-          const visivel = rev > 0 && k >= i - 1;
-          definir(f, 'visibility', visivel ? 'visible' : 'hidden');
-          if (!visivel) return;
-          definir(f, 'clipPath', `polygon(0% ${(topo + 50).toFixed(2)}%, 100% ${topo.toFixed(2)}%, 100% 100%, 0% 100%)`);
-          const midia = f.firstChild;
-          if (midia) definir(midia, 'transform', `scale(${(1.18 - (k === i ? local : k < i ? 1 : 0) * 0.12).toFixed(4)})`);
-        });
-
-        // textos
-        CAPITULOS.forEach((c, k) => {
-          const t = refTextos.current[k];
-          if (!t) return;
-          let v = 0;
-          if (k === i) {
-            const entra = k === 0 ? 1 : Math.min(1, Math.max(0, (local - 0.22) / 0.12));
-            const sai = k === n - 1 ? 1 : Math.min(1, Math.max(0, (0.97 - local) / 0.1));
-            v = Math.min(entra, sai);
-          }
-          definir(t, 'visibility', v < 0.01 ? 'hidden' : 'visible');
-          definir(t, 'pointerEvents', v > 0.5 ? 'auto' : 'none');
-          if (v < 0.01) return;
-          definir(t, 'opacity', v.toFixed(3));
-          definir(t, 'transform', `translate3d(0, ${((1 - v) * 30).toFixed(2)}px, 0)`);
-        });
-
-        const ativo = local > 0.28 || i === 0 ? i : Math.max(0, i - 1);
-        if (ativo !== capRef.current) { capRef.current = ativo; setCapAtivo(ativo); }
-        if (refAnel.current) definir(refAnel.current, 'strokeDashoffset', (125.6 * (1 - suave)).toFixed(2));
-        // ainda assentando: segue no próximo quadro; parado, dorme até a próxima rolagem
-        if (suave !== p) agendar();
-        else ultimo = 0;
-      }
-    };
-    agendar();
-    window.addEventListener('scroll', agendar, { passive: true });
-    window.addEventListener('resize', agendar);
-
-    const aoMover = (e) => { if (part) part.setMouse((e.clientX / window.innerWidth) * 2 - 1, (e.clientY / window.innerHeight) * 2 - 1); };
-    window.addEventListener('mousemove', aoMover, { passive: true });
-    return () => {
-      desmontado = true;
-      if (raf != null) cancelAnimationFrame(raf);
-      window.removeEventListener('scroll', agendar);
-      window.removeEventListener('resize', agendar);
-      window.removeEventListener('mousemove', aoMover);
-      if (part) part.destruir();
-      refPart.current = null;
-    };
-  }, [modoQuadros]);
-
-  const irPara = (k) => {
-    if (modoQuadros) { refQuadros.current[k]?.scrollIntoView({ behavior: 'smooth' }); return; }
-    const el = refExp.current;
-    const total = el.offsetHeight - window.innerHeight;
-    window.scrollTo({ top: el.offsetTop + total * ((k + (k === 0 ? 0 : 0.5)) / CAPITULOS.length), behavior: 'smooth' });
-  };
-
-  const cap = CAPITULOS[capAtivo];
-
-  const conteudoCapitulo = (c, k) => (
-    <>
-      <span className="of-kicker">{c.kicker}</span>
-      <TituloDecodificado linhas={c.titulo} ativo={introFeita && capAtivo === k} className={k === 0 ? 'of-titulo-hero' : ''} />
-      {c.texto && <p className="of-paragrafo">{c.texto}</p>}
-      {k === 0 && (
-        <>
-          <div className="of-ctas">
-            <Link to="/cadastrar" data-track="hero_criar_conta" className="of-btn of-btn-claro">Criar conta grátis <Seta /></Link>
-            <button type="button" data-track="hero_ver_como_funciona" className="of-btn of-btn-contorno" onClick={() => irPara(1)}>Ver os ofícios</button>
-          </div>
-          <p className="of-mini">{diasTesteGratis > 0 ? `Teste grátis por ${diasTesteGratis} dias · sem cartão` : 'Grátis pra começar · sem cartão'}</p>
-        </>
-      )}
-      {c.tags && (
-        <ul className="of-tags">{c.tags.map((t) => <li key={t}>{t}</li>)}</ul>
-      )}
-      {c.passos && (
-        <ol className="of-passos">
-          {c.passos.map((p) => (
-            <li key={p.n}><span>{p.n}</span><div><strong>{p.t}</strong><p>{p.d}</p></div></li>
-          ))}
-        </ol>
-      )}
-    </>
-  );
-
-  const midiaCapitulo = (c, comVideo) => (
-    c.midia === 'video' ? (
-      comVideo ? (
-        <video ref={refVideo} className="of-midia of-assada" src="/videos/hero-barbearia-palco.mp4" poster="/videos/hero-barbearia-palco.jpg" autoPlay loop muted playsInline preload="auto" aria-hidden="true" />
-      ) : modoQuadros ? <img className="of-midia" src="/images/hero-barbearia-mobile.jpg" alt="" />
-        : <img className="of-midia of-assada" src="/videos/hero-barbearia-palco.jpg" alt="" />
-    ) : c.midia.startsWith('/') ? (
-      modoQuadros ? <div className="of-midia of-foto" style={{ backgroundImage: `url(${c.midiaMobile || c.midia})` }} />
-        : <div className="of-midia of-foto of-assada" style={{ backgroundImage: `url(${fotoPalco(c.midia)})` }} />
-    ) : (
-      <div className={`of-midia of-abstrato of-abstrato-${c.midia}`} />
-    )
-  );
+  const fecharMenu = () => setMenuAberto(false);
 
   return (
-    <div className={`of-landing ${introFeita ? 'pronta' : ''} ${leve ? 'of-leve' : ''}`} style={{ '--tom': cap.tom }}>
-      {!introFeita && <Intro aoTerminar={() => setIntroFeita(true)} />}
-      <Menu aberto={menuAberto} fechar={() => setMenuAberto(false)} />
-
-      <header className="of-topo">
-        <button type="button" className={`of-hamburguer ${menuAberto ? 'aberto' : ''}`} onClick={() => setMenuAberto((v) => !v)} aria-label={menuAberto ? 'Fechar menu' : 'Abrir menu'}>
-          <span /><span />
-        </button>
-        <Link to="/" className="of-logo"><img src="/logo-schednext.png" alt="SchedNext" /></Link>
-        <div className="of-topo-dir">
-          <span className="of-letreiro"><i className="of-ponto" /> Agenda aberta 24h</span>
-          <Link to="/admin/login" data-track="menu_entrar" className="of-topo-link">Entrar</Link>
-          <Link to="/cadastrar" data-track="menu_criar_conta" className="of-btn of-btn-claro of-btn-p">Criar conta grátis</Link>
+    <div className="lp">
+      <header className={`lp-topo${rolou ? ' rolou' : ''}`}>
+        <div className="lp-container lp-topo-linha">
+          <Link to="/" className="lp-logo"><img src="/icon-schednext.png" alt="SchedNext" /><span>Sched<b>Next</b></span></Link>
+          <nav className="lp-nav" aria-label="Seções">
+            {NAV.map(([href, rotulo]) => <a key={href} href={href}>{rotulo}</a>)}
+          </nav>
+          <div className="lp-topo-acoes">
+            <Link to="/admin/login" data-track="menu_entrar" className="lp-link-entrar">Entrar</Link>
+            <Link to="/cadastrar" data-track="menu_criar_conta" className="lp-btn lp-btn-primario lp-btn-p">Teste grátis</Link>
+            <button type="button" className="lp-menu-botao" onClick={() => setMenuAberto((v) => !v)} aria-label={menuAberto ? 'Fechar menu' : 'Abrir menu'} aria-expanded={menuAberto}>
+              <Icone nome={menuAberto ? 'fechar' : 'menu'} tamanho={22} />
+            </button>
+          </div>
         </div>
+        {menuAberto && (
+          <nav className="lp-menu-celular" aria-label="Menu">
+            {NAV.map(([href, rotulo]) => <a key={href} href={href} onClick={fecharMenu}>{rotulo}</a>)}
+            <Link to="/admin/login" data-track="menu_entrar" onClick={fecharMenu}>Entrar</Link>
+            <Link to="/cadastrar" data-track="menu_criar_conta" className="lp-btn lp-btn-primario" onClick={fecharMenu}>Criar conta grátis</Link>
+          </nav>
+        )}
       </header>
 
-      {/* ============ CAPÍTULOS ============ */}
-      {modoQuadros ? (
-        <div className="of-quadros">
-          {CAPITULOS.map((c, k) => (
-            <section
-              key={c.id}
-              ref={(el) => { refQuadros.current[k] = el; }}
-              data-k={k}
-              data-track-secao={MARCOS_QUADROS[k]}
-              className={`of-quadro of-quadro-${c.id} ${vistos.has(k) && introFeita ? 'visto' : ''}`}
-              style={{ '--tom-cap': c.tom }}
-            >
-              <div className={`of-fundo of-fundo-${c.id}`}>
-                {midiaCapitulo(c, false)}
-                <div className="of-tinta" />
-                <div className="of-sombra" />
+      <main>
+        <section data-track-secao="1_topo" className="lp-hero">
+          <div className="lp-container lp-hero-grade">
+            <div className="lp-hero-texto">
+              <span className="lp-selo">Agenda online + WhatsApp para negócios de hora marcada</span>
+              <h1>Sua agenda cheia, sem parar o atendimento.</h1>
+              <p className="lp-hero-sub">
+                Seus clientes agendam sozinhos pelo seu link ou pelo WhatsApp, recebem lembrete automático e você acompanha tudo num painel só.
+              </p>
+              <div className="lp-hero-acoes">
+                <Link to="/cadastrar" data-track="hero_criar_conta" className="lp-btn lp-btn-primario lp-btn-g">Começar grátis <Icone nome="seta" tamanho={18} /></Link>
+                <a href="#como-funciona" data-track="hero_ver_como_funciona" className="lp-btn lp-btn-secundario lp-btn-g">Ver como funciona</a>
               </div>
-              <div className={`of-texto of-texto-${c.id}`}>{conteudoCapitulo(c, k)}</div>
-            </section>
-          ))}
-        </div>
-      ) : (
-      <div ref={refExp} className="of-exp" style={{ height: `${CAPITULOS.length * 115}vh` }}>
-        <div className="of-marco" data-track-secao="1_topo" style={{ top: 0 }} />
-        <div className="of-marco" data-track-secao="4_casos_de_uso" style={{ top: `${(1 / CAPITULOS.length) * 100}%` }} />
-        <div className="of-marco" data-track-secao="2_como_funciona" style={{ top: `${(5 / CAPITULOS.length) * 100}%` }} />
-
-        <div className="of-palco">
-          {CAPITULOS.map((c, k) => (
-            <div key={c.id} ref={(el) => { refFundos.current[k] = el; }} className={`of-fundo of-fundo-${c.id}`} style={{ '--tom-cap': c.tom }}>
-              {midiaCapitulo(c, !reduzirMovimento)}
-              <div className="of-tinta" />
-              <div className="of-sombra" />
+              <ul className="lp-hero-garantias">
+                <li><Icone nome="check" tamanho={16} /> Sem cartão de crédito</li>
+                <li><Icone nome="check" tamanho={16} /> Pronto em minutos</li>
+                <li><Icone nome="check" tamanho={16} /> Cancele quando quiser</li>
+              </ul>
             </div>
-          ))}
-
-          <canvas ref={refCanvas} className="of-particulas" aria-hidden="true" />
-          <div className="of-grao" aria-hidden="true" />
-
-          {CAPITULOS.map((c, k) => (
-            <section key={c.id} ref={(el) => { refTextos.current[k] = el; }} className={`of-texto of-texto-${c.id}`}>
-              {conteudoCapitulo(c, k)}
-            </section>
-          ))}
-
-          {/* HUD */}
-          <div className="of-hud-cap">
-            <span className="of-hud-num">{String(capAtivo + 1).padStart(2, '0')}</span>
-            <span className="of-hud-barra" />
-            <span className="of-hud-nome">{cap.rotulo}</span>
-          </div>
-          <nav className="of-indice" aria-label="Capítulos">
-            {CAPITULOS.map((c, k) => (
-              <button key={c.id} type="button" className={capAtivo === k ? 'ativo' : ''} onClick={() => irPara(k)} aria-label={c.rotulo}>
-                <span>{c.rotulo}</span>
-              </button>
-            ))}
-          </nav>
-          <div className="of-rolar" aria-hidden="true">
-            <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="20" className="of-rolar-trilho" /><circle ref={refAnel} cx="23" cy="23" r="20" className="of-rolar-anel" /></svg>
-            <span>role</span>
-          </div>
-        </div>
-      </div>
-      )}
-
-      {/* ============ SEÇÕES ============ */}
-      <main className="of-conteudo">
-        <section id="recursos" data-track-secao="3_recursos" className="of-secao">
-          <Revelar className="of-cabeca">
-            <span className="of-kicker">Recursos</span>
-            <h2 className="of-titulo-secao">TUDO QUE A SUA<br />CADEIRA PRECISA.</h2>
-          </Revelar>
-          <div className="of-lista-recursos">
-            {RECURSOS.map((r, i) => (
-              <Revelar key={r.t} className="of-recurso" style={{ transitionDelay: `${(i % 4) * 0.05}s` }}>
-                <span className="of-recurso-num">{String(i + 1).padStart(2, '0')}</span>
-                <h3>{r.t}</h3>
-                <p>{r.d}</p>
-                <span className="of-recurso-seta"><Seta /></span>
-              </Revelar>
-            ))}
+            <PreviaProduto />
           </div>
         </section>
 
-        <section id="planos" data-track-secao="5_planos" className="of-secao">
-          <Revelar className="of-cabeca">
-            <span className="of-kicker">Planos</span>
-            <h2 className="of-titulo-secao">DO PRIMEIRO CLIENTE<br />À REDE DE UNIDADES.</h2>
-          </Revelar>
-          <div className="of-planos">
-            {planos.map((p, i) => {
-              const destaque = p.nome === 'Profissional';
-              return (
-                <Revelar key={p.id} className={`of-plano ${destaque ? 'destaque' : ''}`} style={{ transitionDelay: `${i * 0.08}s` }}>
-                  {destaque && <span className="of-plano-selo">Mais escolhido</span>}
-                  <span className="of-plano-nome">{p.nome}</span>
-                  <div className="of-plano-preco">
-                    {p.preco_mensal == null ? <span className="of-plano-consulta">SOB CONSULTA</span> : precoPromocionalPrimeiroMes(p) != null ? (
-                      <><small>R$</small>{formatarReal(precoPromocionalPrimeiroMes(p))}<small>no 1º mês</small></>
-                    ) : (
-                      <><small>R$</small>{p.preco_mensal === 0 ? '0' : Number(p.preco_mensal).toFixed(2).replace('.', ',')}{p.preco_mensal > 0 && <small>/mês</small>}</>
-                    )}
+        <section className="lp-faixa">
+          <div className="lp-container lp-faixa-grade">
+            <div><b>24 horas</b><span>sua agenda aberta, inclusive de madrugada</span></div>
+            <div><b>Sem app</b><span>o cliente agenda pelo navegador ou WhatsApp</span></div>
+            <div><b>Menos faltas</b><span>com lembretes automáticos antes do horário</span></div>
+            <div><b>Tudo junto</b><span>agenda, caixa, estoque e relatórios</span></div>
+          </div>
+        </section>
+
+        <section id="como-funciona" data-track-secao="2_como_funciona" className="lp-secao">
+          <div className="lp-container">
+            <div className="lp-cabeca">
+              <span className="lp-sobretitulo">Como funciona</span>
+              <h2>Comece a receber agendamentos hoje</h2>
+              <p>Três passos e o seu negócio já está aberto pra agendamento online.</p>
+            </div>
+            <ol className="lp-passos">
+              {PASSOS.map((p, i) => (
+                <li key={p.t}>
+                  <span className="lp-passo-num">{i + 1}</span>
+                  <h3>{p.t}</h3>
+                  <p>{p.d}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section id="recursos" data-track-secao="3_recursos" className="lp-secao lp-secao-cinza">
+          <div className="lp-container">
+            <div className="lp-cabeca">
+              <span className="lp-sobretitulo">Recursos</span>
+              <h2>Tudo que o seu negócio precisa num só lugar</h2>
+              <p>Da marcação do horário ao fechamento do caixa, sem planilha e sem caderno.</p>
+            </div>
+            <div className="lp-recursos">
+              {RECURSOS.map((r) => (
+                <div key={r.t} className="lp-recurso">
+                  <span className="lp-recurso-icone"><Icone nome={r.icone} /></span>
+                  <h3>{r.t}</h3>
+                  <p>{r.d}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="para-quem" data-track-secao="4_casos_de_uso" className="lp-secao">
+          <div className="lp-container">
+            <div className="lp-cabeca">
+              <span className="lp-sobretitulo">Para quem é</span>
+              <h2>Feito para qualquer negócio de hora marcada</h2>
+              <p>Inclusive quem oferece mais de um serviço no mesmo lugar, como barbearia e tatuagem.</p>
+            </div>
+            <div className="lp-segmentos">
+              {SEGMENTOS.map((sg) => (
+                <article key={sg.nome} className="lp-segmento">
+                  <div className="lp-segmento-foto" style={{ backgroundImage: `url(${sg.foto})` }} />
+                  <div className="lp-segmento-texto">
+                    <h3>{sg.nome}</h3>
+                    <p>{sg.d}</p>
                   </div>
-                  {algumaCampanha && <p className="of-plano-promo">{continuacaoCampanha(p) || ' '}</p>}
-                  <ul>
-                    {p.dias_teste > 0 && <li>{p.dias_teste} dias de teste grátis</li>}
-                    <li>{p.limite_profissionais == null ? 'Profissionais ilimitados' : `Até ${p.limite_profissionais} profissional(is)`}</li>
-                    <li>{p.limite_agendamentos_mes == null ? 'Agendamentos ilimitados/mês' : `Até ${p.limite_agendamentos_mes} agendamentos/mês`}</li>
-                    {recursosDoPlano(p).map((r) => <li key={r}>{r}</li>)}
-                  </ul>
-                  <Link to="/cadastrar" data-track={`plano_comecar_${p.nome}`} className={`of-btn of-btn-bloco ${destaque ? 'of-btn-claro' : 'of-btn-contorno'}`}>Começar</Link>
-                </Revelar>
-              );
-            })}
+                </article>
+              ))}
+            </div>
+            <div className="lp-outros">
+              <span>Também atende:</span>
+              {OUTROS_SEGMENTOS.map((o) => <span key={o} className="lp-chip">{o}</span>)}
+            </div>
           </div>
         </section>
 
-        <section data-track-secao="6_confianca" className="of-secao of-confianca">
-          <Revelar className="of-confianca-grade">
-            <div><span className="of-kicker">Seus dados, isolados</span><p>Cada negócio tem seus próprios dados, com senhas em hash e nunca em texto puro.</p></div>
-            <div><span className="of-kicker">Conexão criptografada</span><p>Todo tráfego entre seus clientes e o SchedNext usa HTTPS de ponta a ponta.</p></div>
-            <div><span className="of-kicker">Backups automáticos</span><p>Agenda e histórico de clientes seguros mesmo se algo der errado.</p></div>
-          </Revelar>
+        <section id="planos" data-track-secao="5_planos" className="lp-secao lp-secao-cinza">
+          <div className="lp-container">
+            <div className="lp-cabeca">
+              <span className="lp-sobretitulo">Planos</span>
+              <h2>Do primeiro cliente à rede de unidades</h2>
+              <p>Comece grátis e mude de plano quando precisar, direto pelo painel.</p>
+            </div>
+            <div className="lp-planos">
+              {planos.map((p) => {
+                const destaque = p.nome === 'Profissional';
+                return (
+                  <div key={p.id} className={`lp-plano${destaque ? ' destaque' : ''}`}>
+                    {destaque && <span className="lp-plano-selo">Mais escolhido</span>}
+                    <h3>{p.nome}</h3>
+                    <div className="lp-plano-preco">
+                      {p.preco_mensal == null ? <span className="lp-plano-consulta">Sob consulta</span> : precoPromocionalPrimeiroMes(p) != null ? (
+                        <><small>R$</small><b>{formatarReal(precoPromocionalPrimeiroMes(p))}</b><small>no 1º mês</small></>
+                      ) : (
+                        <><small>R$</small><b>{p.preco_mensal === 0 ? '0' : Number(p.preco_mensal).toFixed(2).replace('.', ',')}</b>{p.preco_mensal > 0 && <small>/mês</small>}</>
+                      )}
+                    </div>
+                    {algumaCampanha && <p className="lp-plano-promo">{continuacaoCampanha(p) || ' '}</p>}
+                    <Link to="/cadastrar" data-track={`plano_comecar_${p.nome}`} className={`lp-btn lp-btn-bloco ${destaque ? 'lp-btn-primario' : 'lp-btn-secundario'}`}>Começar</Link>
+                    <ul>
+                      {p.dias_teste > 0 && <li><Icone nome="check" tamanho={16} />{p.dias_teste} dias de teste grátis</li>}
+                      <li><Icone nome="check" tamanho={16} />{p.limite_profissionais == null ? 'Profissionais ilimitados' : `Até ${p.limite_profissionais} profissional(is)`}</li>
+                      <li><Icone nome="check" tamanho={16} />{p.limite_agendamentos_mes == null ? 'Agendamentos ilimitados/mês' : `Até ${p.limite_agendamentos_mes} agendamentos/mês`}</li>
+                      {recursosDoPlano(p).map((r) => <li key={r}><Icone nome="check" tamanho={16} />{r}</li>)}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </section>
 
-        <section id="faq" data-track-secao="7_faq" className="of-secao of-secao-estreita">
-          <Revelar className="of-cabeca">
-            <span className="of-kicker">Dúvidas</span>
-            <h2 className="of-titulo-secao">PERGUNTAS<br />FREQUENTES.</h2>
-          </Revelar>
-          <div className="of-faq">
-            {FAQ.map((f, i) => (
-              <div key={f.p} className={`of-faq-item ${faqAberto === i ? 'aberto' : ''}`}>
-                <button type="button" onClick={() => setFaqAberto(faqAberto === i ? -1 : i)} aria-expanded={faqAberto === i}>
-                  {f.p}<span className="of-faq-mais" />
-                </button>
-                <div className="of-faq-resp"><p>{f.r}</p></div>
+        <section data-track-secao="6_confianca" className="lp-secao">
+          <div className="lp-container lp-confianca">
+            {[
+              ['escudo', 'Dados de cada negócio isolados', 'Cada empresa só enxerga os próprios clientes e agendamentos. Senhas guardadas com criptografia.'],
+              ['cadeado', 'Conexão criptografada', 'Todo o tráfego entre seus clientes e o SchedNext usa HTTPS de ponta a ponta.'],
+              ['nuvem', 'Backups automáticos', 'Sua agenda e o histórico dos clientes ficam seguros mesmo se algo der errado.']
+            ].map(([icone, t, d]) => (
+              <div key={t} className="lp-confianca-item">
+                <span className="lp-recurso-icone"><Icone nome={icone} /></span>
+                <div><h3>{t}</h3><p>{d}</p></div>
               </div>
             ))}
           </div>
         </section>
 
-        <section data-track-secao="8_chamada_final" className="of-cta">
-          <div className="of-cta-foto" style={{ backgroundImage: "linear-gradient(90deg, rgba(6, 11, 24, 0.95) 20%, rgba(6, 11, 24, 0.35)), url(/images/casos/barbearia.jpg)" }} />
-          <Revelar className="of-cta-conteudo">
-            <span className="of-kicker">Comece hoje</span>
-            <h2 className="of-titulo-cta">SUA AGENDA,<br />NO SEU RITMO.</h2>
-            <p>Leva menos de 5 minutos, e o plano grátis não pede cartão.</p>
-            <Link to="/cadastrar" data-track="cta_final_criar_conta" className="of-btn of-btn-claro of-btn-g">Criar conta grátis <Seta tamanho={20} /></Link>
-          </Revelar>
-        </section>
-
-        <footer className="of-rodape">
-          <div className="of-rodape-grade">
-            <div>
-              <img src="/logo-schednext.png" alt="SchedNext" className="of-rodape-logo" />
-              <p>Agenda online para barbearias, salões, estúdios de unhas e estética.</p>
+        <section id="faq" data-track-secao="7_faq" className="lp-secao lp-secao-cinza">
+          <div className="lp-container lp-container-estreito">
+            <div className="lp-cabeca">
+              <span className="lp-sobretitulo">Dúvidas</span>
+              <h2>Perguntas frequentes</h2>
             </div>
-            <div>
-              <h4>Produto</h4>
-              <a href="#recursos" data-track="rodape_recursos">Recursos</a>
-              <a href="#planos" data-track="rodape_planos">Planos</a>
-              <Link to="/cadastrar" data-track="rodape_criar_conta">Criar conta</Link>
-            </div>
-            <div>
-              <h4>Empresa</h4>
-              <a href="#faq" data-track="rodape_faq">FAQ</a>
-              <Link to="/docs" data-track="rodape_docs">Docs</Link>
-              <Link to="/admin/login" data-track="rodape_entrar">Entrar</Link>
-            </div>
-            <div>
-              <h4>Legal</h4>
-              <a href="/legal/termos-de-uso.pdf" data-track="rodape_termos" target="_blank" rel="noopener noreferrer">Termos de uso</a>
-              <a href="/legal/politica-de-privacidade.pdf" data-track="rodape_privacidade" target="_blank" rel="noopener noreferrer">Privacidade</a>
+            <div className="lp-faq">
+              {FAQ.map((f, i) => (
+                <div key={f.p} className={`lp-faq-item${faqAberto === i ? ' aberto' : ''}`}>
+                  <button type="button" onClick={() => setFaqAberto(faqAberto === i ? -1 : i)} aria-expanded={faqAberto === i}>
+                    {f.p}<span className="lp-faq-mais" aria-hidden="true" />
+                  </button>
+                  {faqAberto === i && <p>{f.r}</p>}
+                </div>
+              ))}
             </div>
           </div>
-          <p className="of-rodape-copy">© {new Date().getFullYear()} SchedNext. Todos os direitos reservados.</p>
-          <p className="of-rodape-credito">
-            Fotos: <a href="https://commons.wikimedia.org/wiki/File:Caleb%27s_Chop_Shop.jpg" target="_blank" rel="noopener noreferrer">Tamanoeconomico</a> ·{' '}
-            <a href="https://commons.wikimedia.org/wiki/File:Hair_salon_(51212326557).jpg" target="_blank" rel="noopener noreferrer">Hair Spies</a> ·{' '}
-            <a href="https://commons.wikimedia.org/wiki/File:Acrylic_nails,_Salon_Sagesse.jpg" target="_blank" rel="noopener noreferrer">Naica Dumeny</a>, via Wikimedia Commons (CC BY / CC BY-SA)
-          </p>
-        </footer>
+        </section>
+
+        <section data-track-secao="8_chamada_final" className="lp-cta">
+          <div className="lp-container lp-cta-conteudo">
+            <h2>Abra sua agenda online hoje</h2>
+            <p>Crie sua conta grátis, cadastre seus serviços e compartilhe o link com seus clientes.</p>
+            <Link to="/cadastrar" data-track="cta_final_criar_conta" className="lp-btn lp-btn-branco lp-btn-g">Criar conta grátis <Icone nome="seta" tamanho={18} /></Link>
+          </div>
+        </section>
       </main>
+
+      <footer className="lp-rodape">
+        <div className="lp-container lp-rodape-grade">
+          <div>
+            <img src="/logo-schednext.png" alt="SchedNext" className="lp-rodape-logo" />
+            <p>Agenda online e WhatsApp para negócios de hora marcada.</p>
+          </div>
+          <div>
+            <h4>Produto</h4>
+            <a href="#recursos" data-track="rodape_recursos">Recursos</a>
+            <a href="#planos" data-track="rodape_planos">Planos</a>
+            <Link to="/cadastrar" data-track="rodape_criar_conta">Criar conta</Link>
+          </div>
+          <div>
+            <h4>Ajuda</h4>
+            <a href="#faq" data-track="rodape_faq">Dúvidas</a>
+            <Link to="/docs" data-track="rodape_docs">Documentação</Link>
+            <Link to="/admin/login" data-track="rodape_entrar">Entrar</Link>
+          </div>
+          <div>
+            <h4>Legal</h4>
+            <a href="/legal/termos-de-uso.pdf" data-track="rodape_termos" target="_blank" rel="noopener noreferrer">Termos de uso</a>
+            <a href="/legal/politica-de-privacidade.pdf" data-track="rodape_privacidade" target="_blank" rel="noopener noreferrer">Privacidade</a>
+          </div>
+        </div>
+        <div className="lp-container lp-rodape-base">
+          <span>© {new Date().getFullYear()} SchedNext. Todos os direitos reservados.</span>
+          <span className="lp-creditos">
+            Fotos: <a href="https://commons.wikimedia.org/wiki/File:Caleb%27s_Chop_Shop.jpg" target="_blank" rel="noopener noreferrer">Tamanoeconomico</a>,{' '}
+            <a href="https://commons.wikimedia.org/wiki/File:Hair_salon_(51212326557).jpg" target="_blank" rel="noopener noreferrer">Hair Spies</a>,{' '}
+            <a href="https://commons.wikimedia.org/wiki/File:Acrylic_nails,_Salon_Sagesse.jpg" target="_blank" rel="noopener noreferrer">Naica Dumeny</a> via Wikimedia Commons (CC BY / CC BY-SA)
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }

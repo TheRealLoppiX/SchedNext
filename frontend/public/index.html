@@ -73,10 +73,10 @@
       carregar). As mesmas classes são usadas pelo TelaCarregando do App.js.
     -->
     <style>
-      .sn-preload { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: #060b18; }
-      .sn-preload-marca { font-family: 'Anton', Impact, 'Arial Narrow', sans-serif; font-size: clamp(44px, 11vw, 150px); line-height: 1; letter-spacing: 0.01em; color: transparent; -webkit-text-stroke: 1.5px #f2f7ff; }
-      .sn-preload-linha { width: min(320px, 60vw); height: 2px; background: rgba(160, 200, 255, 0.14); overflow: hidden; border-radius: 2px; }
-      .sn-preload-linha span { display: block; width: 40%; height: 100%; background: linear-gradient(90deg, #2554eb, #22d3ee, #19e6d4); animation: sn-preload-corre 1.1s ease-in-out infinite; }
+      .sn-preload { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; background: #f6f8fc; }
+      .sn-preload-marca { height: 40px; width: auto; }
+      .sn-preload-linha { width: min(220px, 50vw); height: 3px; background: #e2e8f0; overflow: hidden; border-radius: 3px; }
+      .sn-preload-linha span { display: block; width: 40%; height: 100%; background: #2554eb; border-radius: 3px; animation: sn-preload-corre 1.1s ease-in-out infinite; }
       @keyframes sn-preload-corre { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
       @media (prefers-reduced-motion: reduce) { .sn-preload-linha span { animation: none; width: 100%; } }
     </style>
@@ -86,7 +86,7 @@
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root">
       <div class="sn-preload" role="status" aria-label="Carregando">
-        <div class="sn-preload-marca">SCHEDNEXT</div>
+        <img class="sn-preload-marca" src="%PUBLIC_URL%/logo-schednext.png" alt="SchedNext" />
         <div class="sn-preload-linha"><span></span></div>
       </div>
     </div>
