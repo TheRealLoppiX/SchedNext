@@ -66,20 +66,49 @@ function AdminAgendamentos({ empresaId }) {
     window.open(`https://wa.me/55${num}`, '_blank');
   };
 
-  // Filtros aplicados sem o erro do "toLowerCase"
-  const agendamentosFiltrados = agendamentos.filter(ag => {
-    const infoStatus = getStatusInfo(ag);
-    
+  // Recorte por cliente, data e profissional (sem o status): base tanto da tabela quanto do resumo.
+  const bateRecorte = (ag) => {
     // Tratamento à prova de balas caso venha undefined
     const nomeSeguro = ag.cliente_nome || '';
-    
     const bateNome = nomeSeguro.toLowerCase().includes(filtroNomeDebounced.toLowerCase());
     const bateData = filtroData ? ag.data === filtroData : true;
-    const bateStatus = filtroStatus === 'todos' || infoStatus.label.toLowerCase().includes(filtroStatus.toLowerCase());
     const bateBarbeiro = barbeirosSelecionados.length === 0 || barbeirosSelecionados.includes(ag.barbeiro_id);
+    return bateNome && bateData && bateBarbeiro;
+  };
 
-    return bateNome && bateData && bateStatus && bateBarbeiro;
-  });
+  const agendamentosDoRecorte = agendamentos.filter(bateRecorte);
+
+  const agendamentosFiltrados = agendamentosDoRecorte.filter(ag =>
+    filtroStatus === 'todos' || getStatusInfo(ag).label.toLowerCase().includes(filtroStatus.toLowerCase())
+  );
+
+  // Resumo do recorte: ignora o filtro de status de propósito, pra mostrar como os agendamentos
+  // daquela data/profissional terminaram. "Não compareceu" segue a mesma regra da tabela
+  // (passou do horário + 10 min de tolerância sem ser concluído nem cancelado).
+  const resumo = agendamentosDoRecorte.reduce((acc, ag) => {
+    const label = getStatusInfo(ag).label;
+    acc.total += 1;
+    if (label === 'Concluído') { acc.finalizados += 1; acc.faturado += Number(ag.valor_total) || 0; }
+    else if (label === 'Cancelado') acc.cancelados += 1;
+    else if (label === 'Não Compareceu') acc.faltas += 1;
+    else acc.emAberto += 1;
+    return acc;
+  }, { total: 0, finalizados: 0, cancelados: 0, faltas: 0, emAberto: 0, faturado: 0 });
+  const percentual = (n) => (resumo.total ? `${Math.round((n / resumo.total) * 100)}%` : '0%');
+
+  const descricaoRecorte = [
+    filtroData ? filtroData.split('-').reverse().join('/') : 'Todas as datas',
+    barbeirosSelecionados.length === 0
+      ? `Todos os ${TERMOS.profissionalPlural.toLowerCase()}`
+      : barbeiros.filter(b => barbeirosSelecionados.includes(b.id)).map(b => b.nome).join(', ')
+  ].join(' · ');
+
+  const cardsResumo = [
+    { chave: 'todos', rotulo: 'Total de agendamentos', valor: resumo.total, detalhe: `${resumo.emAberto} em aberto`, cor: 'var(--fx-text)' },
+    { chave: 'concluído', rotulo: 'Finalizados', valor: resumo.finalizados, detalhe: `${percentual(resumo.finalizados)} · R$ ${resumo.faturado.toFixed(2).replace('.', ',')}`, cor: 'var(--fx-green)' },
+    { chave: 'não compareceu', rotulo: 'Não compareceram', valor: resumo.faltas, detalhe: percentual(resumo.faltas), cor: 'var(--fx-amber)' },
+    { chave: 'cancelado', rotulo: 'Cancelados', valor: resumo.cancelados, detalhe: percentual(resumo.cancelados), cor: 'var(--fx-red)' }
+  ];
 
   return (
     <div className="admin-page-container" style={styles.container}>
@@ -163,6 +192,30 @@ function AdminAgendamentos({ empresaId }) {
         </div>
       </div>
 
+      {/* RESUMO DO RECORTE (data + profissionais) */}
+      <div style={{ marginBottom: '20px' }}>
+        <p style={{ ...styles.subtitle, marginBottom: '10px', fontSize: '13px' }}>Resumo: {descricaoRecorte}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px' }}>
+          {cardsResumo.map(c => (
+            <button
+              key={c.chave}
+              type="button"
+              onClick={() => setFiltroStatus(c.chave)}
+              title={c.chave === 'todos' ? 'Mostrar todos' : `Mostrar só ${c.rotulo.toLowerCase()}`}
+              style={{
+                textAlign: 'left', cursor: 'pointer', background: 'var(--fx-card)', borderRadius: '12px', padding: '16px 18px',
+                border: filtroStatus === c.chave ? `2px solid ${c.cor}` : '1px solid var(--fx-line)',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontFamily: 'inherit'
+              }}
+            >
+              <span style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--fx-muted)' }}>{c.rotulo}</span>
+              <span style={{ display: 'block', fontSize: '28px', fontWeight: 700, color: c.cor, lineHeight: 1.2, marginTop: '4px' }}>{c.valor}</span>
+              <span style={{ display: 'block', fontSize: '12px', color: 'var(--fx-muted)', marginTop: '2px' }}>{c.detalhe}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* TABELA DE RESULTADOS */}
       <div style={styles.cardTabela}>
         <div style={{ overflowX: 'auto' }}>
@@ -171,7 +224,7 @@ function AdminAgendamentos({ empresaId }) {
             <tr>
               <th style={{ ...styles.th, width: '20%' }}>DATA / HORA</th>
               <th style={{ ...styles.th, width: '25%' }}>CLIENTE</th>
-              <th style={{ ...styles.th, width: '20%' }}>BARBEIRO</th>
+              <th style={{ ...styles.th, width: '20%' }}>{TERMOS.profissional.toUpperCase()}</th>
               <th style={{ ...styles.th, width: '20%', textAlign: 'center' }}>STATUS</th>
               <th style={{ ...styles.th, width: '15%', textAlign: 'center' }}>AÇÃO</th>
             </tr>
