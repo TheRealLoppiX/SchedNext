@@ -474,3 +474,6 @@
   .oa-absoluto .sa-header h1 { font-size: 26px !important; }
   .oa-absoluto table.sa-tabela td::before { font-size: 12px; font-weight: 600; letter-spacing: 0; }
 }
+.oa-admin .oc-kicker { font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--bb-link); }
+.oa-admin .oc-kicker::before { display: none; }
+.oa-admin .oc-contagem { font-size: 13px; letter-spacing: 0; text-transform: none; }
