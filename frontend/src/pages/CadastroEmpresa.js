@@ -8,6 +8,8 @@ import { formatarTelefone } from '../utils/telefone';
 import { API_URL } from '../services/api';
 import { rastrearEvento } from '../utils/analytics';
 import { formatarReal, precoPromocionalPrimeiroMes, resumoCampanha } from '../utils/campanhaPlano';
+import LogoSchedNext from '../components/LogoSchedNext';
+import PainelMarcaAcesso from '../components/PainelMarcaAcesso';
 
 function gerarSlug(nome) {
   return nome
@@ -184,9 +186,10 @@ function CadastroEmpresa({ setEmpresaLogada }) {
   };
 
   return (
-    <div className="bb-page">
+    <div className="bb-page bb-page-marca">
+      <PainelMarcaAcesso />
       <div className="bb-card" style={{ maxWidth: '480px' }}>
-        <img src="/icon-schednext.png" alt="SchedNext" className="bb-logo-img" />
+        <LogoSchedNext tamanho={34} className="bb-logo-marca" />
         <h2 className="bb-title">{etapa === 4 ? 'Verifique seu e-mail' : 'Criar sua conta'}</h2>
         {etapa === 4 ? (
           <p className="bb-subtitle">Enviamos um código para <b>{email}</b></p>

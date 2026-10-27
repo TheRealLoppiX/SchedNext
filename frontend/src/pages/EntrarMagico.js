@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { API_URL } from '../services/api';
+import LogoSchedNext from '../components/LogoSchedNext';
 
 // Consome o link de login automático mandado pelo bot de WhatsApp quando ele já reconhece o
 // cliente pelo telefone (ver backend/src/services/loginMagico.js e POST /login-magico). Só troca
@@ -48,7 +49,7 @@ function EntrarMagico() {
   return (
     <div className="bb-page">
       <div className="bb-card" style={{ textAlign: 'center' }}>
-        <img src="/icon-schednext.png" alt="SchedNext" className="bb-logo-img" />
+        <LogoSchedNext tamanho={34} className="bb-logo-marca" />
         {erro ? (
           <>
             <p className="bb-erro" style={{ marginTop: '16px' }}>{erro}</p>

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/Toast';
 import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
+import LogoSchedNext from '../../components/LogoSchedNext';
+import PainelMarcaAcesso from '../../components/PainelMarcaAcesso';
 
 // Recuperação de senha do login da barbearia (/admin/login) — sem slug de empresa, porque esse
 // login busca o e-mail direto em `empresas`/`unidade_admins` (ver routes/auth.js), diferente do
@@ -75,9 +77,10 @@ function RecuperarSenhaAdmin() {
   };
 
   return (
-    <div className="bb-page">
+    <div className="bb-page bb-page-marca">
+      <PainelMarcaAcesso />
       <div className="bb-card">
-        <img src="/icon-schednext.png" alt="SchedNext" className="bb-logo-img" />
+        <LogoSchedNext tamanho={34} className="bb-logo-marca" />
         <h2 className="bb-title">Recuperação de Senha</h2>
         <p className="bb-subtitle">Painel administrativo da sua empresa</p>
 

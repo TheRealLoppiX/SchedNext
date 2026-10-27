@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/Toast';
 import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
+import LogoSchedNext from '../../components/LogoSchedNext';
+import PainelMarcaAcesso from '../../components/PainelMarcaAcesso';
 
 // Login do dono da plataforma — totalmente separado do login de admin de empresa (ver
 // backend/src/middleware/superAdminAuth.js). Tem recuperação de senha, mas não cadastro: um
@@ -39,8 +41,10 @@ function SuperAdminLogin() {
   };
 
   return (
-    <div className="bb-page">
+    <div className="bb-page bb-page-marca">
+      <PainelMarcaAcesso />
       <form className="bb-card" onSubmit={handleLogin}>
+        <LogoSchedNext tamanho={34} className="bb-logo-marca" />
         <h2 className="bb-title">Admin absoluto</h2>
         <p className="bb-subtitle">Acesso restrito ao dono da plataforma</p>
 

@@ -5,6 +5,7 @@ import { API_URL } from '../services/api';
 import { recursosDoPlano } from '../utils/recursosPlano';
 import { observarSecoes } from '../utils/analytics';
 import { formatarReal, precoPromocionalPrimeiroMes, continuacaoCampanha } from '../utils/campanhaPlano';
+import LogoSchedNext from '../components/LogoSchedNext';
 
 // Landing comercial: fundo claro, tipografia de produto (Inter) e uma prévia do painel desenhada
 // em HTML/CSS no lugar das partículas e do vídeo da versão anterior — carrega rápido em qualquer
@@ -55,10 +56,10 @@ const RECURSOS = [
 ];
 
 const SEGMENTOS = [
-  { nome: 'Barbearias', foto: '/images/casos/barbearia.jpg', d: 'Agenda por barbeiro, encaixes e plano de assinatura.' },
-  { nome: 'Salões de beleza', foto: '/images/casos/salao.jpg', d: 'Vários profissionais e serviços combinados sem encavalar horário.' },
-  { nome: 'Unhas, cílios e sobrancelha', foto: '/images/casos/estudio.jpg', d: 'Manutenções e retornos lembrados automaticamente.' },
-  { nome: 'Estética e bem-estar', foto: '/images/casos/estetica.jpg', d: 'Histórico do cliente e sessões organizadas.' }
+  { nome: 'Barbearias', foto: '/images/casos/barbearia.jpg', d: 'Fila organizada e cliente fiel voltando todo mês.', itens: ['Agenda por profissional', 'Encaixe e atendimento avulso', 'Clube de assinatura mensal'] },
+  { nome: 'Salões de beleza', foto: '/images/casos/salao.jpg', d: 'A equipe toda numa agenda só, sem encavalar horário.', itens: ['Serviços combinados', 'Duração certa por serviço', 'Caixa e estoque de produtos'] },
+  { nome: 'Unhas, cílios e sobrancelha', foto: '/images/casos/estudio.jpg', d: 'Manutenções e retornos sem depender da memória.', itens: ['Lembrete automático', 'Agendamento pelo WhatsApp', 'Programa de fidelidade'] },
+  { nome: 'Estética e bem-estar', foto: '/images/casos/estetica.jpg', d: 'Sessões organizadas e histórico de cada cliente.', itens: ['Ficha do cliente', 'Planos e pacotes mensais', 'Relatórios de faturamento'] }
 ];
 const OUTROS_SEGMENTOS = ['Estúdios de tatuagem', 'Clínicas e consultórios', 'Personal e aulas', 'Pet shops', 'Negócios com mais de um serviço'];
 
@@ -154,7 +155,7 @@ function Landing() {
     <div className="lp">
       <header className={`lp-topo${rolou ? ' rolou' : ''}`}>
         <div className="lp-container lp-topo-linha">
-          <Link to="/" className="lp-logo"><img src="/icon-schednext.png" alt="SchedNext" /><span>Sched<b>Next</b></span></Link>
+          <Link to="/" className="lp-logo" aria-label="SchedNext, página inicial"><LogoSchedNext tamanho={34} /></Link>
           <nav className="lp-nav" aria-label="Seções">
             {NAV.map(([href, rotulo]) => <a key={href} href={href}>{rotulo}</a>)}
           </nav>
@@ -242,6 +243,10 @@ function Landing() {
                 </div>
               ))}
             </div>
+            <div className="lp-chamada-meio">
+              <Link to="/cadastrar" data-track="recursos_criar_conta" className="lp-btn lp-btn-primario lp-btn-g">Teste grátis <Icone nome="seta" tamanho={18} /></Link>
+              <span>Sem cartão de crédito. Configuração em minutos.</span>
+            </div>
           </div>
         </section>
 
@@ -259,6 +264,9 @@ function Landing() {
                   <div className="lp-segmento-texto">
                     <h3>{sg.nome}</h3>
                     <p>{sg.d}</p>
+                    <ul>
+                      {sg.itens.map((it) => <li key={it}><Icone nome="check" tamanho={15} />{it}</li>)}
+                    </ul>
                   </div>
                 </article>
               ))}
@@ -337,6 +345,22 @@ function Landing() {
           </div>
         </section>
 
+        <section className="lp-secao lp-suporte-secao">
+          <div className="lp-container lp-suporte">
+            <div>
+              <span className="lp-sobretitulo">Suporte de verdade</span>
+              <h2>Você não fica sozinho depois de assinar</h2>
+              <p>Tirou uma dúvida às 23h? O assistente do painel responde na hora, a qualquer momento. Precisou de uma pessoa? Ele passa a conversa pro nosso time, que continua o atendimento por ali mesmo.</p>
+              <Link to="/cadastrar" data-track="suporte_criar_conta" className="lp-btn lp-btn-primario lp-btn-g">Começar grátis <Icone nome="seta" tamanho={18} /></Link>
+            </div>
+            <ul className="lp-suporte-lista">
+              <li><span className="lp-recurso-icone"><Icone nome="conversa" /></span><div><b>Assistente 24 horas</b><small>Respostas imediatas dentro do próprio painel.</small></div></li>
+              <li><span className="lp-recurso-icone"><Icone nome="coracao" /></span><div><b>Time humano quando precisar</b><small>Sua conversa chega pra gente sem você repetir nada.</small></div></li>
+              <li><span className="lp-recurso-icone"><Icone nome="calendario" /></span><div><b>Documentação passo a passo</b><small>Guias pra configurar agenda, serviços e WhatsApp.</small></div></li>
+            </ul>
+          </div>
+        </section>
+
         <section data-track-secao="6_confianca" className="lp-secao">
           <div className="lp-container lp-confianca">
             {[
@@ -383,7 +407,7 @@ function Landing() {
       <footer className="lp-rodape">
         <div className="lp-container lp-rodape-grade">
           <div>
-            <img src="/logo-schednext.png" alt="SchedNext" className="lp-rodape-logo" />
+            <LogoSchedNext tamanho={36} claro className="lp-rodape-logo" />
             <p>Agenda online e WhatsApp para negócios de hora marcada.</p>
           </div>
           <div>

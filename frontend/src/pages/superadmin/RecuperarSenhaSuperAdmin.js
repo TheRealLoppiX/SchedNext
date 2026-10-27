@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/Toast';
 import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
+import LogoSchedNext from '../../components/LogoSchedNext';
+import PainelMarcaAcesso from '../../components/PainelMarcaAcesso';
 
 // Recuperação de senha do admin absoluto (dono da plataforma) — só recuperação, sem cadastro: um
 // super admin novo só é criado por quem já é super admin (ver routes/superAdmin.js).
@@ -74,8 +76,10 @@ function RecuperarSenhaSuperAdmin() {
   };
 
   return (
-    <div className="bb-page">
+    <div className="bb-page bb-page-marca">
+      <PainelMarcaAcesso />
       <div className="bb-card">
+        <LogoSchedNext tamanho={34} className="bb-logo-marca" />
         <h2 className="bb-title">Recuperação de Senha</h2>
         <p className="bb-subtitle">Acesso restrito ao dono da plataforma</p>
 

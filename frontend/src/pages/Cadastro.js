@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast';
 import usePaletaTenant from '../hooks/usePaletaTenant';
 import MarcaPlataforma from '../components/MarcaPlataforma';
 import { API_URL } from '../services/api';
+import LogoSchedNext from '../components/LogoSchedNext';
 
 function Cadastro() {
   const [form, setForm] = useState({ nome: '', nascimento: '', email: '', telefone: '', senha: '' });
@@ -99,7 +100,7 @@ function Cadastro() {
         {empresa?.logo_url ? (
           <img src={empresa.logo_url} alt="Logo" className="bb-logo-img" />
         ) : (
-          <img src="/icon-schednext.png" alt="SchedNext" className="bb-logo-img" />
+          <LogoSchedNext tamanho={34} className="bb-logo-marca" />
         )}
         {etapa === 'cadastro' ? (
           <>

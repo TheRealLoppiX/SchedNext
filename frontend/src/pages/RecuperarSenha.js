@@ -4,6 +4,7 @@ import { useToast } from '../components/Toast';
 import usePaletaTenant from '../hooks/usePaletaTenant';
 import MarcaPlataforma from '../components/MarcaPlataforma';
 import { API_URL } from '../services/api';
+import LogoSchedNext from '../components/LogoSchedNext';
 
 function RecuperarSenha() {
   const [etapa, setEtapa] = useState(1); // 1: Email, 2: Código, 3: Nova Senha
@@ -82,7 +83,7 @@ function RecuperarSenha() {
   return (
     <div className="bb-page">
       <div className="bb-card">
-        <img src="/icon-schednext.png" alt="SchedNext" className="bb-logo-img" />
+        <LogoSchedNext tamanho={34} className="bb-logo-marca" />
         <h2 className="bb-title">Recuperação de Senha</h2>
 
         {etapa === 1 && (

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import usePaletaTenant from '../hooks/usePaletaTenant';
 import MarcaPlataforma from '../components/MarcaPlataforma';
 import { API_URL } from '../services/api';
+import LogoSchedNext from '../components/LogoSchedNext';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -65,7 +66,7 @@ function Login() {
           {empresa.logo_url ? (
             <img src={empresa.logo_url} alt="Logo" style={s.logoImg} />
           ) : (
-            <img src="/icon-schednext.png" alt="SchedNext" className="bb-logo-img" />
+            <LogoSchedNext tamanho={34} className="bb-logo-marca" />
           )}
         </div>
 

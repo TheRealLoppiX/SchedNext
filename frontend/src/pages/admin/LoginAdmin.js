@@ -4,6 +4,8 @@ import { useToast } from '../../components/Toast';
 import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
 import { rastrearEvento } from '../../utils/analytics';
+import LogoSchedNext from '../../components/LogoSchedNext';
+import PainelMarcaAcesso from '../../components/PainelMarcaAcesso';
 
 function LoginAdmin({ setEmpresaLogada }) {
   const [email, setEmail] = useState('');
@@ -53,9 +55,10 @@ function LoginAdmin({ setEmpresaLogada }) {
   };
 
   return (
-    <div className="bb-page">
+    <div className="bb-page bb-page-marca">
+      <PainelMarcaAcesso />
       <form className="bb-card" onSubmit={handleLogin}>
-        <img src="/icon-schednext.png" alt="SchedNext" className="bb-logo-img" />
+        <LogoSchedNext tamanho={34} className="bb-logo-marca" />
         <h2 className="bb-title">Painel Administrativo</h2>
         <p className="bb-subtitle">Entre com os dados do seu negócio</p>
 
