@@ -6,6 +6,7 @@ import { API_URL } from './services/api';
 import { resumoCampanha } from './utils/campanhaPlano';
 import { acessoAteCancelamento, textoDiasRestantes } from './utils/cancelamentoPlano';
 import { PagamentoPendentePlataforma } from './components/CobrancaPlataforma';
+import AvaliarSchedNext from './components/AvaliarSchedNext';
 
 const HORARIOS_PADRAO = {
     0: { aberto: false, abre: '08:00', fecha: '18:00', label: 'Domingo' },
@@ -623,6 +624,8 @@ function AdminConta({ empresaId }) {
                             })}
                         </div>
                     </div>
+
+                    <AvaliarSchedNext estiloCard={styles.card} estiloTitulo={styles.cardTitle} />
                 </div>
 
             </div>

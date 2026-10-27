@@ -2,9 +2,18 @@ import React, { useEffect, useState } from 'react';
 import LoadingButton from '../../components/LoadingButton';
 import { API_URL } from '../../services/api';
 
-// Depoimentos de clientes exibidos na landing (backend routes/depoimentos.js). A lista é editada
-// aqui e salva inteira de uma vez. Só relatos reais, com autorização de quem deu: a landing só
-// mostra a seção quando existe pelo menos um ativo.
+// Depoimentos exibidos na landing (backend routes/depoimentos.js). A maioria chega das próprias
+// empresas pelo cartão "Avalie a SchedNext" do painel e fica pendente até ser aprovada aqui; também
+// dá pra cadastrar um manualmente. A lista é salva inteira de uma vez, e a landing só mostra a
+// seção quando existe pelo menos um aprovado e publicado.
+
+const INFO_STATUS = {
+  pendente: { rotulo: 'Aguardando aprovação', bg: 'var(--fx-amber-bg)', fg: 'var(--fx-amber)' },
+  recusado: { rotulo: 'Recusado', bg: 'var(--fx-red-bg)', fg: 'var(--fx-red)' },
+  oculto: { rotulo: 'Oculto', bg: 'var(--fx-surface-2)', fg: 'var(--fx-muted)' },
+  publicado: { rotulo: 'Publicado', bg: 'var(--fx-green-bg)', fg: 'var(--fx-green)' }
+};
+const situacao = (d) => (d.status === 'pendente' ? 'pendente' : d.status === 'recusado' ? 'recusado' : d.ativo === false ? 'oculto' : 'publicado');
 
 const VAZIO = { nome: '', negocio: '', cidade: '', texto: '', nota: 5, foto_url: '', ativo: true };
 
@@ -44,7 +53,7 @@ export default function AbaDepoimentos({ toast, confirmar, s }) {
   const enviarForm = async (e) => {
     e.preventDefault();
     const nova = [...lista];
-    if (editando === null) nova.push({ ...form, nota: Number(form.nota) });
+    if (editando === null) nova.push({ ...form, nota: Number(form.nota), status: 'aprovado' });
     else nova[editando] = { ...nova[editando], ...form, nota: Number(form.nota) };
     if (await salvarLista(nova, editando === null ? 'Depoimento adicionado.' : 'Depoimento atualizado.')) {
       setForm(VAZIO);
@@ -61,6 +70,10 @@ export default function AbaDepoimentos({ toast, confirmar, s }) {
     [nova[i], nova[j]] = [nova[j], nova[i]];
     salvarLista(nova, 'Ordem atualizada.');
   };
+  const moderar = (i, aprovar) => salvarLista(
+    lista.map((d, j) => (j === i ? { ...d, status: aprovar ? 'aprovado' : 'recusado', ativo: aprovar } : d)),
+    aprovar ? 'Depoimento aprovado e publicado.' : 'Depoimento recusado.'
+  );
   const remover = async (i) => {
     const ok = await confirmar(`Excluir o depoimento de ${lista[i].nome}?`, { confirmText: 'Excluir' });
     if (ok) salvarLista(lista.filter((_, j) => j !== i), 'Depoimento excluído.');
@@ -103,10 +116,15 @@ export default function AbaDepoimentos({ toast, confirmar, s }) {
         </form>
       </div>
 
+      {lista.some((d) => d.status === 'pendente') && (
+        <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--fx-amber)' }}>
+          {lista.filter((d) => d.status === 'pendente').length} depoimento(s) de empresas aguardando sua aprovação.
+        </p>
+      )}
       {lista.length === 0 ? (
-        <p style={s.textoVazio}>Nenhum depoimento ainda. Enquanto a lista estiver vazia, a seção não aparece na página inicial.</p>
+        <p style={s.textoVazio}>Nenhum depoimento ainda. As empresas enviam pelo cartão "Avalie a SchedNext", em Configurações da conta do painel. Enquanto não houver nenhum aprovado, a seção não aparece na página inicial.</p>
       ) : lista.map((d, i) => (
-        <div key={d.id || i} style={{ ...s.card, opacity: d.ativo === false ? 0.6 : 1 }}>
+        <div key={d.id || i} style={{ ...s.card, opacity: ['oculto', 'recusado'].includes(situacao(d)) ? 0.6 : 1, borderColor: d.status === 'pendente' ? 'var(--fx-amber-line)' : undefined }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
               <strong style={{ fontSize: '15px' }}>{d.nome}</strong>
@@ -114,13 +132,22 @@ export default function AbaDepoimentos({ toast, confirmar, s }) {
               <div style={{ color: '#f59e0b', fontSize: '14px', margin: '4px 0' }}>{'★'.repeat(d.nota || 5)}</div>
               <p style={{ margin: 0, fontSize: '14px', color: 'var(--fx-text)' }}>“{d.texto}”</p>
             </div>
-            <span style={{ ...s.badge, background: d.ativo === false ? 'var(--fx-surface-2)' : 'var(--fx-green-bg)', color: d.ativo === false ? 'var(--fx-muted)' : 'var(--fx-green)' }}>
-              {d.ativo === false ? 'Oculto' : 'Publicado'}
+            <span style={{ ...s.badge, background: INFO_STATUS[situacao(d)].bg, color: INFO_STATUS[situacao(d)].fg }}>
+              {INFO_STATUS[situacao(d)].rotulo}{d.empresa_id ? ' · enviado pela empresa' : ''}
             </span>
           </div>
           <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+            {d.status === 'pendente' ? (
+              <>
+                <button type="button" style={{ ...s.btnLink, color: 'var(--fx-green)' }} onClick={() => moderar(i, true)}>Aprovar</button>
+                <button type="button" style={{ ...s.btnLink, color: 'var(--fx-red)' }} onClick={() => moderar(i, false)}>Recusar</button>
+              </>
+            ) : d.status === 'recusado' ? (
+              <button type="button" style={{ ...s.btnLink, color: 'var(--fx-green)' }} onClick={() => moderar(i, true)}>Aprovar</button>
+            ) : (
+              <button type="button" style={s.btnLink} onClick={() => alternar(i)}>{d.ativo === false ? 'Publicar' : 'Ocultar'}</button>
+            )}
             <button type="button" style={s.btnLink} onClick={() => editar(i)}>Editar</button>
-            <button type="button" style={s.btnLink} onClick={() => alternar(i)}>{d.ativo === false ? 'Publicar' : 'Ocultar'}</button>
             <button type="button" style={s.btnLink} disabled={i === 0} onClick={() => mover(i, -1)}>Subir</button>
             <button type="button" style={s.btnLink} disabled={i === lista.length - 1} onClick={() => mover(i, 1)}>Descer</button>
             <button type="button" style={{ ...s.btnLink, color: 'var(--fx-red)' }} onClick={() => remover(i)}>Excluir</button>
