@@ -930,3 +930,98 @@ body:has(.bb-page) .oc-tema-flutuante { display: flex; }
 .bb-card > .bb-logo-img { display: block; margin-left: auto; margin-right: auto; }
 .bb-card > .bb-title, .bb-card > .bb-subtitle { text-align: center; }
 .bb-card > p.bb-link, .bb-card > p.bb-text-muted, .bb-card > .bb-link { text-align: center; }
+
+/* ============================ Visual comercial na área do cliente ============================
+   Sobrepõe o "ofício" (Anton, rótulos mono, letreiro de aeroporto, bilhete com picote, brilhos
+   neon, fotos em preto e branco com varredura) por um visual de produto: Inter, botões e cartões
+   sólidos, azul da marca. Fica no fim do arquivo pra valer sobre as regras acima. */
+
+.oc-cliente { --oc-display: var(--oc-corpo); --oc-mono: var(--oc-corpo); --oc-acento: #2554eb; }
+:root:not([data-tema='claro']) .oc-cliente { --oc-acento: #7aa2ff; }
+.oc-cliente .oc-fundo {
+  background:
+    radial-gradient(ellipse at 90% 0%, rgba(37, 84, 235, 0.12), transparent 50%),
+    radial-gradient(ellipse at 0% 100%, rgba(14, 165, 198, 0.06), transparent 45%);
+}
+
+/* menu lateral */
+.oc-cliente .oc-trilho { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--oc-solido); }
+.oc-cliente .oc-trilho-item.ativo { background: rgba(37, 84, 235, 0.12); }
+.oc-cliente .oc-trilho-item.ativo::before { box-shadow: none; }
+.oc-cliente .oc-trilho-rotulo { font-size: 12.5px; letter-spacing: 0; text-transform: none; }
+.oc-cliente .oc-avatar { font-size: 15px; font-weight: 700; color: #fff; background: #2554eb; }
+
+/* tipografia */
+.oc-cliente .oc-kicker { font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; margin-bottom: 8px; }
+.oc-cliente .oc-titulo { font-weight: 700; font-size: clamp(28px, 3.4vw, 40px); line-height: 1.15; letter-spacing: -0.02em; }
+.oc-cliente .oc-titulo-sm { font-weight: 700; font-size: 24px; line-height: 1.2; letter-spacing: -0.01em; }
+.oc-cliente .oc-rotulo { font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.oc-cliente .oc-rotulo b { display: none; }
+.oc-cliente .oc-contagem, .oc-cliente .oc-voltar, .oc-cliente .oc-vazio-linha { font-size: 13px; letter-spacing: 0; text-transform: none; }
+.oc-cliente .oc-vazio strong { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+
+/* botões e superfícies */
+.oc-cliente .oc-btn { border-radius: 10px; }
+.oc-cliente .oc-btn-primario { background: #2554eb; color: #fff; }
+.oc-cliente .oc-btn-primario:hover:not(:disabled) { background: #173fb0; box-shadow: 0 8px 20px rgba(37, 84, 235, 0.28); }
+.oc-cliente .oc-btn:hover:not(:disabled) { transform: none; }
+.oc-cliente .oc-btn:hover:not(:disabled) svg { transform: none; }
+.oc-cliente .oc-chips button.ativo { color: #fff; background: #2554eb; border-color: #2554eb; }
+.oc-cliente .oc-painel, .oc-cliente .oc-pro, .oc-cliente .oc-bilhete { background: var(--oc-solido); backdrop-filter: none; -webkit-backdrop-filter: none; border-radius: 16px; }
+
+/* etapas do agendamento */
+.oc-cliente .oc-etapas li { font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.oc-cliente .oc-etapas li.feita::before { background: rgba(37, 84, 235, 0.45); }
+.oc-cliente .oc-etapas li.atual::before { box-shadow: none; }
+
+/* dias e horários: botões simples no lugar do letreiro de aeroporto */
+.oc-cliente .oc-dia-semana, .oc-cliente .oc-dia-mes { font-size: 11.5px; letter-spacing: 0; text-transform: capitalize; }
+.oc-cliente .oc-dia-num { font-size: 22px; font-weight: 700; }
+.oc-cliente .oc-dia.ativo { background: rgba(37, 84, 235, 0.10); }
+.oc-cliente .oc-dia.ativo::after { box-shadow: none; }
+.oc-cliente .oc-embarque-periodo { font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.oc-cliente .oc-flap { background: var(--oc-solido); border-radius: 10px; perspective: none; }
+.oc-cliente .oc-flap::after { display: none; }
+.oc-cliente .oc-flap span { font-size: 14px; font-weight: 600; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.oc-cliente .oc-flap:hover:not(:disabled) { border-color: #2554eb; }
+.oc-cliente .oc-flap:hover:not(:disabled) span, .oc-cliente .oc-flap.ativo span { animation: none; }
+.oc-cliente .oc-flap.ativo { background: #2554eb; border-color: #2554eb; color: #fff; box-shadow: none; }
+
+/* serviços */
+.oc-cliente .oc-servico.ativo .oc-servico-check { box-shadow: none; }
+.oc-cliente .oc-plano-tag, .oc-cliente .oc-servico-dur { font-size: 12px; letter-spacing: 0; text-transform: none; }
+.oc-cliente .oc-servico-preco { font-weight: 600; }
+
+/* profissionais: foto colorida, sem varredura nem monograma vazado */
+.oc-cliente .oc-pro:hover { transform: translateY(-2px); border-color: rgba(37, 84, 235, 0.45); }
+.oc-cliente .oc-pro-retrato { background: rgba(37, 84, 235, 0.08); }
+.oc-cliente .oc-pro-retrato img { filter: none; mix-blend-mode: normal; }
+.oc-cliente .oc-pro-monograma { font-size: 56px; font-weight: 700; color: #2554eb; -webkit-text-stroke: 0; }
+.oc-cliente .oc-pro-scan, .oc-cliente .oc-pro-indice { display: none; }
+.oc-cliente .oc-pro-status { font-size: 11.5px; letter-spacing: 0; text-transform: none; backdrop-filter: none; }
+.oc-cliente .oc-pro-status i { box-shadow: none; }
+.oc-cliente .oc-pro-info h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; text-transform: none; }
+.oc-cliente .oc-selo { font-size: 11.5px; letter-spacing: 0; text-transform: none; }
+
+/* resumo do agendamento: cartão simples no lugar do bilhete */
+.oc-cliente .oc-bilhete-codigo, .oc-cliente .oc-bilhete-campos small, .oc-cliente .oc-bilhete-total small { font-size: 12px; letter-spacing: 0; text-transform: none; }
+.oc-cliente .oc-bilhete-hora { font-size: 24px !important; font-weight: 700 !important; }
+.oc-cliente .oc-bilhete-total strong { font-size: 28px; font-weight: 700; }
+.oc-cliente .oc-bilhete-picote { border-top-style: solid; border-top-width: 1px; }
+.oc-cliente .oc-bilhete-picote::before, .oc-cliente .oc-bilhete-picote::after, .oc-cliente .oc-bilhete-barras { display: none; }
+.oc-cliente .oc-bilhete.confirmado { animation: none; }
+.oc-cliente .oc-carimbo { font-size: 15px; font-weight: 700; letter-spacing: 0; transform: none; border-width: 2px; border-radius: 999px; animation: none; }
+
+/* meus horários */
+.oc-cliente .oc-proximo { background: rgba(37, 84, 235, 0.10); border-color: rgba(37, 84, 235, 0.3); }
+.oc-cliente .oc-proximo .oc-rotulo b { animation: none; }
+.oc-cliente .oc-proximo-dia { font-size: 44px; font-weight: 700; line-height: 1; }
+.oc-cliente .oc-proximo-mes { font-size: 12px; letter-spacing: 0; }
+.oc-cliente .oc-proximo-hora { font-size: 26px; font-weight: 700; }
+.oc-cliente .oc-tl-data b { font-size: 20px; font-weight: 700; }
+.oc-cliente .oc-tl-data span, .oc-cliente .oc-tl-info span, .oc-cliente .oc-tl-tag { font-size: 12px; letter-spacing: 0; text-transform: none; }
+.oc-cliente .oc-tl-status { font-size: 11.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.oc-cliente .oc-carimbos-contagem { font-size: 18px; font-weight: 700; }
+.oc-cliente .oc-carimbo-casa.feito { transform: none; box-shadow: none; background: #2554eb; color: #fff; }
+.oc-cliente .oc-carimbos-rodape small, .oc-cliente .oc-carimbos-rodape strong { letter-spacing: 0; text-transform: none; }
+.oc-cliente .oc-notif-badge { box-shadow: none; }
