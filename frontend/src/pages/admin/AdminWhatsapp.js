@@ -3,6 +3,7 @@ import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import LoadingButton from '../../components/LoadingButton';
 import EditorMensagensBot from '../../components/EditorMensagensBot';
+import ContatosBot from '../../components/ContatosBot';
 import { API_URL } from '../../services/api';
 import { formatarTelefone } from '../../utils/telefone';
 
@@ -32,7 +33,7 @@ function AdminWhatsapp() {
   const [telefoneTeste, setTelefoneTeste] = useState('');
   const [testando, setTestando] = useState(false);
 
-  const [botConfig, setBotConfig] = useState({ permiteIa: false, modo: 'guiado', modoLivreDisponivel: true, personalidadeDisponivel: true, nome: '', personalidade: '', boasVindas: '', temperatura: 0.6, resumoProfissionaisAtivo: false, resumoProfissionaisHorario: '08:00', horarioAtivo: false, horarioInicio: '09:00', horarioFim: '18:00', horarioDias: [1, 2, 3, 4, 5, 6], mensagemFora: '', mensagemForaPadrao: '', ignorarContatosSalvos: false, numerosBloqueados: [] });
+  const [botConfig, setBotConfig] = useState({ permiteIa: false, modo: 'guiado', modoLivreDisponivel: true, personalidadeDisponivel: true, nome: '', personalidade: '', boasVindas: '', temperatura: 0.6, resumoProfissionaisAtivo: false, resumoProfissionaisHorario: '08:00', horarioAtivo: false, horarioInicio: '09:00', horarioFim: '18:00', horarioDias: [1, 2, 3, 4, 5, 6], mensagemFora: '', mensagemForaPadrao: '', contatosModo: 'todos' });
   const [salvandoBot, setSalvandoBot] = useState(false);
 
   const pollRef = useRef(null);
@@ -220,9 +221,7 @@ function AdminWhatsapp() {
           horario_inicio: botConfig.horarioInicio || '09:00',
           horario_fim: botConfig.horarioFim || '18:00',
           horario_dias: botConfig.horarioDias && botConfig.horarioDias.length ? botConfig.horarioDias : [0, 1, 2, 3, 4, 5, 6],
-          mensagem_fora: botConfig.mensagemFora,
-          ignorar_contatos_salvos: !!botConfig.ignorarContatosSalvos,
-          numeros_bloqueados: botConfig.numerosBloqueados
+          mensagem_fora: botConfig.mensagemFora
         })
       });
       const dados = await res.json();
@@ -588,41 +587,12 @@ function AdminWhatsapp() {
       </div>
 
       <div style={{ ...styles.cardForm, marginTop: '20px' }}>
-        <h3 style={styles.tituloSecao}>Filtro de contatos pessoais</h3>
+        <h3 style={styles.tituloSecao}>Contatos atendidos pelo bot</h3>
         <p style={{ margin: '0 0 16px', fontSize: '13px', color: 'var(--fx-muted)' }}>
-          Útil principalmente se o número conectado é o seu celular pessoal: evita que o bot responda quem já está na sua
-          agenda (família, amigos) ou números específicos que você escolher.
+          Útil principalmente se o número conectado é o seu celular pessoal: escolha na lista de contatos do WhatsApp quem o bot
+          atende ou ignora, sem precisar digitar número por número. Cada alteração é salva na hora.
         </p>
-
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: 'var(--fx-text)', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={botConfig.ignorarContatosSalvos}
-            onChange={(e) => setBotConfig((c) => ({ ...c, ignorarContatosSalvos: e.target.checked }))}
-            style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-          />
-          Não responder quem já está salvo na agenda do WhatsApp conectado
-        </label>
-        <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>
-          Vale pra quem tem nome salvo no celular conectado ao bot — se seus clientes também costumam ficar salvos aí
-          (ex: agenda usada como CRM), deixe desligado pra não bloquear cliente de verdade sem querer.
-        </p>
-
-        <label style={{ ...styles.label, marginTop: '20px' }}>Números que o bot nunca deve responder</label>
-        <textarea
-          rows={4}
-          placeholder={'Um número por linha, com DDD\nEx: (11) 91234-5678'}
-          value={(botConfig.numerosBloqueados || []).join('\n')}
-          onChange={(e) => setBotConfig((c) => ({ ...c, numerosBloqueados: e.target.value.split('\n') }))}
-          style={{ ...styles.inputTexto, resize: 'vertical', fontFamily: 'inherit' }}
-        />
-        <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--fx-faint)' }}>
-          Independe do filtro acima — vale mesmo que a pessoa não esteja salva em lugar nenhum.
-        </p>
-
-        <div style={{ marginTop: '20px' }}>
-          <LoadingButton loading={salvandoBot} onClick={salvarBotConfig} style={styles.btnCadastrar}>Salvar</LoadingButton>
-        </div>
+        <ContatosBot toast={toast} confirmar={confirmar} estiloBotao={styles.btnCadastrar} conectado={conectado} />
       </div>
 
       <div style={{ ...styles.cardForm, marginTop: '20px' }}>
