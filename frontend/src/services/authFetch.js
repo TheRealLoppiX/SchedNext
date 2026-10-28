@@ -32,7 +32,9 @@ const CLIENTE_ROUTE_FRAGMENTS = [
   '/fidelidade/',
   '/usuario/',
   '/agendar',
-  '/pix/'
+  '/pix/',
+  // Troca de e-mail/senha pelo painel do cliente (routes/auth.js): passou a exigir o token.
+  '/seguranca-'
 ];
 
 function getAdminToken() {
