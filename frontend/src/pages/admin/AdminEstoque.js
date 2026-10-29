@@ -56,9 +56,10 @@ function AdminEstoque({ empresaId }) {
   const [leitorPara, setLeitorPara] = useState(null);
   const campoPrecoRef = useRef(null);
 
+  // Data local (en-CA = AAAA-MM-DD): toISOString é UTC e depois das 21h já virava o dia seguinte.
   const [filtroRelatorio, setFiltroRelatorio] = useState({ 
-      inicio: new Date().toISOString().split('T')[0], 
-      fim: new Date().toISOString().split('T')[0] 
+      inicio: new Date().toLocaleDateString('en-CA'), 
+      fim: new Date().toLocaleDateString('en-CA') 
   });
   const [dadosRelatorio, setDadosRelatorio] = useState([]);
 
