@@ -374,7 +374,7 @@ function AdminEstoque({ empresaId }) {
         body: JSON.stringify({ justificativa: modalExclusao.justificativa, usuario_nome: autorizado?.nome })
       });
       if (res.ok) {
-        toast.success("Produto excluído. O motivo ficou registrado no relatório.");
+        toast.success("Produto excluído. O motivo ficou registrado no histórico.");
         setModalExclusao(null);
         carregarProdutos();
       } else {
@@ -458,7 +458,7 @@ function AdminEstoque({ empresaId }) {
         const res = await fetch(`${API_URL}/admin/estoque/relatorio/${idEfetivo}?inicio=${filtroRelatorio.inicio}&fim=${filtroRelatorio.fim}`);
         const data = await res.json();
         setDadosRelatorio(Array.isArray(data) ? data : []);
-      } catch (err) { toast.error("Não foi possível buscar o relatório."); }
+      } catch (err) { toast.error("Não foi possível buscar o histórico."); }
   };
 
   // Busca automaticamente ao abrir o modal (com o periodo atual)
@@ -486,7 +486,7 @@ function AdminEstoque({ empresaId }) {
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `relatorio_estoque_${filtroRelatorio.inicio}.csv`);
+      link.setAttribute("download", `historico_estoque_${filtroRelatorio.inicio}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -506,13 +506,94 @@ function AdminEstoque({ empresaId }) {
         return toast.error('O navegador bloqueou a janela de impressão. Permita pop-ups para este site e tente novamente.');
       }
       const periodo = `${new Date(filtroRelatorio.inicio + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(filtroRelatorio.fim + 'T00:00:00').toLocaleDateString('pt-BR')}`;
+      // A janela de impressão não carrega o CSS do painel, então as cores vão literais
+      // (var(--fx-*) ficava indefinida e o PDF saía sem cor nenhuma).
       const linhas = dadosRelatorio.map(r => {
           const data = new Date(r.data_movimentacao).toLocaleString('pt-BR');
           const tipo = rotuloMovimentacao(r.tipo);
-          const corTipo = r.tipo === 'ADICIONAR' ? 'var(--fx-green)' : 'var(--fx-red)';
-          return `<tr style='border-bottom:1px solid var(--fx-surface-2)'><td style='padding:9px 12px;font-size:12px;color:var(--fx-text)'>${data}</td><td style='padding:9px 12px;font-size:12px'>${escaparHtml(r.usuario_nome)}</td><td style='padding:9px 12px;font-size:12px;font-weight:600;color:var(--fx-text)'>${escaparHtml(r.produto_nome)}</td><td style='padding:9px 12px;font-size:12px;font-weight:700;color:${corTipo}'>${tipo}</td><td style='padding:9px 12px;font-size:12px;text-align:center;font-weight:700'>${r.quantidade}</td><td style='padding:9px 12px;font-size:12px;color:var(--fx-muted)'>${escaparHtml(r.justificativa) || '-'}</td></tr>`;
+          const corTipo = r.tipo === 'ADICIONAR' ? '#059669' : '#dc2626';
+          return `<tr style='border-bottom:1px solid #e5e7eb'><td style='padding:9px 12px;font-size:12px;color:#111827'>${data}</td><td style='padding:9px 12px;font-size:12px'>${escaparHtml(r.usuario_nome)}</td><td style='padding:9px 12px;font-size:12px;font-weight:600;color:#111827'>${escaparHtml(r.produto_nome)}</td><td style='padding:9px 12px;font-size:12px;font-weight:700;color:${corTipo}'>${tipo}</td><td style='padding:9px 12px;font-size:12px;text-align:center;font-weight:700'>${r.quantidade}</td><td style='padding:9px 12px;font-size:12px;color:#6b7280'>${escaparHtml(r.justificativa) || '-'}</td></tr>`;
       }).join('');
-      janela.document.write(`<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Relatório de Estoque</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:30px;color:var(--fx-text)}h1{font-size:22px;font-weight:800;margin-bottom:4px}.sub{font-size:13px;color:var(--fx-muted);margin-bottom:20px}.periodo{display:inline-block;background:var(--fx-surface-2);padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;color:var(--fx-text);margin-bottom:20px}table{width:100%;border-collapse:collapse}thead tr{background:var(--fx-text)}th{padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--fx-card);text-transform:uppercase;letter-spacing:.5px}tr:nth-child(even){background:var(--fx-surface-2)}.footer{margin-top:20px;font-size:11px;color:var(--fx-faint);text-align:right}@media print{.no-print{display:none}}</style></head><body><h1>Relatório de Auditoria de Estoque</h1><p class='sub'>Movimentações no período</p><span class='periodo'>Período: ${periodo}</span><table><thead><tr><th>Data/Hora</th><th>Operador</th><th>Produto</th><th>Movimentação</th><th>Qtd</th><th>Justificativa</th></tr></thead><tbody>${linhas}</tbody></table><div class='footer'>Gerado em ${new Date().toLocaleString('pt-BR')} &bull; ${dadosRelatorio.length} registro(s)</div></body></html>`);
+      janela.document.write(`<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Histórico de Estoque</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:30px;color:#111827}h1{font-size:22px;font-weight:800;margin-bottom:4px}.sub{font-size:13px;color:#6b7280;margin-bottom:20px}.periodo{display:inline-block;background:#f3f4f6;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;color:#111827;margin-bottom:20px}table{width:100%;border-collapse:collapse}thead tr{background:#111827}th{padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.5px}tr:nth-child(even){background:#f9fafb}.footer{margin-top:20px;font-size:11px;color:#9ca3af;text-align:right}@media print{.no-print{display:none}}</style></head><body><h1>Histórico de Estoque${dadosRelatorio[0].empresa_nome ? ` &bull; ${escaparHtml(dadosRelatorio[0].empresa_nome)}` : ''}</h1><p class='sub'>Movimentações no período</p><span class='periodo'>Período: ${periodo}</span><table><thead><tr><th>Data/Hora</th><th>Operador</th><th>Produto</th><th>Movimentação</th><th>Qtd</th><th>Justificativa</th></tr></thead><tbody>${linhas}</tbody></table><div class='footer'>Gerado em ${new Date().toLocaleString('pt-BR')} &bull; ${dadosRelatorio.length} registro(s)</div></body></html>`);
+      janela.document.close();
+      setTimeout(() => { janela.print(); }, 400);
+  };
+
+  // Comprovante de uma movimentação só: abre a janela de impressão, onde dá pra imprimir ou
+  // escolher "Salvar como PDF". Leva o que comprova a mudança: empresa, número do registro,
+  // data, operador, produto (com código e categoria), quantidade, custo da compra nas
+  // entradas e a justificativa, mais campos de assinatura pra quem confere no papel.
+  const imprimirComprovante = (r) => {
+      const janela = window.open('', '_blank');
+      if (!janela) {
+        return toast.error('O navegador bloqueou a janela de impressão. Permita pop-ups para este site e tente novamente.');
+      }
+      const cores = { ADICIONAR: ['#059669', '#ecfdf5'], VENDA: ['#2563eb', '#eff6ff'], EXCLUSAO: ['#6b7280', '#f3f4f6'] };
+      const [cor, fundo] = cores[r.tipo] || ['#dc2626', '#fef2f2'];
+      const sinal = r.tipo === 'ADICIONAR' ? '+' : r.tipo === 'EXCLUSAO' ? '' : '−';
+      const efeito = {
+        ADICIONAR: 'Unidades acrescentadas ao estoque',
+        VENDA: 'Unidades baixadas do estoque por venda no caixa',
+        EXCLUSAO: 'Unidades em estoque no momento em que o produto foi excluído'
+      }[r.tipo] || 'Unidades retiradas do estoque';
+      const numero = String(r.id).padStart(6, '0');
+      const linha = (rotulo, valor) => `<tr><th>${rotulo}</th><td>${valor}</td></tr>`;
+
+      const custo = r.custo_unitario != null ? Number(r.custo_unitario) : null;
+      const blocoCompra = r.tipo === 'ADICIONAR' && (custo != null || r.data_compra)
+        ? `<h2>Dados da compra</h2><table>${
+            (r.data_compra ? linha('Data da compra', new Date(r.data_compra + 'T00:00:00').toLocaleDateString('pt-BR')) : '')
+            + (custo != null ? linha('Custo unitário', formatarReal(custo)) + linha('Custo total', `<strong>${formatarReal(custo * r.quantidade)}</strong>`) : '')
+          }</table>`
+        : '';
+
+      janela.document.write(`<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Comprovante de estoque nº ${numero}</title><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Arial,sans-serif;color:#111827;padding:32px;max-width:720px;margin:0 auto}
+.topo{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111827;padding-bottom:16px;margin-bottom:22px;gap:16px}
+.empresa{font-size:20px;font-weight:800}
+.doc{font-size:13px;color:#6b7280;margin-top:4px}
+.num{text-align:right;font-size:12px;color:#6b7280;white-space:nowrap}
+.num strong{display:block;font-size:20px;color:#111827;font-family:Consolas,monospace}
+.destaque{display:flex;justify-content:space-between;align-items:center;background:${fundo};border:1px solid ${cor};border-radius:10px;padding:16px 20px;margin-bottom:22px;gap:16px}
+.tipo{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:${cor}}
+.efeito{font-size:13px;color:#374151;margin-top:4px}
+.qtd{font-size:30px;font-weight:800;color:${cor};white-space:nowrap}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:#6b7280;margin:20px 0 8px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:9px 0;border-bottom:1px solid #e5e7eb;font-size:13.5px;vertical-align:top}
+th{width:38%;color:#6b7280;font-weight:600}
+.justificativa{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;font-size:13.5px;line-height:1.5;white-space:pre-wrap}
+.assinaturas{display:flex;gap:40px;margin-top:56px}
+.assinaturas div{flex:1;border-top:1px solid #111827;padding-top:6px;font-size:12px;color:#6b7280;text-align:center}
+.rodape{margin-top:36px;font-size:11px;color:#9ca3af;text-align:center;line-height:1.5}
+@media print{body{padding:0}@page{margin:18mm}}
+</style></head><body>
+<div class='topo'>
+  <div><div class='empresa'>${escaparHtml(r.empresa_nome || 'Estoque')}</div><div class='doc'>Comprovante de movimentação de estoque</div></div>
+  <div class='num'>Registro nº<strong>${numero}</strong></div>
+</div>
+<div class='destaque'>
+  <div><div class='tipo'>${rotuloMovimentacao(r.tipo)}</div><div class='efeito'>${efeito}</div></div>
+  <div class='qtd'>${sinal}${r.quantidade} un</div>
+</div>
+<h2>Movimentação</h2>
+<table>
+  ${linha('Data e hora', new Date(r.data_movimentacao).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'medium' }))}
+  ${linha('Operador responsável', escaparHtml(r.usuario_nome || '-'))}
+</table>
+<h2>Produto</h2>
+<table>
+  ${linha('Nome', `<strong>${escaparHtml(r.produto_nome || 'Produto removido')}</strong>`)}
+  ${linha('Código', escaparHtml(r.produto_codigo_barras || '-'))}
+  ${linha('Categoria', r.produto_tipo === 'uso' ? 'Uso do estabelecimento' : 'Revenda')}
+</table>
+${blocoCompra}
+<h2>Justificativa</h2>
+<div class='justificativa'>${escaparHtml(r.justificativa) || 'Sem justificativa informada.'}</div>
+<div class='assinaturas'><div>Responsável pela movimentação</div><div>Conferido por</div></div>
+<div class='rodape'>Documento gerado em ${new Date().toLocaleString('pt-BR')} a partir do histórico de estoque registrado no SchedNext.<br>O registro nº ${numero} não pode ser alterado depois de criado.</div>
+</body></html>`);
       janela.document.close();
       setTimeout(() => { janela.print(); }, 400);
   };
@@ -594,7 +675,7 @@ function AdminEstoque({ empresaId }) {
           {autorizado.nivel === 'admin' && (
             <>
                 <button onClick={() => setModalRelatorio(true)} style={styles.btnAcaoClaro}>
-                    <Icons.FileText color="var(--fx-muted)" /> Relatório
+                    <Icons.FileText color="var(--fx-muted)" /> Histórico
                 </button>
                 <button onClick={() => setModalSublogin(true)} style={styles.btnAcaoClaro}>
                     <Icons.UserPlus color="var(--fx-muted)" /> Criar Acesso
@@ -844,7 +925,7 @@ function AdminEstoque({ empresaId }) {
           <div style={styles.modalCard}>
             <h3 style={{marginTop: 0, color: 'var(--fx-text)', fontSize: '18px'}}>Excluir {modalExclusao.nome}?</h3>
             <p style={{fontSize: '13px', color: 'var(--fx-muted)', margin: '0 0 16px', lineHeight: 1.4}}>
-              O produto sai do estoque e do caixa{modalExclusao.quantidade > 0 ? ` (ainda há ${modalExclusao.quantidade} un)` : ''}, mas continua nos relatórios e no histórico. O motivo fica registrado no relatório de auditoria.
+              O produto sai do estoque e do caixa{modalExclusao.quantidade > 0 ? ` (ainda há ${modalExclusao.quantidade} un)` : ''}, mas continua nos relatórios e no histórico de movimentações, junto com o motivo.
             </p>
             <form onSubmit={confirmarExclusao}>
               <div style={styles.inputGroup}>
@@ -872,7 +953,7 @@ function AdminEstoque({ empresaId }) {
         <div style={styles.overlay}>
           <div style={styles.modalCard}>
             <h3 style={{marginTop: 0, color: 'var(--fx-text)', fontSize: '18px'}}>Acesso para {TERMOS.profissionalPlural}</h3>
-            <p style={{fontSize: '13px', color: 'var(--fx-muted)', marginBottom: '20px', lineHeight: '1.4'}}>Crie uma senha para o seu colaborador. As movimentações que ele fizer ficarão registradas no relatório.</p>
+            <p style={{fontSize: '13px', color: 'var(--fx-muted)', marginBottom: '20px', lineHeight: '1.4'}}>Crie uma senha para o seu colaborador. As movimentações que ele fizer ficarão registradas no histórico.</p>
             <form onSubmit={criarSublogin}>
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Sua Senha de Administrador (Autorização)</label>
@@ -909,7 +990,7 @@ function AdminEstoque({ empresaId }) {
         <div style={styles.overlay}>
           <div style={{...styles.modalCard, maxWidth: '850px', width: '95%'}}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{margin: 0, color: 'var(--fx-text)', fontSize: '20px'}}>Relatório de Auditoria</h3>
+                <h3 style={{margin: 0, color: 'var(--fx-text)', fontSize: '20px'}}>Histórico de Movimentações</h3>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <button onClick={exportarParaExcel} style={{...styles.btnPrincipal, background: '#059669', color: '#fff', display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 15px', height: 'auto'}}>
                         <Icons.Download color="#fff" /> Exportar Excel
@@ -947,6 +1028,7 @@ function AdminEstoque({ empresaId }) {
                             <th style={styles.th}>Produto</th>
                             <th style={styles.th}>Tipo</th>
                             <th style={styles.th}>Justificativa</th>
+                            <th style={styles.th}>Comprovante</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -961,9 +1043,14 @@ function AdminEstoque({ empresaId }) {
                                     </span>
                                 </td>
                                 <td style={{...styles.td, fontSize: '12px', color: 'var(--fx-muted)'}}>{r.justificativa}</td>
+                                <td style={styles.td}>
+                                    <button onClick={() => imprimirComprovante(r)} title="Imprimir ou salvar o comprovante desta movimentação em PDF" style={{...styles.btnAcaoClaro, padding: '6px 10px', fontSize: '12px', whiteSpace: 'nowrap'}}>
+                                        <Icons.FileText color="var(--fx-muted)" /> PDF
+                                    </button>
+                                </td>
                             </tr>
                         )) : (
-                            <tr><td colSpan="5" style={{ padding: '30px', textAlign: 'center', color: 'var(--fx-faint)' }}>Nenhuma movimentação encontrada neste período.</td></tr>
+                            <tr><td colSpan="6" style={{ padding: '30px', textAlign: 'center', color: 'var(--fx-faint)' }}>Nenhuma movimentação encontrada neste período.</td></tr>
                         )}
                     </tbody>
                 </table>
