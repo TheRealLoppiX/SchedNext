@@ -2,13 +2,12 @@
 // allows you to do things like:
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
+import { TextEncoder, TextDecoder } from 'util';
 
-// O ambiente jsdom do Jest bundlado no react-scripts 5 não expõe TextEncoder/TextDecoder
-// globalmente (só existem em jsdom mais novo), mas o react-router v7 depende deles internamente.
-// Node já tem os dois em `util` desde a v11, só falta colocar no escopo global do teste.
+// Herdado da época do Jest do react-scripts 5, cujo jsdom não expunha TextEncoder/TextDecoder
+// (o react-router v7 depende deles). O jsdom do Vitest já tem; fica só como garantia.
 if (typeof global.TextEncoder === 'undefined') {
-  const { TextEncoder, TextDecoder } = require('util');
   global.TextEncoder = TextEncoder;
   global.TextDecoder = TextDecoder;
 }
